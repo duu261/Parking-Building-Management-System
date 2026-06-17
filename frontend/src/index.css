@@ -1,0 +1,84 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@import "tailwindcss";
+
+/* Class-based dark mode: toggle `.dark` on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Control Room design system.
+  Quiet slate neutrals carry the layout; semantic status colors carry meaning.
+  Surface/text/line/accent flip with the theme; status colors stay fixed
+  (a slot is "available green" in light and dark alike).
+*/
+@theme inline {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-fg: var(--accent-fg);
+
+  --color-available: var(--available);
+  --color-occupied: var(--occupied);
+  --color-reserved: var(--reserved);
+  --color-maintenance: var(--maintenance);
+  --color-locked: var(--locked);
+}
+
+:root {
+  --bg: #fafafa; /* zinc-50 */
+  --surface: #ffffff;
+  --elevated: #ffffff;
+  --text: #18181b; /* zinc-900 */
+  --muted: #71717a; /* zinc-500 */
+  --line: #e4e4e7; /* zinc-200 */
+
+  --accent: #4f46e5; /* indigo-600 */
+  --accent-strong: #4338ca; /* indigo-700 */
+  --accent-fg: #ffffff;
+
+  --available: #10b981; /* emerald-500 */
+  --occupied: #ef4444; /* red-500 */
+  --reserved: #3b82f6; /* blue-500 */
+  --maintenance: #a1a1aa; /* zinc-400 */
+  --locked: #f59e0b; /* amber-500 */
+}
+
+.dark {
+  --bg: #09090b; /* zinc-950 */
+  --surface: #18181b; /* zinc-900 */
+  --elevated: #27272a; /* zinc-800 */
+  --text: #fafafa; /* zinc-50 */
+  --muted: #a1a1aa; /* zinc-400 */
+  --line: #27272a; /* zinc-800 */
+
+  --accent: #6366f1; /* indigo-500 */
+  --accent-strong: #818cf8; /* indigo-400 */
+  --accent-fg: #ffffff;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular numerals for plates, slot IDs, money, timestamps. */
+.nums {
+  font-variant-numeric: tabular-nums;
+}

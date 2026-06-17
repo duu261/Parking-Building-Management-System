@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+
+backend/node_modules/
+backend/.env
+backend/target/
+
+frontend/node_modules/
+frontend/.env
+
+backup.sql
