@@ -5,6 +5,7 @@ import com.parkmaster.common.PeakHours;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.payment.PaymentService;
 import com.parkmaster.pricing.PricingPolicy;
 import com.parkmaster.pricing.PricingPolicyRepository;
 import com.parkmaster.pricing.VehicleType;
@@ -26,15 +27,17 @@ public class ParkingSessionService {
     private final VehicleTypeRepository vehicleTypes;
     private final PricingPolicyRepository policies;
     private final SlotAllocationService allocation;
+    private final PaymentService payments;
 
     public ParkingSessionService(ParkingSessionRepository sessions, ParkingSlotRepository slots,
             VehicleTypeRepository vehicleTypes, PricingPolicyRepository policies,
-            SlotAllocationService allocation) {
+            SlotAllocationService allocation, PaymentService payments) {
         this.sessions = sessions;
         this.slots = slots;
         this.vehicleTypes = vehicleTypes;
         this.policies = policies;
         this.allocation = allocation;
+        this.payments = payments;
     }
 
     @Transactional
@@ -83,6 +86,7 @@ public class ParkingSessionService {
                 policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier));
         session.setStatus(SessionStatus.COMPLETED);
         session.getSlot().setStatus(SlotStatus.AVAILABLE);
+        payments.createForSession(session, session.getAmountCharged());
         return SessionResponse.from(session);
     }
 

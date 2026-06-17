@@ -11,6 +11,7 @@ import com.parkmaster.parking.ParkingBuilding;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.payment.PaymentService;
 import com.parkmaster.pricing.PricingPolicy;
 import com.parkmaster.pricing.PricingPolicyRepository;
 import com.parkmaster.pricing.VehicleType;
@@ -30,6 +31,7 @@ class ParkingSessionServiceTest {
     private VehicleTypeRepository vehicleTypes;
     private PricingPolicyRepository policies;
     private SlotAllocationService allocation;
+    private PaymentService payments;
     private ParkingSessionService service;
 
     @BeforeEach
@@ -39,7 +41,9 @@ class ParkingSessionServiceTest {
         vehicleTypes = Mockito.mock(VehicleTypeRepository.class);
         policies = Mockito.mock(PricingPolicyRepository.class);
         allocation = Mockito.mock(SlotAllocationService.class);
-        service = new ParkingSessionService(sessions, slots, vehicleTypes, policies, allocation);
+        payments = Mockito.mock(PaymentService.class);
+        service = new ParkingSessionService(sessions, slots, vehicleTypes, policies, allocation,
+                payments);
     }
 
     private ParkingSlot slot(SlotStatus status) {
