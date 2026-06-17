@@ -17,7 +17,7 @@ final class ChargeCalculator {
     private ChargeCalculator() {}
 
     static BigDecimal charge(Instant checkIn, Instant checkOut, BigDecimal ratePerHour,
-            BigDecimal dailyCap, int graceMinutes) {
+            BigDecimal dailyCap, int graceMinutes, BigDecimal peakMultiplier) {
         long totalMinutes = Duration.between(checkIn, checkOut).toMinutes();
         long billable = totalMinutes - graceMinutes;
         if (billable <= 0) {
@@ -32,7 +32,7 @@ final class ChargeCalculator {
                 amount = cap;
             }
         }
-        return amount;
+        return amount.multiply(peakMultiplier);
     }
 
     private static long ceilDiv(long a, long b) {

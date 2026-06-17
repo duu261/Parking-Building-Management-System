@@ -44,6 +44,10 @@ public class PricingPolicy {
     @Column(name = "grace_minutes", nullable = false)
     private int graceMinutes = 0;
 
+    /** Surcharge factor applied during peak hours; 1.00 = no surcharge. */
+    @Column(name = "peak_multiplier", nullable = false)
+    private BigDecimal peakMultiplier = BigDecimal.ONE;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

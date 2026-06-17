@@ -1,6 +1,7 @@
 package com.parkmaster.session;
 
 import com.parkmaster.common.ApiException;
+import com.parkmaster.common.PeakHours;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
@@ -10,6 +11,7 @@ import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
 import com.parkmaster.session.SessionDtos.CheckInRequest;
 import com.parkmaster.session.SessionDtos.SessionResponse;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -75,8 +77,10 @@ public class ParkingSessionService {
 
         Instant checkOut = Instant.now();
         session.setCheckOutAt(checkOut);
+        BigDecimal multiplier = PeakHours.isPeak(session.getCheckInAt())
+                ? policy.getPeakMultiplier() : BigDecimal.ONE;
         session.setAmountCharged(ChargeCalculator.charge(session.getCheckInAt(), checkOut,
-                policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes()));
+                policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier));
         session.setStatus(SessionStatus.COMPLETED);
         session.getSlot().setStatus(SlotStatus.AVAILABLE);
         return SessionResponse.from(session);

@@ -1,5 +1,6 @@
 package com.parkmaster.pricing;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -23,14 +24,15 @@ public final class PricingDtos {
     public record PricingPolicyRequest(
             @NotNull @PositiveOrZero BigDecimal ratePerHour,
             @PositiveOrZero BigDecimal dailyCap,
-            @PositiveOrZero int graceMinutes) {}
+            @PositiveOrZero int graceMinutes,
+            @NotNull @DecimalMin("1.0") BigDecimal peakMultiplier) {}
 
     public record PricingPolicyResponse(Long id, Long vehicleTypeId, String vehicleTypeName,
-            BigDecimal ratePerHour, BigDecimal dailyCap, int graceMinutes) {
+            BigDecimal ratePerHour, BigDecimal dailyCap, int graceMinutes, BigDecimal peakMultiplier) {
         static PricingPolicyResponse from(PricingPolicy p) {
             return new PricingPolicyResponse(p.getId(), p.getVehicleType().getId(),
                     p.getVehicleType().getName(), p.getRatePerHour(), p.getDailyCap(),
-                    p.getGraceMinutes());
+                    p.getGraceMinutes(), p.getPeakMultiplier());
         }
     }
 }

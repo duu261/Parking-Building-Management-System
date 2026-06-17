@@ -69,6 +69,7 @@ public class PricingService {
         p.setRatePerHour(req.ratePerHour());
         p.setDailyCap(req.dailyCap());
         p.setGraceMinutes(req.graceMinutes());
+        p.setPeakMultiplier(req.peakMultiplier());
         return PricingPolicyResponse.from(policies.save(p));
     }
 

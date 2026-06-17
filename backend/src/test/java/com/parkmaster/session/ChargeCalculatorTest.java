@@ -13,7 +13,8 @@ class ChargeCalculatorTest {
     private static final BigDecimal RATE = new BigDecimal("3.00");
 
     private static BigDecimal charge(long minutes, BigDecimal cap, int grace) {
-        return ChargeCalculator.charge(IN, IN.plus(Duration.ofMinutes(minutes)), RATE, cap, grace);
+        return ChargeCalculator.charge(IN, IN.plus(Duration.ofMinutes(minutes)), RATE, cap, grace,
+                BigDecimal.ONE);
     }
 
     @Test
@@ -47,5 +48,12 @@ class ChargeCalculatorTest {
     void dailyCapScalesPerStartedDay() {
         // 25h -> 75 raw, spans 2 days -> cap 40
         assertThat(charge(1500, new BigDecimal("20.00"), 0)).isEqualByComparingTo("40.00");
+    }
+
+    @Test
+    void peakMultiplierAppliedAfterCap() {
+        // 10h * 3 = 30, capped at 20, then * 1.5 = 30
+        assertThat(ChargeCalculator.charge(IN, IN.plus(Duration.ofMinutes(600)), RATE,
+                new BigDecimal("20.00"), 0, new BigDecimal("1.5"))).isEqualByComparingTo("30.00");
     }
 }
