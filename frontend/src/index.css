@@ -6,12 +6,18 @@
 
 /*
   Control Room design system.
-  Quiet slate neutrals carry the layout; semantic status colors carry meaning.
-  Surface/text/line/accent flip with the theme; status colors stay fixed
-  (a slot is "available green" in light and dark alike).
+
+  One idea, enforced everywhere: the chrome is monochrome graphite, and color
+  is reserved exclusively for slot/session status. A splash of color on screen
+  always means something. Neutrals carry layout, weight, and elevation; the five
+  status hues carry meaning and never appear as decoration.
+
+  Shape lock: surfaces and controls use --radius (10px); dots/badges are full.
+  Elevation: one tinted card shadow, never a hard black drop shadow.
 */
 @theme inline {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --radius: 0.625rem;
 
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -20,6 +26,8 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
 
+  /* Accent is ink, not a hue. It flips with the theme so the chrome reads as
+     graphite-on-paper in light and paper-on-graphite in dark. */
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-fg: var(--accent-fg);
@@ -34,33 +42,39 @@
 :root {
   --bg: #fafafa; /* zinc-50 */
   --surface: #ffffff;
-  --elevated: #ffffff;
+  --elevated: #f4f4f5; /* zinc-100 */
   --text: #18181b; /* zinc-900 */
   --muted: #71717a; /* zinc-500 */
   --line: #e4e4e7; /* zinc-200 */
 
-  --accent: #4f46e5; /* indigo-600 */
-  --accent-strong: #4338ca; /* indigo-700 */
-  --accent-fg: #ffffff;
+  --accent: #18181b; /* ink */
+  --accent-strong: #09090b;
+  --accent-fg: #fafafa;
 
   --available: #10b981; /* emerald-500 */
   --occupied: #ef4444; /* red-500 */
   --reserved: #3b82f6; /* blue-500 */
   --maintenance: #a1a1aa; /* zinc-400 */
   --locked: #f59e0b; /* amber-500 */
+
+  --shadow-card: 0 1px 2px 0 rgb(24 24 27 / 0.04), 0 1px 3px 0 rgb(24 24 27 / 0.06);
+  --shadow-pop: 0 4px 12px -2px rgb(24 24 27 / 0.10), 0 2px 6px -2px rgb(24 24 27 / 0.08);
 }
 
 .dark {
   --bg: #09090b; /* zinc-950 */
-  --surface: #18181b; /* zinc-900 */
-  --elevated: #27272a; /* zinc-800 */
+  --surface: #131316;
+  --elevated: #1c1c20;
   --text: #fafafa; /* zinc-50 */
   --muted: #a1a1aa; /* zinc-400 */
   --line: #27272a; /* zinc-800 */
 
-  --accent: #6366f1; /* indigo-500 */
-  --accent-strong: #818cf8; /* indigo-400 */
-  --accent-fg: #ffffff;
+  --accent: #fafafa; /* paper */
+  --accent-strong: #ffffff;
+  --accent-fg: #18181b;
+
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 8px 24px -4px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.5);
 }
 
 html,
@@ -81,4 +95,13 @@ body {
 /* Tabular numerals for plates, slot IDs, money, timestamps. */
 .nums {
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Hairline grid texture for the landing slot-map backdrop. */
+.grid-paper {
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
