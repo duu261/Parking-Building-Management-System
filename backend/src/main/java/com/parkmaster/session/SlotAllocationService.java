@@ -1,16 +1,14 @@
 package com.parkmaster.session;
 
 import com.parkmaster.common.ApiException;
+import com.parkmaster.common.PeakHours;
 import com.parkmaster.parking.Floor;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
-import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,10 +28,6 @@ public class SlotAllocationService {
     private static final int WEIGHT_LOAD_BALANCE = 30;
     private static final int WEIGHT_DISTANCE = 20;
     private static final int WEIGHT_PEAK_HOUR = 10;
-
-    // Peak hours: 7-9 AM and 5-7 PM local time (Vietnam)
-    private static final Set<Integer> PEAK_HOURS = Set.of(7, 8, 17, 18);
-    private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final ParkingSlotRepository slots;
 
@@ -55,7 +49,7 @@ public class SlotAllocationService {
         Map<Long, Long> floorTotalCount = floorAvailableCount.keySet().stream()
                 .collect(Collectors.toMap(fId -> fId, slots::countByFloorId));
 
-        boolean peak = isPeakHour();
+        boolean peak = PeakHours.isPeakNow();
 
         return available.stream()
                 .max(Comparator.comparingDouble(
@@ -83,9 +77,5 @@ public class SlotAllocationService {
             return WEIGHT_VEHICLE_TYPE / 2.0; // mixed floor: neutral
         }
         return floor.getVehicleType().getId().equals(vehicleTypeId) ? WEIGHT_VEHICLE_TYPE : 0;
-    }
-
-    static boolean isPeakHour() {
-        return PEAK_HOURS.contains(LocalTime.now(VN_ZONE).getHour());
     }
 }
