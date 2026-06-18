@@ -26,6 +26,8 @@ export const managerApi = {
   floors: (buildingId) => apiRequest(`/manager/buildings/${buildingId}/floors`),
   createFloor: (buildingId, body) =>
     apiRequest(`/manager/buildings/${buildingId}/floors`, { method: "POST", body }),
+  setFloorVehicleType: (id, vehicleTypeId) =>
+    apiRequest(`/manager/floors/${id}/vehicle-type`, { method: "PATCH", body: { vehicleTypeId } }),
   deleteFloor: (id) => apiRequest(`/manager/floors/${id}`, { method: "DELETE" }),
 
   slots: (floorId) => apiRequest(`/manager/floors/${floorId}/slots`),

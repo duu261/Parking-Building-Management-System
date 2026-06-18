@@ -10,6 +10,9 @@ import CheckInPage from "./pages/staff/CheckInPage";
 import ActiveSessionsPage from "./pages/staff/ActiveSessionsPage";
 import OverviewPage from "./pages/system/OverviewPage";
 import AnalyticsPage from "./pages/system/AnalyticsPage";
+import BuildingsPage from "./pages/system/BuildingsPage";
+import PricingPage from "./pages/system/PricingPage";
+import UsersPage from "./pages/system/UsersPage";
 import MyParkingPage from "./pages/user/MyParkingPage";
 import MySessionsPage from "./pages/user/MySessionsPage";
 import { getUser } from "./lib/session";
@@ -34,9 +37,9 @@ export default function App() {
             <Route index element={<AppHome />} />
             <Route path="check-in" element={<CheckInPage />} />
             <Route path="active" element={<ActiveSessionsPage />} />
-            <Route path="buildings" element={<Placeholder title="Buildings" />} />
-            <Route path="pricing" element={<Placeholder title="Pricing" />} />
-            <Route path="users" element={<Placeholder title="Users" />} />
+            <Route path="buildings" element={<BuildingsPage />} />
+            <Route path="pricing" element={<PricingPage />} />
+            <Route path="users" element={<UsersPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
           </Route>
         </Route>

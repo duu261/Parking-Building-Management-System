@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { SquareParking, ArrowRight } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { SquareParking, ArrowRight, Building2, ScanLine, Smartphone } from "lucide-react";
 import { STATUS_COLOR } from "../../lib/status";
 
 const LEGEND = [
@@ -18,6 +19,41 @@ const FLOOR = [
   "AVAILABLE", "OCCUPIED", "RESERVED", "AVAILABLE", "OCCUPIED", "AVAILABLE",
   "OCCUPIED", "MAINTENANCE", "AVAILABLE", "OCCUPIED", "OCCUPIED", "AVAILABLE",
 ];
+
+const ROLES = [
+  {
+    icon: Building2,
+    role: "Manager",
+    line: "Buildings, floors, pricing, and the analytics that prove the allocation works.",
+  },
+  {
+    icon: ScanLine,
+    role: "Staff",
+    line: "Check vehicles in and out, handle exceptions, settle payments at the gate.",
+  },
+  {
+    icon: Smartphone,
+    role: "Driver",
+    line: "See your slot, track your session, scan the ticket, and pay from your phone.",
+  },
+];
+
+// Light scroll-reveal. Collapses to instant under reduced motion (MOTION dial 3).
+const MotionDiv = motion.div;
+function Reveal({ children, className, delay = 0 }) {
+  const reduce = useReducedMotion();
+  return (
+    <MotionDiv
+      className={className}
+      initial={reduce ? false : { opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </MotionDiv>
+  );
+}
 
 function SlotMap() {
   const open = FLOOR.filter((s) => s === "AVAILABLE").length;
@@ -62,37 +98,82 @@ export default function LandingPage() {
         </Link>
       </header>
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:py-16">
-        <div className="max-w-xl">
-          <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight md:text-5xl">
-            Every slot, every session, in one quiet view.
-          </h1>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-muted">
-            Live availability, smart allocation, and role-based control for managers, staff, and drivers.
-          </p>
-          <div className="mt-8">
-            <Link
-              to="/signup"
-              className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition hover:opacity-90 active:translate-y-px"
-            >
-              Get started <ArrowRight size={16} />
-            </Link>
+      <main className="flex-1">
+        <section className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:py-20">
+          <Reveal className="max-w-xl">
+            <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight md:text-5xl">
+              Every slot, every session, in one quiet view.
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-muted">
+              Live availability, smart allocation, and role-based control for managers, staff, and drivers.
+            </p>
+            <div className="mt-8">
+              <Link
+                to="/signup"
+                className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition hover:opacity-90 active:translate-y-px"
+              >
+                Get started <ArrowRight size={16} />
+              </Link>
+            </div>
+
+            <dl className="mt-12 flex flex-wrap gap-x-8 gap-y-4 border-t border-line pt-8">
+              {LEGEND.map(([status, label]) => (
+                <div key={status} className="flex items-center gap-2">
+                  <span className="size-2.5 rounded-full" style={{ backgroundColor: STATUS_COLOR[status] }} />
+                  <dt className="text-sm font-medium">{label}</dt>
+                  <dd className="text-xs uppercase tracking-wide text-muted">{status}</dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+
+          <Reveal className="lg:pl-6" delay={0.1}>
+            <SlotMap />
+          </Reveal>
+        </section>
+
+        <section className="border-t border-line bg-surface/40">
+          <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">
+            <Reveal>
+              <h2 className="max-w-2xl text-2xl font-semibold tracking-tight md:text-3xl">
+                Three people run a parking building. One system serves each of them.
+              </h2>
+            </Reveal>
+            <div className="mt-10 divide-y divide-line border-t border-line">
+              {ROLES.map(({ icon: Icon, role, line }, i) => (
+                <Reveal key={role} delay={i * 0.06}>
+                  <div className="flex items-start gap-5 py-6">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius)] border border-line bg-bg text-text">
+                      {Icon && <Icon size={18} />}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold tracking-tight">{role}</h3>
+                      <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">{line}</p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
+        </section>
 
-          <dl className="mt-12 flex flex-wrap gap-x-8 gap-y-4 border-t border-line pt-8">
-            {LEGEND.map(([status, label]) => (
-              <div key={status} className="flex items-center gap-2">
-                <span className="size-2.5 rounded-full" style={{ backgroundColor: STATUS_COLOR[status] }} />
-                <dt className="text-sm font-medium">{label}</dt>
-                <dd className="text-xs uppercase tracking-wide text-muted">{status}</dd>
+        <section className="border-t border-line">
+          <div className="mx-auto w-full max-w-6xl px-6 py-16 text-center lg:py-20">
+            <Reveal>
+              <h2 className="mx-auto max-w-xl text-2xl font-semibold tracking-tight md:text-3xl">
+                Park smarter. Start in a minute.
+              </h2>
+              <div className="mt-7 flex justify-center">
+                <Link
+                  to="/signup"
+                  className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition hover:opacity-90 active:translate-y-px"
+                >
+                  Get started <ArrowRight size={16} />
+                </Link>
               </div>
-            ))}
-          </dl>
-        </div>
-
-        <div className="lg:pl-6">
-          <SlotMap />
-        </div>
+            </Reveal>
+          </div>
+        </section>
       </main>
 
       <footer className="mx-auto w-full max-w-6xl px-6 py-6 text-xs text-muted">
