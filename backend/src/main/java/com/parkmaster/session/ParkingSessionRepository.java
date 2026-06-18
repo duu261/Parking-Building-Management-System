@@ -2,10 +2,13 @@ package com.parkmaster.session;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ParkingSessionRepository extends JpaRepository<ParkingSession, Long> {
     List<ParkingSession> findByStatusOrderByCheckInAt(SessionStatus status);
+
+    Optional<ParkingSession> findByTicketCode(String ticketCode);
 
     List<ParkingSession> findByUser_EmailOrderByCheckInAtDesc(String email);
 

@@ -20,12 +20,12 @@ public final class SessionDtos {
             Long reservationId) {}
 
     public record SessionResponse(Long id, Long slotId, Long vehicleTypeId, String licensePlate,
-            Instant checkInAt, Instant checkOutAt, BigDecimal amountCharged, SessionStatus status,
-            boolean autoAllocated) {
+            String ticketCode, Instant checkInAt, Instant checkOutAt, BigDecimal amountCharged,
+            SessionStatus status, boolean autoAllocated) {
         static SessionResponse from(ParkingSession s) {
             return new SessionResponse(s.getId(), s.getSlot().getId(), s.getVehicleType().getId(),
-                    s.getLicensePlate(), s.getCheckInAt(), s.getCheckOutAt(), s.getAmountCharged(),
-                    s.getStatus(), s.isAutoAllocated());
+                    s.getLicensePlate(), s.getTicketCode(), s.getCheckInAt(), s.getCheckOutAt(),
+                    s.getAmountCharged(), s.getStatus(), s.isAutoAllocated());
         }
     }
 }

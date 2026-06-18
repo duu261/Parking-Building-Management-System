@@ -139,4 +139,30 @@ public class ParkingSessionService {
         }
         return SessionResponse.from(session);
     }
+
+    /** Staff scans a ticket QR; resolve the code to its session for check-out. */
+    @Transactional(readOnly = true)
+    public SessionResponse byTicket(String ticketCode) {
+        return SessionResponse.from(sessions.findByTicketCode(ticketCode)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Ticket not found")));
+    }
+
+    /** PNG QR encoding the session's ticket code. Staff prints it for walk-ins. */
+    @Transactional(readOnly = true)
+    public byte[] ticketQr(Long id) {
+        ParkingSession session = sessions.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
+        return QrCodeGenerator.pngFor(session.getTicketCode());
+    }
+
+    /** Same QR, but a driver may only fetch their own ticket. */
+    @Transactional(readOnly = true)
+    public byte[] ticketQrForUser(String email, Long id) {
+        ParkingSession session = sessions.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
+        if (session.getUser() == null || !session.getUser().getEmail().equals(email)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Session not found");
+        }
+        return QrCodeGenerator.pngFor(session.getTicketCode());
+    }
 }

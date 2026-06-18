@@ -2,6 +2,7 @@ package com.parkmaster.session;
 
 import com.parkmaster.session.SessionDtos.SessionResponse;
 import java.util.List;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,5 +28,10 @@ class DriverSessionController {
     @GetMapping("/{id}")
     SessionResponse one(@PathVariable Long id, Authentication auth) {
         return service.getForUser(auth.getName(), id);
+    }
+
+    @GetMapping(value = "/{id}/ticket.png", produces = MediaType.IMAGE_PNG_VALUE)
+    byte[] ticketQr(@PathVariable Long id, Authentication auth) {
+        return service.ticketQrForUser(auth.getName(), id);
     }
 }

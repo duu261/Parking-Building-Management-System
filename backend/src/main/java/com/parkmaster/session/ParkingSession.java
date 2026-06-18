@@ -50,6 +50,10 @@ public class ParkingSession {
     @Column(name = "license_plate", nullable = false)
     private String licensePlate;
 
+    // The ticket itself: a unique code encoded into the driver's QR. Staff scans it to check out.
+    @Column(name = "ticket_code", nullable = false, unique = true, updatable = false)
+    private String ticketCode = java.util.UUID.randomUUID().toString();
+
     @Column(name = "check_in_at", nullable = false, updatable = false)
     private Instant checkInAt = Instant.now();
 

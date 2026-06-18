@@ -5,6 +5,7 @@ import com.parkmaster.session.SessionDtos.SessionResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,5 +42,16 @@ class StaffSessionController {
     @GetMapping("/{id}")
     SessionResponse get(@PathVariable Long id) {
         return service.get(id);
+    }
+
+    /** Resolve a scanned ticket code to its session (then check out by id). */
+    @GetMapping("/by-ticket/{ticketCode}")
+    SessionResponse byTicket(@PathVariable String ticketCode) {
+        return service.byTicket(ticketCode);
+    }
+
+    @GetMapping(value = "/{id}/ticket.png", produces = MediaType.IMAGE_PNG_VALUE)
+    byte[] ticketQr(@PathVariable Long id) {
+        return service.ticketQr(id);
     }
 }
