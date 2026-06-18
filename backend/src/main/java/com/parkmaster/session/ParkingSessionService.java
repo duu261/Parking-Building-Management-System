@@ -51,6 +51,7 @@ public class ParkingSessionService {
             ParkingSlot reservedSlot = reservation.getSlot();
             ParkingSession session = new ParkingSession(reservedSlot, reservation.getVehicleType(),
                     reservation.getLicensePlate(), false);
+            session.setUser(reservation.getUser());
             reservedSlot.setStatus(SlotStatus.OCCUPIED);
             return SessionResponse.from(sessions.save(session));
         }
@@ -120,5 +121,22 @@ public class ParkingSessionService {
     public SessionResponse get(Long id) {
         return SessionResponse.from(sessions.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found")));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionResponse> listForUser(String email) {
+        return sessions.findByUser_EmailOrderByCheckInAtDesc(email).stream()
+                .map(SessionResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public SessionResponse getForUser(String email, Long id) {
+        ParkingSession session = sessions.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
+        // Non-owner gets 404, not 403 — do not leak that the session exists.
+        if (session.getUser() == null || !session.getUser().getEmail().equals(email)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Session not found");
+        }
+        return SessionResponse.from(session);
     }
 }

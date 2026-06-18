@@ -144,4 +144,29 @@ class ParkingSessionServiceTest {
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
         verify(payments).createForSession(session, session.getAmountCharged());
     }
+
+    @Test
+    void getForUserReturnsOwnSession() {
+        ParkingSession session = new ParkingSession(slot(SlotStatus.OCCUPIED),
+                new VehicleType("Car", null), "51A-123", false);
+        session.setUser(new com.parkmaster.user.User("d@x.com", "h", "D",
+                com.parkmaster.user.Role.USER));
+        when(sessions.findById(7L)).thenReturn(Optional.of(session));
+
+        var resp = service.getForUser("d@x.com", 7L);
+
+        assertThat(resp.licensePlate()).isEqualTo("51A-123");
+    }
+
+    @Test
+    void getForUserRejectsNonOwner() {
+        ParkingSession session = new ParkingSession(slot(SlotStatus.OCCUPIED),
+                new VehicleType("Car", null), "51A-123", false);
+        session.setUser(new com.parkmaster.user.User("d@x.com", "h", "D",
+                com.parkmaster.user.Role.USER));
+        when(sessions.findById(7L)).thenReturn(Optional.of(session));
+
+        assertThatThrownBy(() -> service.getForUser("other@x.com", 7L))
+                .isInstanceOf(ApiException.class);
+    }
 }

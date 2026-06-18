@@ -2,6 +2,7 @@ package com.parkmaster.session;
 
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.pricing.VehicleType;
+import com.parkmaster.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,6 +33,11 @@ public class ParkingSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // Driver who owns this session; null for staff-handled walk-ins (no account).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "slot_id", nullable = false)
