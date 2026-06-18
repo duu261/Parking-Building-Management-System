@@ -16,6 +16,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findBySession_User_EmailOrderByCreatedAtDesc(String email);
 
+    // For report aggregation: paid payments in a window, grouped in-service.
+    List<Payment> findByStatusAndPaidAtGreaterThanEqualAndPaidAtLessThan(
+            PaymentStatus status, Instant from, Instant to);
+
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p "
             + "WHERE p.status = com.parkmaster.payment.PaymentStatus.PAID "
             + "AND p.paidAt >= :from AND p.paidAt < :to")
