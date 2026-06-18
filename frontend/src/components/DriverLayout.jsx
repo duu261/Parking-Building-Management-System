@@ -26,6 +26,7 @@ export default function DriverLayout() {
           <nav className="flex items-center gap-1 text-sm">
             {[
               { to: "/me", label: "My parking", end: true },
+              { to: "/me/reservations", label: "Reservations" },
               { to: "/me/sessions", label: "Sessions" },
             ].map((it) => (
               <NavLink

@@ -15,6 +15,7 @@ import PricingPage from "./pages/system/PricingPage";
 import UsersPage from "./pages/system/UsersPage";
 import MyParkingPage from "./pages/user/MyParkingPage";
 import MySessionsPage from "./pages/user/MySessionsPage";
+import ReservationsPage from "./pages/user/ReservationsPage";
 import { getUser } from "./lib/session";
 
 // /app index: staff land on check-in; managers/admins on the overview.
@@ -47,6 +48,7 @@ export default function App() {
         <Route element={<ProtectedRoute allow={["USER"]} />}>
           <Route path="/me" element={<DriverLayout />}>
             <Route index element={<MyParkingPage />} />
+            <Route path="reservations" element={<ReservationsPage />} />
             <Route path="sessions" element={<MySessionsPage />} />
           </Route>
         </Route>

@@ -7,4 +7,9 @@ export const STATUS_COLOR = {
   LOCKED: "var(--locked)",
   ACTIVE: "var(--available)",
   COMPLETED: "var(--muted)",
+  // Reservation lifecycle.
+  PENDING: "var(--reserved)",
+  FULFILLED: "var(--available)",
+  CANCELLED: "var(--muted)",
+  EXPIRED: "var(--locked)",
 };

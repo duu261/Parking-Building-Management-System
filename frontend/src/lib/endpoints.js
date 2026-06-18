@@ -75,6 +75,11 @@ export const driverApi = {
   payments: () => apiRequest("/driver/payments"),
   pay: (id, method = "ONLINE") =>
     apiRequest(`/driver/payments/${id}/pay`, { method: "POST", body: { method } }),
+
+  reservations: () => apiRequest("/driver/reservations"),
+  reserve: (body) => apiRequest("/driver/reservations", { method: "POST", body }),
+  cancelReservation: (id) =>
+    apiRequest(`/driver/reservations/${id}/cancel`, { method: "POST" }),
 };
 
 // PUBLIC (guest / SEO): no auth.
