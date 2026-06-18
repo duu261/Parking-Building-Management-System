@@ -44,6 +44,20 @@ public class PaymentService {
         return PaymentResponse.from(payment);
     }
 
+    /** Staff voids a charge: cancels a PENDING one or refunds a PAID one. Reason required. */
+    @Transactional
+    public PaymentResponse voidPayment(Long id, String reason) {
+        Payment payment = payments.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found"));
+        if (payment.getStatus() == PaymentStatus.VOIDED) {
+            throw new ApiException(HttpStatus.CONFLICT, "Payment already voided");
+        }
+        payment.setStatus(PaymentStatus.VOIDED);
+        payment.setVoidedAt(Instant.now());
+        payment.setVoidReason(reason);
+        return PaymentResponse.from(payment);
+    }
+
     @Transactional(readOnly = true)
     public List<PaymentResponse> listPending() {
         return payments.findByStatusOrderByCreatedAt(PaymentStatus.PENDING).stream()

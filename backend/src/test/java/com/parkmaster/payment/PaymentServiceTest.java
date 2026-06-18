@@ -97,6 +97,39 @@ class PaymentServiceTest {
                 .isInstanceOf(ApiException.class);
     }
 
+    @Test
+    void voidPendingCancelsCharge() {
+        Payment pending = new Payment(Mockito.mock(ParkingSession.class), new BigDecimal("12.00"));
+        when(payments.findById(1L)).thenReturn(Optional.of(pending));
+
+        var res = service.voidPayment(1L, "wrong plate");
+
+        assertThat(res.status()).isEqualTo(PaymentStatus.VOIDED);
+        assertThat(res.voidReason()).isEqualTo("wrong plate");
+        assertThat(pending.getVoidedAt()).isNotNull();
+    }
+
+    @Test
+    void voidPaidRefunds() {
+        Payment paid = new Payment(Mockito.mock(ParkingSession.class), new BigDecimal("12.00"));
+        paid.setStatus(PaymentStatus.PAID);
+        when(payments.findById(1L)).thenReturn(Optional.of(paid));
+
+        var res = service.voidPayment(1L, "lost ticket overcharge");
+
+        assertThat(res.status()).isEqualTo(PaymentStatus.VOIDED);
+    }
+
+    @Test
+    void doubleVoidRejected() {
+        Payment voided = new Payment(Mockito.mock(ParkingSession.class), new BigDecimal("12.00"));
+        voided.setStatus(PaymentStatus.VOIDED);
+        when(payments.findById(1L)).thenReturn(Optional.of(voided));
+
+        assertThatThrownBy(() -> service.voidPayment(1L, "again"))
+                .isInstanceOf(ApiException.class);
+    }
+
     private Payment ownedPayment(String ownerEmail) {
         ParkingSession session = Mockito.mock(ParkingSession.class);
         when(session.getUser()).thenReturn(new User(ownerEmail, "h", "D", Role.USER));

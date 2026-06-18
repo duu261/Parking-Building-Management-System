@@ -2,6 +2,7 @@ package com.parkmaster.payment;
 
 import com.parkmaster.payment.PaymentDtos.PaymentResponse;
 import com.parkmaster.payment.PaymentDtos.SettleRequest;
+import com.parkmaster.payment.PaymentDtos.VoidRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,5 +35,10 @@ class StaffPaymentController {
     @PostMapping("/{id}/settle")
     PaymentResponse settle(@PathVariable Long id, @Valid @RequestBody SettleRequest req) {
         return service.settle(id, req.method());
+    }
+
+    @PostMapping("/{id}/void")
+    PaymentResponse voidPayment(@PathVariable Long id, @Valid @RequestBody VoidRequest req) {
+        return service.voidPayment(id, req.reason());
     }
 }

@@ -52,6 +52,12 @@ public class Payment {
     @Column(name = "paid_at")
     private Instant paidAt;
 
+    @Column(name = "voided_at")
+    private Instant voidedAt;
+
+    @Column(name = "void_reason")
+    private String voidReason;
+
     public Payment(ParkingSession session, BigDecimal amount) {
         this.session = session;
         this.amount = amount;
