@@ -10,6 +10,8 @@ import {
   Users,
   BarChart3,
   ListChecks,
+  TriangleAlert,
+  Banknote,
 } from "lucide-react";
 import { getUser, clearSession } from "../lib/session";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
@@ -20,6 +22,8 @@ const NAV = {
   STAFF: [
     { to: "/app/check-in", label: "Check-in", icon: LogIn },
     { to: "/app/active", label: "Active sessions", icon: ListChecks },
+    { to: "/app/payments", label: "Payments", icon: Banknote },
+    { to: "/app/exceptions", label: "Exceptions", icon: TriangleAlert },
   ],
   MANAGER: [
     { to: "/app", label: "Overview", icon: BarChart3, end: true },

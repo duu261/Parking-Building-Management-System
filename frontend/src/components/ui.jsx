@@ -48,6 +48,10 @@ export function Input({ className, ...rest }) {
   return <input className={cx(controlClass, className)} {...rest} />;
 }
 
+export function Textarea({ className, ...rest }) {
+  return <textarea className={cx(controlClass, "resize-y", className)} {...rest} />;
+}
+
 export function Select({ className, children, ...rest }) {
   return (
     <select className={cx(controlClass, "appearance-none", className)} {...rest}>

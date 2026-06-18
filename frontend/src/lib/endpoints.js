@@ -13,6 +13,17 @@ export const staffApi = {
   checkIn: (body) => apiRequest("/staff/sessions/check-in", { method: "POST", body }),
   checkOut: (id) => apiRequest(`/staff/sessions/${id}/check-out`, { method: "POST" }),
   active: () => apiRequest("/staff/sessions/active"),
+
+  pendingPayments: () => apiRequest("/staff/payments/pending"),
+  settlePayment: (id, method = "CASH") =>
+    apiRequest(`/staff/payments/${id}/settle`, { method: "POST", body: { method } }),
+  voidPayment: (id, reason) =>
+    apiRequest(`/staff/payments/${id}/void`, { method: "POST", body: { reason } }),
+
+  exceptions: () => apiRequest("/staff/exceptions/open"),
+  reportException: (body) => apiRequest("/staff/exceptions", { method: "POST", body }),
+  resolveException: (id, resolutionNote) =>
+    apiRequest(`/staff/exceptions/${id}/resolve`, { method: "POST", body: { resolutionNote } }),
 };
 
 // MANAGER: building/floor/slot CRUD, pricing, revenue, and chart-ready reports.

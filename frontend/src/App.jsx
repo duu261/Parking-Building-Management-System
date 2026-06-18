@@ -8,6 +8,8 @@ import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import CheckInPage from "./pages/staff/CheckInPage";
 import ActiveSessionsPage from "./pages/staff/ActiveSessionsPage";
+import ExceptionsPage from "./pages/staff/ExceptionsPage";
+import PaymentsPage from "./pages/staff/PaymentsPage";
 import OverviewPage from "./pages/system/OverviewPage";
 import AnalyticsPage from "./pages/system/AnalyticsPage";
 import BuildingsPage from "./pages/system/BuildingsPage";
@@ -38,6 +40,8 @@ export default function App() {
             <Route index element={<AppHome />} />
             <Route path="check-in" element={<CheckInPage />} />
             <Route path="active" element={<ActiveSessionsPage />} />
+            <Route path="exceptions" element={<ExceptionsPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
             <Route path="buildings" element={<BuildingsPage />} />
             <Route path="pricing" element={<PricingPage />} />
             <Route path="users" element={<UsersPage />} />
