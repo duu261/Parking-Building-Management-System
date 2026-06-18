@@ -58,6 +58,9 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public RevenueResponse revenue(Instant from, Instant to) {
+        if (from.isAfter(to)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "from must be before to");
+        }
         BigDecimal total = payments.sumPaidBetween(from, to);
         long count = payments.countPaidBetween(from, to);
         return new RevenueResponse(from, to, total, count);

@@ -80,6 +80,7 @@ public class ParkingSessionService {
 
         Instant checkOut = Instant.now();
         session.setCheckOutAt(checkOut);
+        // Peak surcharge keyed to check-in time (encourages off-peak entry), not check-out.
         BigDecimal multiplier = PeakHours.isPeak(session.getCheckInAt())
                 ? policy.getPeakMultiplier() : BigDecimal.ONE;
         session.setAmountCharged(ChargeCalculator.charge(session.getCheckInAt(), checkOut,

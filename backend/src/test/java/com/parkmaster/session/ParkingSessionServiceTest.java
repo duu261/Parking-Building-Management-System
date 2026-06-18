@@ -3,6 +3,7 @@ package com.parkmaster.session;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.parkmaster.common.ApiException;
@@ -120,5 +121,6 @@ class ParkingSessionServiceTest {
         assertThat(resp.checkOutAt()).isNotNull();
         assertThat(resp.amountCharged()).isNotNull();
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+        verify(payments).createForSession(session, session.getAmountCharged());
     }
 }

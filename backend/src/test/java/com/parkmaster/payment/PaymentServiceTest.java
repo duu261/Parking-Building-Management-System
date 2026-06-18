@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.parkmaster.common.ApiException;
 import com.parkmaster.session.ParkingSession;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,13 @@ class PaymentServiceTest {
     void settleMissingPaymentThrows() {
         when(payments.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.settle(99L, PaymentMethod.CASH))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void revenueRejectsInvertedRange() {
+        Instant now = Instant.now();
+        assertThatThrownBy(() -> service.revenue(now, now.minusSeconds(1)))
                 .isInstanceOf(ApiException.class);
     }
 }
