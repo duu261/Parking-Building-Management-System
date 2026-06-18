@@ -55,6 +55,20 @@ public class ReservationService {
     }
 
     @Transactional
+    public Reservation consumeForCheckIn(Long reservationId) {
+        Reservation reservation = reservations.findById(reservationId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Reservation not found"));
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new ApiException(HttpStatus.CONFLICT, "Reservation is not active");
+        }
+        if (reservation.getHoldUntil().isBefore(Instant.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, "Reservation has expired");
+        }
+        reservation.setStatus(ReservationStatus.FULFILLED);
+        return reservation;
+    }
+
+    @Transactional
     public int sweepExpired() {
         java.util.List<Reservation> expired =
                 reservations.findByStatusAndHoldUntilBefore(ReservationStatus.PENDING, Instant.now());

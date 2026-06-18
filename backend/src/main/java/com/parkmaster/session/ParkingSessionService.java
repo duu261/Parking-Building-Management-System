@@ -28,20 +28,39 @@ public class ParkingSessionService {
     private final PricingPolicyRepository policies;
     private final SlotAllocationService allocation;
     private final PaymentService payments;
+    private final com.parkmaster.reservation.ReservationService reservationService;
 
     public ParkingSessionService(ParkingSessionRepository sessions, ParkingSlotRepository slots,
             VehicleTypeRepository vehicleTypes, PricingPolicyRepository policies,
-            SlotAllocationService allocation, PaymentService payments) {
+            SlotAllocationService allocation, PaymentService payments,
+            com.parkmaster.reservation.ReservationService reservationService) {
         this.sessions = sessions;
         this.slots = slots;
         this.vehicleTypes = vehicleTypes;
         this.policies = policies;
         this.allocation = allocation;
         this.payments = payments;
+        this.reservationService = reservationService;
     }
 
     @Transactional
     public SessionResponse checkIn(CheckInRequest req) {
+        if (req.reservationId() != null) {
+            com.parkmaster.reservation.Reservation reservation =
+                    reservationService.consumeForCheckIn(req.reservationId());
+            ParkingSlot reservedSlot = reservation.getSlot();
+            ParkingSession session = new ParkingSession(reservedSlot, reservation.getVehicleType(),
+                    reservation.getLicensePlate(), false);
+            reservedSlot.setStatus(SlotStatus.OCCUPIED);
+            return SessionResponse.from(sessions.save(session));
+        }
+
+        if (req.vehicleTypeId() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "vehicleTypeId is required");
+        }
+        if (req.licensePlate() == null || req.licensePlate().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "licensePlate is required");
+        }
         if (req.slotId() == null && req.buildingId() == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST,
                     "Either slotId or buildingId must be provided");

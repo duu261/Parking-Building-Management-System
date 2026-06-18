@@ -147,4 +147,28 @@ class ReservationServiceTest {
         assertThat(r.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
     }
+
+    @Test
+    void consumeForCheckInMarksFulfilled() {
+        Reservation r = pending(driver(), slot(SlotStatus.RESERVED));
+        when(reservations.findById(1L)).thenReturn(Optional.of(r));
+        Reservation consumed = service.consumeForCheckIn(1L);
+        assertThat(consumed.getStatus()).isEqualTo(ReservationStatus.FULFILLED);
+    }
+
+    @Test
+    void consumeForCheckInRejectsExpired() {
+        Reservation r = pending(driver(), slot(SlotStatus.RESERVED));
+        r.setHoldUntil(Instant.now().minusSeconds(1));
+        when(reservations.findById(1L)).thenReturn(Optional.of(r));
+        assertThatThrownBy(() -> service.consumeForCheckIn(1L)).isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void consumeForCheckInRejectsNonPending() {
+        Reservation r = pending(driver(), slot(SlotStatus.RESERVED));
+        r.setStatus(ReservationStatus.CANCELLED);
+        when(reservations.findById(1L)).thenReturn(Optional.of(r));
+        assertThatThrownBy(() -> service.consumeForCheckIn(1L)).isInstanceOf(ApiException.class);
+    }
 }

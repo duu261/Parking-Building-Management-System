@@ -33,6 +33,7 @@ class ParkingSessionServiceTest {
     private PricingPolicyRepository policies;
     private SlotAllocationService allocation;
     private PaymentService payments;
+    private com.parkmaster.reservation.ReservationService reservationService;
     private ParkingSessionService service;
 
     @BeforeEach
@@ -43,8 +44,9 @@ class ParkingSessionServiceTest {
         policies = Mockito.mock(PricingPolicyRepository.class);
         allocation = Mockito.mock(SlotAllocationService.class);
         payments = Mockito.mock(PaymentService.class);
+        reservationService = Mockito.mock(com.parkmaster.reservation.ReservationService.class);
         service = new ParkingSessionService(sessions, slots, vehicleTypes, policies, allocation,
-                payments);
+                payments, reservationService);
     }
 
     private ParkingSlot slot(SlotStatus status) {
@@ -56,13 +58,13 @@ class ParkingSessionServiceTest {
     @Test
     void checkInRejectsUnavailableSlot() {
         when(slots.findById(1L)).thenReturn(Optional.of(slot(SlotStatus.OCCUPIED)));
-        assertThatThrownBy(() -> service.checkIn(new CheckInRequest(1L, null, 2L, "51A-123")))
+        assertThatThrownBy(() -> service.checkIn(new CheckInRequest(1L, null, 2L, "51A-123", null)))
                 .isInstanceOf(ApiException.class);
     }
 
     @Test
     void checkInRejectsWhenNeitherSlotNorBuilding() {
-        assertThatThrownBy(() -> service.checkIn(new CheckInRequest(null, null, 2L, "51A-123")))
+        assertThatThrownBy(() -> service.checkIn(new CheckInRequest(null, null, 2L, "51A-123", null)))
                 .isInstanceOf(ApiException.class);
     }
 
@@ -72,7 +74,7 @@ class ParkingSessionServiceTest {
         when(slots.findById(1L)).thenReturn(Optional.of(slot));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
         when(sessions.save(any(ParkingSession.class))).thenAnswer(inv -> inv.getArgument(0));
-        var resp = service.checkIn(new CheckInRequest(1L, null, 2L, "51A-123"));
+        var resp = service.checkIn(new CheckInRequest(1L, null, 2L, "51A-123", null));
         assertThat(resp.licensePlate()).isEqualTo("51A-123");
         assertThat(resp.status()).isEqualTo(SessionStatus.ACTIVE);
         assertThat(resp.autoAllocated()).isFalse();
@@ -85,8 +87,27 @@ class ParkingSessionServiceTest {
         when(allocation.allocate(10L, 2L)).thenReturn(slot);
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
         when(sessions.save(any(ParkingSession.class))).thenAnswer(inv -> inv.getArgument(0));
-        var resp = service.checkIn(new CheckInRequest(null, 10L, 2L, "51A-123"));
+        var resp = service.checkIn(new CheckInRequest(null, 10L, 2L, "51A-123", null));
         assertThat(resp.autoAllocated()).isTrue();
+        assertThat(slot.getStatus()).isEqualTo(SlotStatus.OCCUPIED);
+    }
+
+    @Test
+    void checkInWithReservationFulfillsAndOccupies() {
+        ParkingSlot slot = slot(SlotStatus.RESERVED);
+        com.parkmaster.reservation.Reservation reservation =
+                new com.parkmaster.reservation.Reservation(
+                        new com.parkmaster.user.User("d@x.com", "h", "D",
+                                com.parkmaster.user.Role.USER),
+                        slot, new VehicleType("Car", null), "51A-999",
+                        java.time.Instant.now().plusSeconds(600));
+        when(reservationService.consumeForCheckIn(5L)).thenReturn(reservation);
+        when(sessions.save(any(ParkingSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var resp = service.checkIn(new CheckInRequest(null, null, null, null, 5L));
+
+        assertThat(resp.licensePlate()).isEqualTo("51A-999");
+        assertThat(resp.status()).isEqualTo(SessionStatus.ACTIVE);
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.OCCUPIED);
     }
 

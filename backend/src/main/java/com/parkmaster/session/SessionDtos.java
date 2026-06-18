@@ -1,7 +1,5 @@
 package com.parkmaster.session;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -11,13 +9,15 @@ public final class SessionDtos {
     private SessionDtos() {}
 
     /**
-     * slotId: manual pick. buildingId: auto-allocate. Exactly one must be non-null.
+     * slotId: manual pick. buildingId: auto-allocate. reservationId: consume a hold.
+     * Exactly one entry path is used; the service validates the combination.
      */
     public record CheckInRequest(
             Long slotId,
             Long buildingId,
-            @NotNull Long vehicleTypeId,
-            @NotBlank @Size(max = 20) String licensePlate) {}
+            Long vehicleTypeId,
+            @Size(max = 20) String licensePlate,
+            Long reservationId) {}
 
     public record SessionResponse(Long id, Long slotId, Long vehicleTypeId, String licensePlate,
             Instant checkInAt, Instant checkOutAt, BigDecimal amountCharged, SessionStatus status,
