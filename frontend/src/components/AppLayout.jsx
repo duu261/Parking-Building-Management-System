@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   SquareParking,
   LogIn,
@@ -64,10 +64,10 @@ export default function AppLayout() {
   return (
     <div className="flex min-h-[100dvh] bg-bg text-text">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-surface sm:flex">
-        <div className="flex items-center gap-2 px-5 py-4">
+        <Link to="/" className="flex items-center gap-2 px-5 py-4 transition hover:opacity-80">
           <SquareParking className="text-text" size={20} />
           <span className="font-semibold tracking-tight">ParkMaster</span>
-        </div>
+        </Link>
         <nav className="flex-1 space-y-0.5 px-3 py-2">
           {items.map((it) => (
             <NavLink
@@ -109,10 +109,10 @@ export default function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface/80 px-6 py-3 backdrop-blur">
-          <div className="flex items-center gap-2 sm:hidden">
+          <Link to="/" className="flex items-center gap-2 transition hover:opacity-80 sm:hidden">
             <SquareParking className="text-text" size={20} />
             <span className="font-semibold">ParkMaster</span>
-          </div>
+          </Link>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={toggle}
