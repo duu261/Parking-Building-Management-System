@@ -21,13 +21,17 @@ spring:
       enabled: true
 
 server:
-  port: ${SERVER_PORT:5000}
+  # Render injects PORT; SERVER_PORT for local override; 5000 default.
+  port: ${PORT:${SERVER_PORT:5000}}
 
 parkmaster:
   jwt:
     # 256-bit base64 secret. Override in prod via PARKMASTER_JWT_SECRET.
     secret: ${PARKMASTER_JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWNoYW5nZS1tZS1pbi1wcm9kdWN0aW9uLTI1Ni1iaXQ=}
     access-token-ttl-minutes: ${PARKMASTER_JWT_TTL:120}
+  cors:
+    # Comma-separated. Set FRONTEND_ORIGIN to the deployed frontend URL in prod.
+    allowed-origins: ${FRONTEND_ORIGIN:http://localhost:5173}
 
 logging:
   level:
