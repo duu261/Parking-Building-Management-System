@@ -16,7 +16,9 @@ import com.parkmaster.session.SlotAllocationService;
 import com.parkmaster.user.Role;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -82,6 +84,52 @@ class ReservationServiceTest {
     void createRejectsUnknownUser() {
         when(users.findByEmail("ghost@x.com")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.create("ghost@x.com", 10L, 2L, "51A-123"))
+                .isInstanceOf(ApiException.class);
+    }
+
+    private Reservation pending(User owner, ParkingSlot slot) {
+        Reservation r = new Reservation(owner, slot, new VehicleType("Car", null), "51A-123",
+                Instant.now().plus(Duration.ofMinutes(30)));
+        r.setStatus(ReservationStatus.PENDING);
+        return r;
+    }
+
+    @Test
+    void listForUserReturnsOwnReservations() {
+        User driver = driver();
+        when(reservations.findByUser_EmailOrderByCreatedAtDesc("driver@x.com"))
+                .thenReturn(List.of(pending(driver, slot(SlotStatus.RESERVED))));
+        var result = service.listForUser("driver@x.com");
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).status()).isEqualTo(ReservationStatus.PENDING);
+    }
+
+    @Test
+    void cancelByOwnerReleasesSlot() {
+        ParkingSlot slot = slot(SlotStatus.RESERVED);
+        Reservation r = pending(driver(), slot);
+        when(reservations.findById(1L)).thenReturn(Optional.of(r));
+
+        service.cancel("driver@x.com", 1L);
+
+        assertThat(r.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+        assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+    }
+
+    @Test
+    void cancelByNonOwnerRejectedAsNotFound() {
+        Reservation r = pending(driver(), slot(SlotStatus.RESERVED));
+        when(reservations.findById(1L)).thenReturn(Optional.of(r));
+        assertThatThrownBy(() -> service.cancel("someoneelse@x.com", 1L))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void cancelNonPendingRejected() {
+        Reservation r = pending(driver(), slot(SlotStatus.RESERVED));
+        r.setStatus(ReservationStatus.FULFILLED);
+        when(reservations.findById(1L)).thenReturn(Optional.of(r));
+        assertThatThrownBy(() -> service.cancel("driver@x.com", 1L))
                 .isInstanceOf(ApiException.class);
     }
 }

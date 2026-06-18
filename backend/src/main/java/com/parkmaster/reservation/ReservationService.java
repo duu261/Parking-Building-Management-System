@@ -48,6 +48,27 @@ public class ReservationService {
         return ReservationResponse.from(reservations.save(reservation));
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<ReservationResponse> listForUser(String email) {
+        return reservations.findByUser_EmailOrderByCreatedAtDesc(email).stream()
+                .map(ReservationResponse::from).toList();
+    }
+
+    @Transactional
+    public void cancel(String email, Long id) {
+        Reservation reservation = reservations.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Reservation not found"));
+        // Non-owner gets 404, not 403 — do not leak that the reservation exists.
+        if (!reservation.getUser().getEmail().equals(email)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Reservation not found");
+        }
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new ApiException(HttpStatus.CONFLICT, "Reservation cannot be cancelled");
+        }
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        reservation.getSlot().setStatus(SlotStatus.AVAILABLE);
+    }
+
     // ponytail: re-check + retry-once guards the allocate-then-flip race. Upgrade to a
     // row lock (SELECT ... FOR UPDATE) or @Version only if real contention shows up.
     private ParkingSlot pickAndHoldSlot(Long buildingId, Long vehicleTypeId) {
