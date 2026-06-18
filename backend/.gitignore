@@ -6,3 +6,7 @@ mvnw.cmd
 .idea/
 *.iml
 .vscode/
+.classpath
+.project
+.factorypath
+.settings/
