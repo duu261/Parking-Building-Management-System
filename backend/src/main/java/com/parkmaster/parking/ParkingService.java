@@ -2,6 +2,7 @@ package com.parkmaster.parking;
 
 import com.parkmaster.common.ApiException;
 import com.parkmaster.parking.ParkingDtos.AllocationAnalytics;
+import com.parkmaster.parking.ParkingDtos.BuildingAvailability;
 import com.parkmaster.parking.ParkingDtos.BuildingRequest;
 import com.parkmaster.parking.ParkingDtos.BuildingResponse;
 import com.parkmaster.parking.ParkingDtos.FloorFillRate;
@@ -48,6 +49,14 @@ public class ParkingService {
     @Transactional(readOnly = true)
     public BuildingResponse getBuilding(Long id) {
         return BuildingResponse.from(building(id));
+    }
+
+    /** Public/guest view: how many slots are free in a building right now. */
+    @Transactional(readOnly = true)
+    public BuildingAvailability getAvailability(Long id) {
+        ParkingBuilding b = building(id);
+        long available = slots.findByFloor_Building_IdAndStatus(id, SlotStatus.AVAILABLE).size();
+        return new BuildingAvailability(b.getId(), b.getName(), available);
     }
 
     @Transactional
