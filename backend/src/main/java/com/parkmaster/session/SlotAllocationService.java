@@ -35,29 +35,42 @@ public class SlotAllocationService {
         this.slots = slots;
     }
 
+    /** One slot's score split by criterion, so callers can show why it ranked where it did. */
+    public record ScoreBreakdown(ParkingSlot slot, double vehicleTypeMatch, double loadBalance,
+            double distanceToEntry, double peakHour) {
+        public double total() {
+            return vehicleTypeMatch + loadBalance + distanceToEntry + peakHour;
+        }
+    }
+
     @Transactional(readOnly = true)
     public ParkingSlot allocate(Long buildingId, Long vehicleTypeId) {
+        return rank(buildingId, vehicleTypeId).stream()
+                .max(Comparator.comparingDouble(ScoreBreakdown::total))
+                .map(ScoreBreakdown::slot)
+                .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "No available slots in building"));
+    }
+
+    /** Available slots scored and ordered best-first. Empty when the building is full. */
+    @Transactional(readOnly = true)
+    public List<ScoreBreakdown> rank(Long buildingId, Long vehicleTypeId) {
         List<ParkingSlot> available =
                 slots.findByFloor_Building_IdAndStatus(buildingId, SlotStatus.AVAILABLE);
-        if (available.isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "No available slots in building");
-        }
 
         Map<Long, Long> floorAvailableCount = available.stream()
                 .collect(Collectors.groupingBy(s -> s.getFloor().getId(), Collectors.counting()));
-
         Map<Long, Long> floorTotalCount = floorAvailableCount.keySet().stream()
                 .collect(Collectors.toMap(fId -> fId, slots::countByFloorId));
 
         boolean peak = PeakHours.isPeakNow();
 
         return available.stream()
-                .max(Comparator.comparingDouble(
-                        s -> score(s, vehicleTypeId, floorAvailableCount, floorTotalCount, peak)))
-                .orElseThrow();
+                .map(s -> score(s, vehicleTypeId, floorAvailableCount, floorTotalCount, peak))
+                .sorted(Comparator.comparingDouble(ScoreBreakdown::total).reversed())
+                .toList();
     }
 
-    private double score(ParkingSlot slot, Long vehicleTypeId,
+    private ScoreBreakdown score(ParkingSlot slot, Long vehicleTypeId,
             Map<Long, Long> floorAvailableCount, Map<Long, Long> floorTotalCount, boolean peak) {
         Floor floor = slot.getFloor();
         long total = floorTotalCount.getOrDefault(floor.getId(), 1L);
@@ -69,7 +82,7 @@ public class SlotAllocationService {
         double distScore = (double) WEIGHT_DISTANCE / floor.getLevel();
         double peakScore = peak ? availableRatio * WEIGHT_PEAK_HOUR : 0;
 
-        return vtScore + loadScore + distScore + peakScore;
+        return new ScoreBreakdown(slot, vtScore, loadScore, distScore, peakScore);
     }
 
     private double vehicleTypeScore(Floor floor, Long vehicleTypeId) {

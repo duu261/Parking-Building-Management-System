@@ -111,6 +111,29 @@ class SlotAllocationServiceTest {
     }
 
     @Test
+    void rankOrdersBestFirstWithBreakdownSummingToTotal() {
+        Floor bikeFloor = floor(1, bike);  // wrong type for a car request
+        Floor carFloor = floor(2, car);    // type match
+
+        ParkingSlot bikeSlot = slot(bikeFloor, "B1");
+        ParkingSlot carSlot = slot(carFloor, "C1");
+
+        when(slots.findByFloor_Building_IdAndStatus(1L, SlotStatus.AVAILABLE))
+                .thenReturn(List.of(bikeSlot, carSlot));
+        when(slots.countByFloorId(bikeFloor.getId())).thenReturn(2L);
+        when(slots.countByFloorId(carFloor.getId())).thenReturn(2L);
+
+        List<SlotAllocationService.ScoreBreakdown> ranked = service.rank(1L, car.getId());
+
+        assertThat(ranked).hasSize(2);
+        assertThat(ranked.get(0).slot()).isEqualTo(carSlot); // type match ranks first
+        assertThat(ranked.get(0).total()).isGreaterThan(ranked.get(1).total());
+        var top = ranked.get(0);
+        assertThat(top.vehicleTypeMatch() + top.loadBalance() + top.distanceToEntry()
+                + top.peakHour()).isEqualTo(top.total());
+    }
+
+    @Test
     void rejectsBikeSlotForCarRequest() {
         Floor bikeFloor = floor(1, bike);
         Floor carFloor = floor(2, car);

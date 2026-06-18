@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { SquareParking, ArrowRight, Building2, ScanLine, Smartphone } from "lucide-react";
 import { STATUS_COLOR } from "../../lib/status";
+import AllocationShowcase from "../../components/AllocationShowcase";
 
 const LEGEND = [
   ["AVAILABLE", "Open"],
@@ -112,7 +113,7 @@ export default function LandingPage() {
                 to="/signup"
                 className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition hover:opacity-90 active:translate-y-px"
               >
-                Get started <ArrowRight size={16} />
+                Let it park you <ArrowRight size={16} />
               </Link>
             </div>
 
@@ -135,6 +136,14 @@ export default function LandingPage() {
         <section className="border-t border-line bg-surface/40">
           <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">
             <Reveal>
+              <AllocationShowcase />
+            </Reveal>
+          </div>
+        </section>
+
+        <section className="border-t border-line">
+          <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">
+            <Reveal>
               <h2 className="max-w-2xl text-2xl font-semibold tracking-tight md:text-3xl">
                 Three people run a parking building. One system serves each of them.
               </h2>
@@ -154,24 +163,6 @@ export default function LandingPage() {
                 </Reveal>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="border-t border-line">
-          <div className="mx-auto w-full max-w-6xl px-6 py-16 text-center lg:py-20">
-            <Reveal>
-              <h2 className="mx-auto max-w-xl text-2xl font-semibold tracking-tight md:text-3xl">
-                Park smarter. Start in a minute.
-              </h2>
-              <div className="mt-7 flex justify-center">
-                <Link
-                  to="/signup"
-                  className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition hover:opacity-90 active:translate-y-px"
-                >
-                  Get started <ArrowRight size={16} />
-                </Link>
-              </div>
-            </Reveal>
           </div>
         </section>
       </main>

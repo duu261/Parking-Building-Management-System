@@ -98,4 +98,9 @@ export const publicApi = {
   buildings: () => apiRequest("/public/buildings", { auth: false }),
   availability: (id) => apiRequest(`/public/buildings/${id}/availability`, { auth: false }),
   pricing: () => apiRequest("/public/pricing", { auth: false }),
+  allocationPreview: (id, vehicleTypeId, limit = 6) =>
+    apiRequest(
+      `/public/buildings/${id}/allocation-preview?vehicleTypeId=${vehicleTypeId}&limit=${limit}`,
+      { auth: false },
+    ),
 };
