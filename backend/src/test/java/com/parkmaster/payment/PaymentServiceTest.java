@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.parkmaster.common.ApiException;
 import com.parkmaster.session.ParkingSession;
+import com.parkmaster.user.Role;
+import com.parkmaster.user.User;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
@@ -73,5 +75,31 @@ class PaymentServiceTest {
         Instant now = Instant.now();
         assertThatThrownBy(() -> service.revenue(now, now.minusSeconds(1)))
                 .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void payOwnByOwnerSettlesOnline() {
+        Payment payment = ownedPayment("driver@x.com");
+        when(payments.findById(1L)).thenReturn(Optional.of(payment));
+
+        PaymentDtos.PaymentResponse res = service.payOwn("driver@x.com", 1L);
+
+        assertThat(res.status()).isEqualTo(PaymentStatus.PAID);
+        assertThat(res.method()).isEqualTo(PaymentMethod.ONLINE);
+    }
+
+    @Test
+    void payOwnByNonOwnerNotFound() {
+        Payment payment = ownedPayment("driver@x.com");
+        when(payments.findById(1L)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() -> service.payOwn("intruder@x.com", 1L))
+                .isInstanceOf(ApiException.class);
+    }
+
+    private Payment ownedPayment(String ownerEmail) {
+        ParkingSession session = Mockito.mock(ParkingSession.class);
+        when(session.getUser()).thenReturn(new User(ownerEmail, "h", "D", Role.USER));
+        return new Payment(session, new BigDecimal("12.00"));
     }
 }

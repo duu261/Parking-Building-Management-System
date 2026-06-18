@@ -14,6 +14,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findByStatusOrderByCreatedAt(PaymentStatus status);
 
+    List<Payment> findBySession_User_EmailOrderByCreatedAtDesc(String email);
+
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p "
             + "WHERE p.status = com.parkmaster.payment.PaymentStatus.PAID "
             + "AND p.paidAt >= :from AND p.paidAt < :to")

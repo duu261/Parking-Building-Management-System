@@ -57,6 +57,30 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
+    public List<PaymentResponse> listForUser(String email) {
+        return payments.findBySession_User_EmailOrderByCreatedAtDesc(email).stream()
+                .map(PaymentResponse::from).toList();
+    }
+
+    /** Driver pays their own session online. Ownership enforced; non-owner gets 404. */
+    @Transactional
+    public PaymentResponse payOwn(String email, Long id) {
+        Payment payment = payments.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found"));
+        var owner = payment.getSession().getUser();
+        if (owner == null || !owner.getEmail().equals(email)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Payment not found");
+        }
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new ApiException(HttpStatus.CONFLICT, "Payment already settled");
+        }
+        payment.setMethod(PaymentMethod.ONLINE);
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(Instant.now());
+        return PaymentResponse.from(payment);
+    }
+
+    @Transactional(readOnly = true)
     public RevenueResponse revenue(Instant from, Instant to) {
         if (from.isAfter(to)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "from must be before to");
