@@ -55,6 +55,17 @@ public class ReservationService {
     }
 
     @Transactional
+    public int sweepExpired() {
+        java.util.List<Reservation> expired =
+                reservations.findByStatusAndHoldUntilBefore(ReservationStatus.PENDING, Instant.now());
+        for (Reservation reservation : expired) {
+            reservation.setStatus(ReservationStatus.EXPIRED);
+            reservation.getSlot().setStatus(SlotStatus.AVAILABLE);
+        }
+        return expired.size();
+    }
+
+    @Transactional
     public void cancel(String email, Long id) {
         Reservation reservation = reservations.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Reservation not found"));

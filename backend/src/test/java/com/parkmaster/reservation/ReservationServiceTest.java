@@ -132,4 +132,19 @@ class ReservationServiceTest {
         assertThatThrownBy(() -> service.cancel("driver@x.com", 1L))
                 .isInstanceOf(ApiException.class);
     }
+
+    @Test
+    void sweepExpiredReleasesSlotsAndMarksExpired() {
+        ParkingSlot slot = slot(SlotStatus.RESERVED);
+        Reservation r = pending(driver(), slot);
+        when(reservations.findByStatusAndHoldUntilBefore(
+                org.mockito.ArgumentMatchers.eq(ReservationStatus.PENDING),
+                any(Instant.class))).thenReturn(List.of(r));
+
+        int swept = service.sweepExpired();
+
+        assertThat(swept).isEqualTo(1);
+        assertThat(r.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+    }
 }
