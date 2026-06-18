@@ -8,13 +8,17 @@ import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import CheckInPage from "./pages/staff/CheckInPage";
 import ActiveSessionsPage from "./pages/staff/ActiveSessionsPage";
+import OverviewPage from "./pages/system/OverviewPage";
+import AnalyticsPage from "./pages/system/AnalyticsPage";
+import MyParkingPage from "./pages/user/MyParkingPage";
+import MySessionsPage from "./pages/user/MySessionsPage";
 import { getUser } from "./lib/session";
 
 // /app index: staff land on check-in; managers/admins on the overview.
 function AppHome() {
   const role = getUser()?.role;
   if (role === "STAFF") return <CheckInPage />;
-  return <Placeholder title="Overview" />;
+  return <OverviewPage />;
 }
 
 export default function App() {
@@ -33,14 +37,14 @@ export default function App() {
             <Route path="buildings" element={<Placeholder title="Buildings" />} />
             <Route path="pricing" element={<Placeholder title="Pricing" />} />
             <Route path="users" element={<Placeholder title="Users" />} />
-            <Route path="analytics" element={<Placeholder title="Analytics" />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
           </Route>
         </Route>
 
         <Route element={<ProtectedRoute allow={["USER"]} />}>
           <Route path="/me" element={<DriverLayout />}>
-            <Route index element={<Placeholder title="My parking" />} />
-            <Route path="sessions" element={<Placeholder title="My sessions" />} />
+            <Route index element={<MyParkingPage />} />
+            <Route path="sessions" element={<MySessionsPage />} />
           </Route>
         </Route>
 

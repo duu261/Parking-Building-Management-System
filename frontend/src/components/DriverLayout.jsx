@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { SquareParking, LogOut, Moon, Sun } from "lucide-react";
 import { getUser, clearSession } from "../lib/session";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
@@ -18,9 +18,30 @@ export default function DriverLayout() {
   return (
     <div className="min-h-[100dvh] bg-bg text-text">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface/80 px-6 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <SquareParking className="text-text" size={20} />
-          <span className="font-semibold">ParkMaster</span>
+        <div className="flex items-center gap-5">
+          <div className="flex items-center gap-2">
+            <SquareParking className="text-text" size={20} />
+            <span className="font-semibold">ParkMaster</span>
+          </div>
+          <nav className="flex items-center gap-1 text-sm">
+            {[
+              { to: "/me", label: "My parking", end: true },
+              { to: "/me/sessions", label: "Sessions" },
+            ].map((it) => (
+              <NavLink
+                key={it.to}
+                to={it.to}
+                end={it.end}
+                className={({ isActive }) =>
+                  `rounded-[var(--radius)] px-3 py-1.5 transition ${
+                    isActive ? "bg-elevated font-medium text-text" : "text-muted hover:bg-elevated hover:text-text"
+                  }`
+                }
+              >
+                {it.label}
+              </NavLink>
+            ))}
+          </nav>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden text-sm text-muted sm:inline">{user?.fullName}</span>
