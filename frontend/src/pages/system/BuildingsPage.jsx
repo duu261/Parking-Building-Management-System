@@ -202,7 +202,7 @@ function FloorsPanel({ building, types, onError }) {
                 </button>
                 <div className="ml-auto flex items-center gap-2">
                   <Select
-                    className="w-40 py-1.5 text-xs"
+                    className="w-32 py-1.5 text-xs sm:w-40"
                     value={f.vehicleTypeId ?? ""}
                     onChange={(e) => setType(f.id, e.target.value)}
                   >
@@ -292,11 +292,11 @@ function SlotsPanel({ floor, onError }) {
       ) : (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {slots.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 rounded-[var(--radius)] border border-line bg-surface px-3 py-2">
+            <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-[var(--radius)] border border-line bg-surface px-3 py-2">
               <span className="nums text-sm font-medium">{s.code}</span>
               <StatusBadge status={s.status} />
               <div className="ml-auto flex items-center gap-1">
-                <Select className="w-32 py-1 text-xs" value={s.status} onChange={(e) => setStatus(s.id, e.target.value)}>
+                <Select className="w-28 py-1 text-xs sm:w-32" value={s.status} onChange={(e) => setStatus(s.id, e.target.value)}>
                   {SLOT_STATUSES.map((st) => (
                     <option key={st} value={st}>
                       {st}

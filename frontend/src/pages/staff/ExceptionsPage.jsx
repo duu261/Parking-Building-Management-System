@@ -48,7 +48,7 @@ export default function ExceptionsPage() {
   if (list === null) return <Spinner label="Loading exceptions" />;
 
   return (
-    <div>
+    <div className="mx-auto max-w-3xl">
       <h1 className="text-xl font-semibold tracking-tight">Exceptions</h1>
       <p className="mt-1 text-sm text-muted">Log floor incidents and resolve open reports.</p>
 

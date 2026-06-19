@@ -78,7 +78,7 @@ export default function ActiveSessionsPage() {
       ) : (
         <Card className="mt-6 divide-y divide-line">
           {sessions.map((s) => (
-            <div key={s.id} className="flex items-center gap-4 px-5 py-3.5">
+            <div key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
                   <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>

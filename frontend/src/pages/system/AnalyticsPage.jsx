@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
             title="Auto vs manual allocation"
             hint="Does auto-allocation park drivers faster? (RQ2)"
           >
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <AllocStat
                 icon={Sparkles}
                 label="Auto-allocated"

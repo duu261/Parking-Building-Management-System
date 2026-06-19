@@ -22,7 +22,7 @@ export default function PaymentsPage() {
   if (list === null) return <Spinner label="Loading payments" />;
 
   return (
-    <div>
+    <div className="mx-auto max-w-3xl">
       <h1 className="text-xl font-semibold tracking-tight">Payments</h1>
       <p className="mt-1 text-sm text-muted">Pending charges. Settle cash at the booth or void with a reason.</p>
 

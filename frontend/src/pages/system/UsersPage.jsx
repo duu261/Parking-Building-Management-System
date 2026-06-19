@@ -98,7 +98,7 @@ export default function UsersPage() {
       ) : (
         <Card className="mt-6 divide-y divide-line">
           {users.map((u) => (
-            <div key={u.id} className="flex flex-wrap items-center gap-4 px-5 py-3.5">
+            <div key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
                   <span className="font-medium">{u.fullName}</span>
@@ -110,7 +110,7 @@ export default function UsersPage() {
                 </div>
                 <div className="mt-0.5 text-xs text-muted">{u.email}</div>
               </div>
-              <div className="w-36">
+              <div className="w-28 sm:w-36">
                 <Select
                   value={u.role}
                   disabled={busyId === u.id}
