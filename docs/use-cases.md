@@ -125,14 +125,17 @@ Formal use case descriptions derived from user flows. SWP391 format.
 | Main flow | 1. Staff opens Active Sessions page |
 | | 2. Staff finds session (by plate search or ticket scan) |
 | | 3. Staff clicks "Check out" |
-| | 4. System calculates charge: hourly rate × duration |
-| | 5. Grace period applied (no charge if under threshold) |
-| | 6. Daily cap applied (charge capped at maximum) |
-| | 7. Payment record created (status PENDING) |
-| | 8. Session status → COMPLETED |
-| | 9. Slot status → AVAILABLE |
-| Postcondition | Session ended, payment pending, slot freed |
+| | 4. System checks for active Monthly Pass (plate + vehicle type + today's date) |
+| | 5a. **Pass active →** charge = 0, session → COMPLETED, slot → AVAILABLE (free exit) |
+| | 5b. **No pass →** System calculates charge: hourly rate × duration (peak surcharge if peak-hour check-in) |
+| | 6. Grace period applied (no charge if under threshold) |
+| | 7. Daily cap applied (charge capped at maximum) |
+| | 8. Payment record created |
+| | 9a. **Charge = 0 →** session → COMPLETED, slot → AVAILABLE |
+| | 9b. **Charge > 0 →** session → AWAITING_PAYMENT, slot stays OCCUPIED until payment settled (see UC-07) |
+| Postcondition | Free exit: session completed, slot freed. Paid exit: slot held until payment settled |
 | Alt flow | A1: Ticket scan → `GET /by-ticket/{code}` → resolves session → check out |
+| | A2: Lost ticket → staff searches by plate, verifies vehicle, checks out normally; link exception via UC-09 |
 
 ---
 
@@ -141,14 +144,15 @@ Formal use case descriptions derived from user flows. SWP391 format.
 | Field | Value |
 |---|---|
 | Actor | Staff |
-| Precondition | Pending payment exists |
+| Precondition | Payment exists with status PENDING; session is AWAITING_PAYMENT; slot is still OCCUPIED |
 | Trigger | Driver at gate ready to pay |
 | Main flow | 1. Staff opens Payments page |
 | | 2. Staff sees pending payments list |
 | | 3. Staff selects payment, chooses method (CASH / CARD / ONLINE) |
 | | 4. System marks payment SETTLED |
-| Postcondition | Payment completed |
-| Alt flow | A1: Staff voids payment (with reason) → status VOIDED |
+| | 5. System sets session → COMPLETED, slot → AVAILABLE |
+| Postcondition | Payment completed, session closed, slot freed |
+| Alt flow | A1: Staff voids payment (with reason) → status VOIDED, session COMPLETED, slot freed |
 
 ---
 
@@ -180,6 +184,7 @@ Formal use case descriptions derived from user flows. SWP391 format.
 | | 4. Staff optionally links session ID |
 | | 5. System creates exception report (status OPEN) |
 | Postcondition | Exception logged, visible in open list |
+| Alt flow | A1: LOST_TICKET → staff searches active sessions by plate in UC-06 (Alt A2), checks out vehicle, then logs exception here for audit trail |
 
 ---
 
