@@ -1,6 +1,7 @@
 package com.parkmaster.payment;
 
 import com.parkmaster.session.ParkingSession;
+import com.parkmaster.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -35,8 +37,18 @@ public class Payment {
     @JoinColumn(name = "session_id", nullable = false, unique = true)
     private ParkingSession session;
 
+    /** Total charged = base parking fee + penalty. */
     @Column(nullable = false)
     private BigDecimal amount;
+
+    /** Penalty component of the total (lost ticket, overtime, etc.); 0 if none. */
+    @Column(name = "penalty_amount", nullable = false)
+    private BigDecimal penaltyAmount = BigDecimal.ZERO;
+
+    /** Staff member who settled or voided this at the booth; null for online pay. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "processed_by_staff_id")
+    private User processedByStaff;
 
     @Enumerated(EnumType.STRING)
     @Column

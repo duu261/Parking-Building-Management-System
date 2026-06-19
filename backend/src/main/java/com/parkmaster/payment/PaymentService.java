@@ -6,6 +6,8 @@ import com.parkmaster.payment.PaymentDtos.PaymentResponse;
 import com.parkmaster.payment.PaymentDtos.RevenueResponse;
 import com.parkmaster.session.ParkingSession;
 import com.parkmaster.session.SessionStatus;
+import com.parkmaster.user.User;
+import com.parkmaster.user.UserRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -17,9 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentService {
 
     private final PaymentRepository payments;
+    private final UserRepository users;
 
-    public PaymentService(PaymentRepository payments) {
+    public PaymentService(PaymentRepository payments, UserRepository users) {
         this.payments = payments;
+        this.users = users;
     }
 
     /** Called at check-out. Zero-charge exits are auto-settled; otherwise PENDING. */
@@ -34,7 +38,7 @@ public class PaymentService {
     }
 
     @Transactional
-    public PaymentResponse settle(Long id, PaymentMethod method) {
+    public PaymentResponse settle(Long id, PaymentMethod method, String staffEmail) {
         Payment payment = payments.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found"));
         if (payment.getStatus() == PaymentStatus.PAID) {
@@ -43,13 +47,14 @@ public class PaymentService {
         payment.setMethod(method);
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaidAt(Instant.now());
+        payment.setProcessedByStaff(staff(staffEmail));
         completeCheckedOutSession(payment);
         return PaymentResponse.from(payment);
     }
 
     /** Staff voids a charge: cancels a PENDING one or refunds a PAID one. Reason required. */
     @Transactional
-    public PaymentResponse voidPayment(Long id, String reason) {
+    public PaymentResponse voidPayment(Long id, String reason, String staffEmail) {
         Payment payment = payments.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found"));
         if (payment.getStatus() == PaymentStatus.VOIDED) {
@@ -58,9 +63,18 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.VOIDED);
         payment.setVoidedAt(Instant.now());
         payment.setVoidReason(reason);
+        payment.setProcessedByStaff(staff(staffEmail));
         // Charge waived: the car still leaves, so release its slot too.
         completeCheckedOutSession(payment);
         return PaymentResponse.from(payment);
+    }
+
+    /** Resolve the acting staff member; null email (e.g. system) leaves it unset. */
+    private User staff(String email) {
+        if (email == null) {
+            return null;
+        }
+        return users.findByEmail(email).orElse(null);
     }
 
     /**

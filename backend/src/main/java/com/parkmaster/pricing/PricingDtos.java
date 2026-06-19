@@ -28,11 +28,12 @@ public final class PricingDtos {
             @NotNull @DecimalMin("1.0") BigDecimal peakMultiplier) {}
 
     public record PricingPolicyResponse(Long id, Long vehicleTypeId, String vehicleTypeName,
-            BigDecimal ratePerHour, BigDecimal dailyCap, int graceMinutes, BigDecimal peakMultiplier) {
+            BigDecimal ratePerHour, BigDecimal dailyCap, int graceMinutes, BigDecimal peakMultiplier,
+            boolean active) {
         static PricingPolicyResponse from(PricingPolicy p) {
             return new PricingPolicyResponse(p.getId(), p.getVehicleType().getId(),
                     p.getVehicleType().getName(), p.getRatePerHour(), p.getDailyCap(),
-                    p.getGraceMinutes(), p.getPeakMultiplier());
+                    p.getGraceMinutes(), p.getPeakMultiplier(), p.isActive());
         }
     }
 }

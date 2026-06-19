@@ -5,6 +5,7 @@ import com.parkmaster.payment.PaymentDtos.SettleRequest;
 import com.parkmaster.payment.PaymentDtos.VoidRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,12 +34,14 @@ class StaffPaymentController {
     }
 
     @PostMapping("/{id}/settle")
-    PaymentResponse settle(@PathVariable Long id, @Valid @RequestBody SettleRequest req) {
-        return service.settle(id, req.method());
+    PaymentResponse settle(@PathVariable Long id, @Valid @RequestBody SettleRequest req,
+            Authentication auth) {
+        return service.settle(id, req.method(), auth.getName());
     }
 
     @PostMapping("/{id}/void")
-    PaymentResponse voidPayment(@PathVariable Long id, @Valid @RequestBody VoidRequest req) {
-        return service.voidPayment(id, req.reason());
+    PaymentResponse voidPayment(@PathVariable Long id, @Valid @RequestBody VoidRequest req,
+            Authentication auth) {
+        return service.voidPayment(id, req.reason(), auth.getName());
     }
 }

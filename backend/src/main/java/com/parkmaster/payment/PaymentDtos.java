@@ -13,13 +13,14 @@ public final class PaymentDtos {
 
     public record VoidRequest(@NotBlank String reason) {}
 
-    public record PaymentResponse(Long id, Long sessionId, BigDecimal amount, PaymentMethod method,
-            PaymentStatus status, Instant createdAt, Instant paidAt, Instant voidedAt,
-            String voidReason) {
+    public record PaymentResponse(Long id, Long sessionId, BigDecimal amount,
+            BigDecimal penaltyAmount, PaymentMethod method, PaymentStatus status, Instant createdAt,
+            Instant paidAt, Instant voidedAt, String voidReason, String processedByStaff) {
         static PaymentResponse from(Payment p) {
             return new PaymentResponse(p.getId(), p.getSession().getId(), p.getAmount(),
-                    p.getMethod(), p.getStatus(), p.getCreatedAt(), p.getPaidAt(),
-                    p.getVoidedAt(), p.getVoidReason());
+                    p.getPenaltyAmount(), p.getMethod(), p.getStatus(), p.getCreatedAt(),
+                    p.getPaidAt(), p.getVoidedAt(), p.getVoidReason(),
+                    p.getProcessedByStaff() == null ? null : p.getProcessedByStaff().getFullName());
         }
     }
 

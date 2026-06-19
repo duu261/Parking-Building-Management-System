@@ -25,14 +25,18 @@ import org.mockito.Mockito;
 /** Unit test for PaymentService — repository mocked, no Spring context. */
 class PaymentServiceTest {
 
+    private static final String STAFF = "staff@x.com";
+
     private PaymentRepository payments;
+    private com.parkmaster.user.UserRepository users;
     private PaymentService service;
 
     @BeforeEach
     void setUp() {
         payments = Mockito.mock(PaymentRepository.class);
+        users = Mockito.mock(com.parkmaster.user.UserRepository.class);
         when(payments.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
-        service = new PaymentService(payments);
+        service = new PaymentService(payments, users);
     }
 
     @Test
@@ -54,7 +58,7 @@ class PaymentServiceTest {
     void settleMarksPaidWithMethod() {
         Payment pending = new Payment(Mockito.mock(ParkingSession.class), new BigDecimal("12.00"));
         when(payments.findById(1L)).thenReturn(Optional.of(pending));
-        var resp = service.settle(1L, PaymentMethod.CASH);
+        var resp = service.settle(1L, PaymentMethod.CASH, STAFF);
         assertThat(resp.status()).isEqualTo(PaymentStatus.PAID);
         assertThat(resp.method()).isEqualTo(PaymentMethod.CASH);
         assertThat(pending.getPaidAt()).isNotNull();
@@ -65,14 +69,14 @@ class PaymentServiceTest {
         Payment paid = new Payment(Mockito.mock(ParkingSession.class), new BigDecimal("12.00"));
         paid.setStatus(PaymentStatus.PAID);
         when(payments.findById(1L)).thenReturn(Optional.of(paid));
-        assertThatThrownBy(() -> service.settle(1L, PaymentMethod.CASH))
+        assertThatThrownBy(() -> service.settle(1L, PaymentMethod.CASH, STAFF))
                 .isInstanceOf(ApiException.class);
     }
 
     @Test
     void settleMissingPaymentThrows() {
         when(payments.findById(99L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.settle(99L, PaymentMethod.CASH))
+        assertThatThrownBy(() -> service.settle(99L, PaymentMethod.CASH, STAFF))
                 .isInstanceOf(ApiException.class);
     }
 
@@ -108,7 +112,7 @@ class PaymentServiceTest {
         Payment pending = new Payment(Mockito.mock(ParkingSession.class), new BigDecimal("12.00"));
         when(payments.findById(1L)).thenReturn(Optional.of(pending));
 
-        var res = service.voidPayment(1L, "wrong plate");
+        var res = service.voidPayment(1L, "wrong plate", STAFF);
 
         assertThat(res.status()).isEqualTo(PaymentStatus.VOIDED);
         assertThat(res.voidReason()).isEqualTo("wrong plate");
@@ -121,7 +125,7 @@ class PaymentServiceTest {
         paid.setStatus(PaymentStatus.PAID);
         when(payments.findById(1L)).thenReturn(Optional.of(paid));
 
-        var res = service.voidPayment(1L, "lost ticket overcharge");
+        var res = service.voidPayment(1L, "lost ticket overcharge", STAFF);
 
         assertThat(res.status()).isEqualTo(PaymentStatus.VOIDED);
     }
@@ -132,7 +136,7 @@ class PaymentServiceTest {
         voided.setStatus(PaymentStatus.VOIDED);
         when(payments.findById(1L)).thenReturn(Optional.of(voided));
 
-        assertThatThrownBy(() -> service.voidPayment(1L, "again"))
+        assertThatThrownBy(() -> service.voidPayment(1L, "again", STAFF))
                 .isInstanceOf(ApiException.class);
     }
 
@@ -142,7 +146,7 @@ class PaymentServiceTest {
         Payment pending = awaitingPayment(slot);
         when(payments.findById(1L)).thenReturn(Optional.of(pending));
 
-        service.settle(1L, PaymentMethod.CASH);
+        service.settle(1L, PaymentMethod.CASH, STAFF);
 
         assertThat(pending.getSession().getStatus()).isEqualTo(SessionStatus.COMPLETED);
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
@@ -154,10 +158,22 @@ class PaymentServiceTest {
         Payment pending = awaitingPayment(slot);
         when(payments.findById(1L)).thenReturn(Optional.of(pending));
 
-        service.voidPayment(1L, "waived");
+        service.voidPayment(1L, "waived", STAFF);
 
         assertThat(pending.getSession().getStatus()).isEqualTo(SessionStatus.COMPLETED);
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+    }
+
+    @Test
+    void settleRecordsProcessingStaff() {
+        Payment pending = new Payment(Mockito.mock(ParkingSession.class), new BigDecimal("12.00"));
+        when(payments.findById(1L)).thenReturn(Optional.of(pending));
+        when(users.findByEmail(STAFF))
+                .thenReturn(Optional.of(new User(STAFF, "h", "Sam Staff", Role.STAFF)));
+
+        var resp = service.settle(1L, PaymentMethod.CASH, STAFF);
+
+        assertThat(resp.processedByStaff()).isEqualTo("Sam Staff");
     }
 
     private ParkingSlot occupiedSlot() {
