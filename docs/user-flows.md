@@ -94,8 +94,9 @@ Step-by-step flows per role. Use as hand-testing script and presentation referen
 2. See list of all active sessions (`GET /api/staff/sessions/active`)
 3. Find session by plate or scan ticket
 4. Click "Check out" → `POST /api/staff/sessions/{id}/check-out`
-5. Session ends, charge calculated, payment record created
-6. Slot status flips back to AVAILABLE
+5. Charge calculated; if active monthly pass → zero charge, session completes immediately, slot freed
+6. Otherwise: session → AWAITING_PAYMENT, slot stays OCCUPIED, payment record created (PENDING)
+7. Staff settles payment → session → COMPLETED, slot → AVAILABLE
 
 ### SF-4: Look up by ticket code
 1. Scan ticket QR or enter ticket code
@@ -160,12 +161,19 @@ Step-by-step flows per role. Use as hand-testing script and presentation referen
 4. View all pricing policies → `GET /api/manager/pricing`
 5. Delete vehicle type → `DELETE /api/manager/vehicle-types/{id}`
 
-### MF-5: View analytics dashboard
+### MF-5: Manage monthly passes
+1. Open Passes page (`/passes`)
+2. Issue pass: license plate, vehicle type, start date, end date → `POST /api/manager/passes`
+3. View all passes → `GET /api/manager/passes` (filter by status)
+4. View single pass → `GET /api/manager/passes/{id}`
+5. Revoke pass → `DELETE /api/manager/passes/{id}`
+
+### MF-6: View analytics dashboard
 1. Open Overview page (`/overview`)
 2. See summary cards: total buildings, slots, active sessions, revenue
 3. See floor fill-rate analytics (`GET /api/manager/buildings/{id}/analytics/allocation`)
 
-### MF-6: View reports
+### MF-7: View reports
 1. Open Analytics page (`/analytics`)
 2. Select date range
 3. View charts:
@@ -210,10 +218,11 @@ Step-by-step flows per role. Use as hand-testing script and presentation referen
 6. **Driver** parks, time passes
 7. **Driver** ready to leave
 8. **Staff** scans ticket or finds session, checks out
-9. Charge calculated (hourly rate × duration, grace period, daily cap)
-10. Payment created as PENDING
-11. **Staff** settles at gate (cash/card) OR **driver** pays online
-12. Session complete, slot freed
+9. Charge calculated (hourly rate x duration, grace period, daily cap)
+10. If **driver** has active monthly pass → zero charge, session completes immediately, slot freed
+11. Otherwise: session → AWAITING_PAYMENT, slot stays OCCUPIED, payment created as PENDING
+12. **Staff** settles at gate (cash/card) OR **driver** pays online
+13. Payment settled → session complete, slot freed
 
 ### XF-2: Exception handling
 1. **Driver** loses ticket

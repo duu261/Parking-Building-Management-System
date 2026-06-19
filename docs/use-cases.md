@@ -307,6 +307,24 @@ Formal use case descriptions derived from user flows. SWP391 format.
 
 ---
 
+## UC-17: Manage Monthly Passes
+
+| Field | Value |
+|---|---|
+| Actor | Manager |
+| Precondition | Manager is logged in, vehicle types exist |
+| Trigger | Manager wants to issue or manage monthly parking passes |
+| Main flow | 1. Manager opens Passes page |
+| | 2. Manager issues pass: license plate, vehicle type, start date, end date |
+| | 3. System validates no overlapping pass for same plate + vehicle type |
+| | 4. Pass created with status ACTIVE |
+| | 5. Manager can view all passes (filter by status) |
+| Postcondition | Monthly pass active; vehicle exits free during pass validity |
+| Alt flow | A1: Revoke pass → status changed, free exit no longer applies |
+| Exception | E1: Overlapping dates for same plate + vehicle type → error |
+
+---
+
 ## Use Case Diagram (text representation)
 
 ```
@@ -355,6 +373,9 @@ Guest ───┘     All roles              │           │
  │  ├─────────┤      │                            │
  │  │ UC-13   │      │                            │
  │  │Reports  │      │                            │
+ │  ├─────────┤      │                            │
+ │  │ UC-17   │      │                            │
+ │  │Passes   │      │                            │
  │  └─────────┘      │                            │
  │                    │                            │
  │  ┌─────────┐      │                            │

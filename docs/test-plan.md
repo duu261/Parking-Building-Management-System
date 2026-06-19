@@ -103,6 +103,10 @@ Test against user flows (see [user-flows.md](user-flows.md)). Use dev seed data 
 | M-08 | Overview dashboard | `/overview` | Summary cards with counts |
 | M-09 | Analytics charts | `/analytics` → select date range | Charts render with data |
 | M-10 | Duplicate floor level | Same level in same building | Error "Floor level already exists" |
+| M-11 | Issue monthly pass | `/passes` → plate + type + dates → create | Pass in list, status ACTIVE |
+| M-12 | Overlapping pass rejected | Same plate + type + overlapping dates | Error "Overlapping active pass" |
+| M-13 | Revoke pass | Click revoke on active pass | Pass removed, free exit no longer applies |
+| M-14 | Free exit with pass | Check out vehicle with active pass | Zero charge, session completes immediately |
 
 ### 3.6 Admin
 
@@ -120,6 +124,8 @@ Test against user flows (see [user-flows.md](user-flows.md)). Use dev seed data 
 | E-01 | Full parking lifecycle | Manager creates infra → Driver reserves → Staff checks in → time passes → Staff checks out → Staff settles payment | All statuses correct at each step |
 | E-02 | Exception flow | Driver loses ticket → Staff reports LOST_TICKET → Staff resolves → manual check-out | Exception resolved, session completed |
 | E-03 | AI vs Manual comparison | Check in 5 auto, 5 manual → view allocation comparison report | Chart shows both methods with counts |
+| E-04 | Monthly pass lifecycle | Manager issues pass → Staff checks in vehicle → Staff checks out → verify zero charge | Free exit, no payment record |
+| E-05 | Two-phase checkout | Staff checks out (no pass) → session AWAITING_PAYMENT → Staff settles → session COMPLETED, slot AVAILABLE | Status transitions correct |
 
 ---
 

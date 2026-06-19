@@ -146,8 +146,10 @@ ParkMaster is a standalone web application with:
 | FR-5.2 | Charge calculated: hourly rate x duration | Must |
 | FR-5.3 | Grace period: no charge if duration under grace minutes | Must |
 | FR-5.4 | Daily cap: charge capped at maximum per day | Must |
-| FR-5.5 | Session status → COMPLETED, slot status → AVAILABLE | Must |
+| FR-5.5 | Session status → AWAITING_PAYMENT, slot stays OCCUPIED until payment settled | Must |
 | FR-5.6 | Payment record created automatically (status PENDING) | Must |
+| FR-5.7 | Payment settlement completes session (→ COMPLETED) and releases slot (→ AVAILABLE) | Must |
+| FR-5.8 | Active monthly pass → zero charge, session completes immediately (free exit) | Should |
 
 ### 3.6 Reservation (F6)
 
@@ -201,15 +203,26 @@ ParkMaster is a standalone web application with:
 | FR-10.3 | Admin can change user role | Must |
 | FR-10.4 | Admin can deactivate/reactivate user | Must |
 
-### 3.11 Public View (F11, F12)
+### 3.11 Monthly Pass (F11)
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-11.1 | Guest can view building list and slot availability without auth | Must |
-| FR-11.2 | Guest can view pricing per vehicle type without auth | Must |
-| FR-11.3 | Landing page shows live slot map preview | Should |
-| FR-11.4 | Landing page shows AI allocation score breakdown (research demo) | Must |
-| FR-11.5 | Allocation preview shows per-criterion scores: vehicle type match, load balance, distance, peak hour | Must |
+| FR-11.1 | Manager can issue monthly pass: license plate, vehicle type, start/end date | Should |
+| FR-11.2 | System prevents overlapping passes for same plate + vehicle type | Must |
+| FR-11.3 | Manager can view all passes, filter by status | Should |
+| FR-11.4 | Manager can revoke active pass | Should |
+| FR-11.5 | Expired passes detected by date comparison (Asia/Ho_Chi_Minh timezone) | Must |
+| FR-11.6 | Active pass zeroes check-out charge via free-exit path | Should |
+
+### 3.12 Public View (F12, F13)
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-12.1 | Guest can view building list and slot availability without auth | Must |
+| FR-12.2 | Guest can view pricing per vehicle type without auth | Must |
+| FR-12.3 | Landing page shows live slot map preview | Should |
+| FR-12.4 | Landing page shows AI allocation score breakdown (research demo) | Must |
+| FR-12.5 | Allocation preview shows per-criterion scores: vehicle type match, load balance, distance, peak hour | Must |
 
 ---
 
@@ -306,9 +319,9 @@ score = vehicleTypeMatch(40) + loadBalance(30) + distanceToEntry(20) + peakHour(
 
 See [ERD](erd.md) for full entity-relationship diagram.
 
-**10 entities:** User, VehicleType, PricingPolicy, ParkingBuilding, Floor, ParkingSlot, ParkingSession, Reservation, Payment, ExceptionReport.
+**11 entities:** User, VehicleType, PricingPolicy, ParkingBuilding, Floor, ParkingSlot, ParkingSession, Reservation, Payment, ExceptionReport, MonthlyPass.
 
-**8 enums:** Role, SlotStatus, SessionStatus, ReservationStatus, PaymentStatus, PaymentMethod, ExceptionType, ExceptionStatus.
+**9 enums:** Role, SlotStatus, SessionStatus, ReservationStatus, PaymentStatus, PaymentMethod, ExceptionType, ExceptionStatus, PassStatus.
 
 ---
 
@@ -381,3 +394,4 @@ All free-tier. Frontend sets `VITE_API_URL` to Render backend URL.
 | AC-8 | Analytics charts render with real data | Manual test |
 | AC-9 | AI allocation score breakdown visible on landing page | Manual test |
 | AC-10 | Application deploys and runs on free-tier infrastructure | Deploy test |
+| AC-11 | Monthly pass holders exit free; pass issuance prevents overlaps | Unit test + manual |
