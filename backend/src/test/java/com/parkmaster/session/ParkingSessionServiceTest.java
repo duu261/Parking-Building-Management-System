@@ -130,7 +130,8 @@ class ParkingSessionServiceTest {
     }
 
     @Test
-    void checkOutChargesAndFreesSlot() {
+    void checkOutFreeExitCompletesAndFreesSlot() {
+        // check-in == now within grace, so charge is zero: nothing to settle.
         VehicleType car = new VehicleType("Car", null);
         ParkingSlot slot = slot(SlotStatus.OCCUPIED);
         ParkingSession session = new ParkingSession(slot, car, "51A-123", false);
@@ -140,8 +141,27 @@ class ParkingSessionServiceTest {
         var resp = service.checkOut(1L);
         assertThat(resp.status()).isEqualTo(SessionStatus.COMPLETED);
         assertThat(resp.checkOutAt()).isNotNull();
-        assertThat(resp.amountCharged()).isNotNull();
+        assertThat(resp.amountCharged()).isEqualByComparingTo("0.00");
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+        verify(payments).createForSession(session, session.getAmountCharged());
+    }
+
+    @Test
+    void checkOutWithChargeAwaitsPaymentAndKeepsSlotOccupied() {
+        VehicleType car = new VehicleType("Car", null);
+        ParkingSlot slot = slot(SlotStatus.OCCUPIED);
+        ParkingSession session = new ParkingSession(slot, car, "51A-123", false);
+        session.setCheckInAt(java.time.Instant.now().minusSeconds(2 * 3600));
+        when(sessions.findById(1L)).thenReturn(Optional.of(session));
+        when(policies.findByVehicleTypeId(any()))
+                .thenReturn(Optional.of(new PricingPolicy(car, new BigDecimal("3.00"), null, 0)));
+
+        var resp = service.checkOut(1L);
+
+        assertThat(resp.status()).isEqualTo(SessionStatus.AWAITING_PAYMENT);
+        assertThat(resp.amountCharged()).isEqualByComparingTo("6.00");
+        // Slot must NOT be freed while the charge is unpaid (car still present).
+        assertThat(slot.getStatus()).isEqualTo(SlotStatus.OCCUPIED);
         verify(payments).createForSession(session, session.getAmountCharged());
     }
 

@@ -6,7 +6,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.parkmaster.common.ApiException;
+import com.parkmaster.parking.Floor;
+import com.parkmaster.parking.ParkingBuilding;
+import com.parkmaster.parking.ParkingSlot;
+import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.session.ParkingSession;
+import com.parkmaster.session.SessionStatus;
 import com.parkmaster.user.Role;
 import com.parkmaster.user.User;
 import java.math.BigDecimal;
@@ -128,6 +134,43 @@ class PaymentServiceTest {
 
         assertThatThrownBy(() -> service.voidPayment(1L, "again"))
                 .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void settleReleasesSlotOfAwaitingSession() {
+        ParkingSlot slot = occupiedSlot();
+        Payment pending = awaitingPayment(slot);
+        when(payments.findById(1L)).thenReturn(Optional.of(pending));
+
+        service.settle(1L, PaymentMethod.CASH);
+
+        assertThat(pending.getSession().getStatus()).isEqualTo(SessionStatus.COMPLETED);
+        assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+    }
+
+    @Test
+    void voidReleasesSlotOfAwaitingSession() {
+        ParkingSlot slot = occupiedSlot();
+        Payment pending = awaitingPayment(slot);
+        when(payments.findById(1L)).thenReturn(Optional.of(pending));
+
+        service.voidPayment(1L, "waived");
+
+        assertThat(pending.getSession().getStatus()).isEqualTo(SessionStatus.COMPLETED);
+        assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+    }
+
+    private ParkingSlot occupiedSlot() {
+        ParkingSlot slot = new ParkingSlot(new Floor(new ParkingBuilding("B", null), 1, "P1"), "A1");
+        slot.setStatus(SlotStatus.OCCUPIED);
+        return slot;
+    }
+
+    private Payment awaitingPayment(ParkingSlot slot) {
+        ParkingSession session =
+                new ParkingSession(slot, new VehicleType("Car", null), "51A-123", false);
+        session.setStatus(SessionStatus.AWAITING_PAYMENT);
+        return new Payment(session, new BigDecimal("12.00"));
     }
 
     private Payment ownedPayment(String ownerEmail) {

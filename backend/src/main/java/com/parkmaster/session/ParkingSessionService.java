@@ -103,11 +103,19 @@ public class ParkingSessionService {
         // Peak surcharge keyed to check-in time (encourages off-peak entry), not check-out.
         BigDecimal multiplier = PeakHours.isPeak(session.getCheckInAt())
                 ? policy.getPeakMultiplier() : BigDecimal.ONE;
-        session.setAmountCharged(ChargeCalculator.charge(session.getCheckInAt(), checkOut,
-                policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier));
-        session.setStatus(SessionStatus.COMPLETED);
-        session.getSlot().setStatus(SlotStatus.AVAILABLE);
-        payments.createForSession(session, session.getAmountCharged());
+        BigDecimal amount = ChargeCalculator.charge(session.getCheckInAt(), checkOut,
+                policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier);
+        session.setAmountCharged(amount);
+        payments.createForSession(session, amount);
+        if (amount.signum() == 0) {
+            // Free exit: nothing to settle, so complete and release the slot now.
+            session.setStatus(SessionStatus.COMPLETED);
+            session.getSlot().setStatus(SlotStatus.AVAILABLE);
+        } else {
+            // Slot stays OCCUPIED until the payment is settled (or voided); the
+            // payment side completes the session and frees the slot then.
+            session.setStatus(SessionStatus.AWAITING_PAYMENT);
+        }
         return SessionResponse.from(session);
     }
 

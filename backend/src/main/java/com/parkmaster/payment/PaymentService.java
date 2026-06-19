@@ -1,9 +1,11 @@
 package com.parkmaster.payment;
 
 import com.parkmaster.common.ApiException;
+import com.parkmaster.parking.SlotStatus;
 import com.parkmaster.payment.PaymentDtos.PaymentResponse;
 import com.parkmaster.payment.PaymentDtos.RevenueResponse;
 import com.parkmaster.session.ParkingSession;
+import com.parkmaster.session.SessionStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -41,6 +43,7 @@ public class PaymentService {
         payment.setMethod(method);
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaidAt(Instant.now());
+        completeCheckedOutSession(payment);
         return PaymentResponse.from(payment);
     }
 
@@ -55,7 +58,22 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.VOIDED);
         payment.setVoidedAt(Instant.now());
         payment.setVoidReason(reason);
+        // Charge waived: the car still leaves, so release its slot too.
+        completeCheckedOutSession(payment);
         return PaymentResponse.from(payment);
+    }
+
+    /**
+     * Once a checked-out session's charge is resolved (settled, paid, or voided),
+     * complete the session and free its slot. No-op for sessions in any other
+     * state, so refunding an already-completed session leaves its slot untouched.
+     */
+    private void completeCheckedOutSession(Payment payment) {
+        ParkingSession session = payment.getSession();
+        if (session != null && session.getStatus() == SessionStatus.AWAITING_PAYMENT) {
+            session.setStatus(SessionStatus.COMPLETED);
+            session.getSlot().setStatus(SlotStatus.AVAILABLE);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -91,6 +109,7 @@ public class PaymentService {
         payment.setMethod(PaymentMethod.ONLINE);
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaidAt(Instant.now());
+        completeCheckedOutSession(payment);
         return PaymentResponse.from(payment);
     }
 
