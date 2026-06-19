@@ -144,7 +144,7 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 
 | Method | Path | Params | Response | Description |
 |---|---|---|---|---|
-| GET | `/manager/payments/revenue` | `from`, `to` (ISO) | `{ total }` | Total revenue in range |
+| GET | `/manager/payments/revenue` | `from`, `to` (ISO) | `RevenueResponse` | Total revenue in range |
 | GET | `/manager/reports/revenue-daily` | `from`, `to` | `{ points: [{ date, amount }] }` | Daily revenue trend |
 | GET | `/manager/reports/revenue-by-vehicle-type` | `from`, `to` | `{ points: [{ vehicleType, amount }] }` | Revenue by type |
 | GET | `/manager/reports/check-ins-by-hour` | `from`, `to` | `{ points: [{ hour, count }] }` | Check-ins by hour |
@@ -185,10 +185,9 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 ```json
 {
   "id": 1,
-  "licensePlate": "51A-12345",
   "slotId": 42,
-  "slotCode": "A1-03",
-  "vehicleTypeName": "Car",
+  "vehicleTypeId": 2,
+  "licensePlate": "51A-12345",
   "ticketCode": "uuid-string",
   "checkInAt": "2026-06-19T10:00:00Z",
   "checkOutAt": null,
@@ -204,10 +203,14 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
   "id": 1,
   "sessionId": 1,
   "amount": 25000,
+  "penaltyAmount": 0,
   "method": "CASH",
   "status": "SETTLED",
   "createdAt": "2026-06-19T12:00:00Z",
-  "paidAt": "2026-06-19T12:05:00Z"
+  "paidAt": "2026-06-19T12:05:00Z",
+  "voidedAt": null,
+  "voidReason": null,
+  "processedByStaff": "Staff Name"
 }
 ```
 
@@ -215,9 +218,11 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 ```json
 {
   "id": 1,
-  "licensePlate": "51A-12345",
-  "slotCode": "B2-07",
   "status": "PENDING",
+  "licensePlate": "51A-12345",
+  "vehicleTypeId": 2,
+  "slotId": 42,
+  "slotCode": "B2-07",
   "holdUntil": "2026-06-19T10:30:00Z",
   "createdAt": "2026-06-19T10:00:00Z"
 }
@@ -239,6 +244,31 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 }
 ```
 
+### ExceptionResponse
+```json
+{
+  "id": 1,
+  "type": "LOST_TICKET",
+  "status": "OPEN",
+  "description": "Driver lost parking ticket",
+  "sessionId": 5,
+  "reportedBy": "staff@example.com",
+  "resolutionNote": null,
+  "createdAt": "2026-06-19T10:00:00Z",
+  "resolvedAt": null
+}
+```
+
+### RevenueResponse
+```json
+{
+  "from": "2026-06-01T00:00:00Z",
+  "to": "2026-06-30T23:59:59Z",
+  "totalPaid": 1250000,
+  "count": 87
+}
+```
+
 ---
 
 ## Enum Values
@@ -247,7 +277,7 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 |---|---|
 | Role | `ADMIN`, `MANAGER`, `STAFF`, `USER` |
 | SlotStatus | `AVAILABLE`, `OCCUPIED`, `RESERVED`, `MAINTENANCE`, `LOCKED` |
-| SessionStatus | `ACTIVE`, `COMPLETED` |
+| SessionStatus | `ACTIVE`, `AWAITING_PAYMENT`, `COMPLETED` |
 | ReservationStatus | `PENDING`, `FULFILLED`, `CANCELLED`, `EXPIRED` |
 | PaymentStatus | `PENDING`, `SETTLED`, `VOIDED` |
 | PaymentMethod | `CASH`, `CARD`, `ONLINE` |

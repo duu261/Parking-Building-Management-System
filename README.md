@@ -24,6 +24,8 @@ AI slot-allocation algorithm.
 - Payments and manager revenue reporting
 - Reservations — pre-book a slot, auto-allocated and held, staff convert at the gate
 - AI slot allocation — scores slots by load balance, vehicle-type match, distance, and peak hour
+- Exception reports — lost ticket, wrong plate, overtime, wrong zone
+- Monthly passes — manager-issued free parking for a date range
 
 See `docs/features/` for per-feature notes.
 
