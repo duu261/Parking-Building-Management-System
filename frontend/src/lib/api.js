@@ -25,3 +25,14 @@ export async function apiRequest(path, { method = "GET", body, auth = true } = {
   }
   return data;
 }
+
+// Binary endpoints (the ticket PNG) sit behind the same JWT, so a plain <img src>
+// gets a 401. Fetch with the token and hand back an object URL the caller revokes.
+export async function apiBlobUrl(path) {
+  const headers = {};
+  const token = localStorage.getItem("accessToken");
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api${path}`, { headers });
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return URL.createObjectURL(await res.blob());
+}

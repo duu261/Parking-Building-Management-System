@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, apiBlobUrl } from "./api";
 
 export const authApi = {
   login: (body) => apiRequest("/auth/login", { method: "POST", body, auth: false }),
@@ -82,7 +82,7 @@ export const adminApi = {
 export const driverApi = {
   sessions: () => apiRequest("/driver/sessions"),
   session: (id) => apiRequest(`/driver/sessions/${id}`),
-  ticketUrl: (id) => `/api/driver/sessions/${id}/ticket.png`,
+  ticketBlob: (id) => apiBlobUrl(`/driver/sessions/${id}/ticket.png`),
   payments: () => apiRequest("/driver/payments"),
   pay: (id, method = "ONLINE") =>
     apiRequest(`/driver/payments/${id}/pay`, { method: "POST", body: { method } }),

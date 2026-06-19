@@ -3,6 +3,32 @@ import { QrCode, Car, MapPin } from "lucide-react";
 import { Card, Button, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi } from "../../lib/endpoints";
 
+// The ticket PNG is auth-gated, so fetch it with the token and show it from an
+// object URL (a bare <img src> would 401). Falls back to a skeleton then an error note.
+function TicketQr({ id }) {
+  const [url, setUrl] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let objectUrl;
+    driverApi
+      .ticketBlob(id)
+      .then((u) => {
+        objectUrl = u;
+        setUrl(u);
+      })
+      .catch(() => setFailed(true));
+    return () => objectUrl && URL.revokeObjectURL(objectUrl);
+  }, [id]);
+
+  const box = "size-36 rounded-[var(--radius)] border border-line";
+  if (failed) {
+    return <div className={`${box} flex items-center justify-center bg-elevated text-[11px] text-muted`}>QR unavailable</div>;
+  }
+  if (!url) return <div className={`${box} animate-pulse bg-elevated`} />;
+  return <img src={url} alt={`Ticket QR for session ${id}`} className={`${box} bg-white p-2`} />;
+}
+
 const money = (n) => `$${Number(n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 const time = (iso) =>
   iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
@@ -67,11 +93,7 @@ export default function MyParkingPage() {
             <Card key={s.id} className="p-5">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
                 <div className="flex shrink-0 flex-col items-center">
-                  <img
-                    src={driverApi.ticketUrl(s.id)}
-                    alt={`Ticket QR for session ${s.id}`}
-                    className="size-36 rounded-[var(--radius)] border border-line bg-white p-2"
-                  />
+                  <TicketQr id={s.id} />
                   <span className="mt-2 flex items-center gap-1 text-[11px] text-muted">
                     <QrCode size={12} /> Scan to check out
                   </span>

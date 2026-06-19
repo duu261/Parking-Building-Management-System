@@ -40,6 +40,8 @@
 }
 
 :root {
+  /* Make native controls (select option lists, scrollbars, date pickers) follow the theme. */
+  color-scheme: light;
   --bg: #fafafa; /* zinc-50 */
   --surface: #ffffff;
   --elevated: #f4f4f5; /* zinc-100 */
@@ -62,6 +64,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --bg: #09090b; /* zinc-950 */
   --surface: #131316;
   --elevated: #1c1c20;

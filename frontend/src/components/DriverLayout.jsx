@@ -19,7 +19,7 @@ export default function DriverLayout() {
     <div className="min-h-[100dvh] bg-bg text-text">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-surface/80 px-6 py-3 backdrop-blur">
         <div className="flex items-center gap-5">
-          <Link to="/" className="flex items-center gap-2 transition hover:opacity-80">
+          <Link to="/me" className="flex items-center gap-2 transition hover:opacity-80">
             <SquareParking className="text-text" size={20} />
             <span className="font-semibold">ParkMaster</span>
           </Link>

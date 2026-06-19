@@ -72,7 +72,10 @@ export default function ReservationsPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold tracking-tight">Reservations</h1>
-      <p className="mt-1 text-sm text-muted">Hold a slot ahead of time. A held slot is yours for 30 minutes.</p>
+      <p className="mt-1 text-sm text-muted">
+        Hold a slot ahead of time. A pending hold is yours for 30 minutes: drive in and staff
+        check you in against it. Unused holds expire on their own.
+      </p>
 
       {error && (
         <div className="mt-4">
