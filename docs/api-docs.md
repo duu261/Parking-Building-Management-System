@@ -157,6 +157,15 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 |---|---|---|---|
 | GET | `/manager/buildings/{id}/analytics/allocation` | `{ buildingId, floors: [{ floorId, level, name, vehicleTypeId, total, occupied, available, fillRate }] }` | Floor fill-rate analytics |
 
+### Monthly Passes
+
+| Method | Path | Body | Response | Description |
+|---|---|---|---|---|
+| POST | `/manager/passes` | `{ userId, vehicleTypeId, licensePlate, validFrom, validUntil }` | `201` `PassResponse` | Issue a pass (free parking while active) |
+| GET | `/manager/passes` | — | `[PassResponse]` | List passes, newest first |
+| GET | `/manager/passes/{id}` | — | `PassResponse` | Get pass |
+| DELETE | `/manager/passes/{id}` | — | `PassResponse` | Revoke pass (status -> EXPIRED) |
+
 ---
 
 ## Admin (`/api/admin`) — ADMIN role only
@@ -214,6 +223,22 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 }
 ```
 
+### PassResponse
+```json
+{
+  "id": 1,
+  "userId": 5,
+  "userFullName": "Jane Driver",
+  "vehicleTypeId": 2,
+  "vehicleTypeName": "Car",
+  "licensePlate": "51A-12345",
+  "validFrom": "2026-07-01",
+  "validUntil": "2026-07-31",
+  "status": "ACTIVE",
+  "createdAt": "2026-06-19T10:00:00Z"
+}
+```
+
 ---
 
 ## Enum Values
@@ -228,6 +253,7 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 | PaymentMethod | `CASH`, `CARD`, `ONLINE` |
 | ExceptionType | `LOST_TICKET`, `WRONG_PLATE`, `OVERTIME`, `WRONG_ZONE` |
 | ExceptionStatus | `OPEN`, `RESOLVED` |
+| PassStatus | `ACTIVE`, `EXPIRED` |
 
 ---
 

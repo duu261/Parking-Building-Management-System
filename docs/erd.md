@@ -138,6 +138,7 @@ Database: PostgreSQL. Schema managed by Flyway migrations.
 | Reservation | `reservation` | id | Belongs to: user, slot, vehicle_type |
 | Payment | `payment` | id | Belongs to: session (1:1 unique FK) |
 | ExceptionReport | `exception_report` | id | Belongs to: session (optional), reported_by (user) |
+| MonthlyPass | `monthly_pass` | id | Belongs to: user, vehicle_type |
 
 ---
 
@@ -157,6 +158,8 @@ vehicle_type    1 ──── * parking_session     (session for vehicle type)
 vehicle_type    1 ──── * reservation         (reservation for vehicle type)
 parking_session 1 ──── 1 payment             (one payment per session)
 parking_session 1 ──── * exception_report    (session may have exceptions)
+users           1 ──── * monthly_pass         (driver holds passes)
+vehicle_type    1 ──── * monthly_pass         (pass for vehicle type)
 ```
 
 ---
@@ -173,3 +176,4 @@ parking_session 1 ──── * exception_report    (session may have exception
 | PaymentMethod | CASH, CARD, ONLINE | payment.method |
 | ExceptionType | LOST_TICKET, WRONG_PLATE, OVERTIME, WRONG_ZONE | exception_report.type |
 | ExceptionStatus | OPEN, RESOLVED | exception_report.status |
+| PassStatus | ACTIVE, EXPIRED | monthly_pass.status |

@@ -14,6 +14,7 @@ import com.parkmaster.session.SessionDtos.CheckInRequest;
 import com.parkmaster.session.SessionDtos.SessionResponse;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,11 +30,13 @@ public class ParkingSessionService {
     private final SlotAllocationService allocation;
     private final PaymentService payments;
     private final com.parkmaster.reservation.ReservationService reservationService;
+    private final com.parkmaster.pass.MonthlyPassService monthlyPasses;
 
     public ParkingSessionService(ParkingSessionRepository sessions, ParkingSlotRepository slots,
             VehicleTypeRepository vehicleTypes, PricingPolicyRepository policies,
             SlotAllocationService allocation, PaymentService payments,
-            com.parkmaster.reservation.ReservationService reservationService) {
+            com.parkmaster.reservation.ReservationService reservationService,
+            com.parkmaster.pass.MonthlyPassService monthlyPasses) {
         this.sessions = sessions;
         this.slots = slots;
         this.vehicleTypes = vehicleTypes;
@@ -41,6 +44,7 @@ public class ParkingSessionService {
         this.allocation = allocation;
         this.payments = payments;
         this.reservationService = reservationService;
+        this.monthlyPasses = monthlyPasses;
     }
 
     @Transactional
@@ -100,11 +104,19 @@ public class ParkingSessionService {
 
         Instant checkOut = Instant.now();
         session.setCheckOutAt(checkOut);
-        // Peak surcharge keyed to check-in time (encourages off-peak entry), not check-out.
-        BigDecimal multiplier = PeakHours.isPeak(session.getCheckInAt())
-                ? policy.getPeakMultiplier() : BigDecimal.ONE;
-        BigDecimal amount = ChargeCalculator.charge(session.getCheckInAt(), checkOut,
-                policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier);
+        // An active monthly pass for this plate+type parks free; otherwise bill normally.
+        // "Today" uses the app calendar zone so a pass does not expire on UTC midnight.
+        BigDecimal amount;
+        if (monthlyPasses.hasActivePass(session.getLicensePlate(),
+                session.getVehicleType().getId(), LocalDate.now(PeakHours.VN_ZONE))) {
+            amount = BigDecimal.ZERO;
+        } else {
+            // Peak surcharge keyed to check-in time (encourages off-peak entry), not check-out.
+            BigDecimal multiplier = PeakHours.isPeak(session.getCheckInAt())
+                    ? policy.getPeakMultiplier() : BigDecimal.ONE;
+            amount = ChargeCalculator.charge(session.getCheckInAt(), checkOut,
+                    policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier);
+        }
         session.setAmountCharged(amount);
         payments.createForSession(session, amount);
         if (amount.signum() == 0) {
