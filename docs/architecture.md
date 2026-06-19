@@ -44,8 +44,9 @@
           │  │  AuthController          /api/auth               │  │
           │  │  PublicController         /api/public             │  │
           │  │  AdminUserController      /api/admin/users        │  │
-          │  │  ManagerBuildingController /api/manager/buildings  │  │
+          │  │  ManagerParkingController  /api/manager/buildings  │  │
           │  │  ManagerPricingController  /api/manager/*          │  │
+          │  │  ManagerPassController     /api/manager/passes     │  │
           │  │  ManagerReportController   /api/manager/reports    │  │
           │  │  StaffSessionController   /api/staff/sessions     │  │
           │  │  StaffPaymentController   /api/staff/payments     │  │
@@ -127,7 +128,7 @@ backend/src/main/java/com/parkmaster/
 ├── security/          JwtService, JwtAuthFilter, SecurityConfig
 ├── common/            ApiException, GlobalExceptionHandler (RFC 7807)
 ├── parking/           ParkingBuilding, Floor, ParkingSlot, SlotStatus
-│                      ParkingService, ManagerBuildingController, ParkingDtos
+│                      ParkingService, ManagerParkingController, ParkingDtos
 ├── pricing/           VehicleType, PricingPolicy, PricingService
 │                      ManagerPricingController, PricingDtos
 ├── session/           ParkingSession, SessionStatus, ParkingSessionService
@@ -141,6 +142,8 @@ backend/src/main/java/com/parkmaster/
 ├── exceptionreport/   ExceptionReport, ExceptionType, ExceptionStatus
 │                      ExceptionReportService, StaffExceptionController, ExceptionDtos
 ├── report/            ReportService, ManagerReportController, ReportDtos
+├── pass/              MonthlyPass, PassStatus, MonthlyPassService
+│                      ManagerPassController, PassDtos
 └── publicapi/         PublicController
 
 frontend/src/

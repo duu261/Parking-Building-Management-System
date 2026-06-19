@@ -112,7 +112,7 @@ Database: PostgreSQL. Schema managed by Flyway migrations.
     CASH | CARD | ONLINE
 
     SessionStatus:
-    ACTIVE | COMPLETED
+    ACTIVE | AWAITING_PAYMENT | COMPLETED
 
     SlotStatus:
     AVAILABLE | OCCUPIED | RESERVED
@@ -170,7 +170,7 @@ vehicle_type    1 ──── * monthly_pass         (pass for vehicle type)
 |---|---|---|
 | Role | ADMIN, MANAGER, STAFF, USER | users.role |
 | SlotStatus | AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE, LOCKED | parking_slot.status |
-| SessionStatus | ACTIVE, COMPLETED | parking_session.status |
+| SessionStatus | ACTIVE, AWAITING_PAYMENT, COMPLETED | parking_session.status |
 | ReservationStatus | PENDING, FULFILLED, CANCELLED, EXPIRED | reservation.status |
 | PaymentStatus | PENDING, SETTLED, VOIDED | payment.status |
 | PaymentMethod | CASH, CARD, ONLINE | payment.method |

@@ -10,12 +10,13 @@ AI auto-allocation is a separate feature on top of this.
 |---|---|---|
 | `ParkingSession` | `slot`, `vehicleType`, `licensePlate`, `checkInAt`, `checkOutAt?`, `amountCharged?`, `status` | doubles as the ticket for now |
 
-`status`: `ACTIVE` → `COMPLETED`. Charge + checkout time set at close.
+`status`: `ACTIVE` → `AWAITING_PAYMENT` → `COMPLETED`. Session moves to `AWAITING_PAYMENT` at check-out while charge is settled; slot stays `OCCUPIED` during this phase. Session completes after payment is settled.
 
 ## Flow
 
 1. **Check-in** — slot must be `AVAILABLE`; session created, slot → `OCCUPIED`.
-2. **Check-out** — charge computed from the vehicle type's `PricingPolicy`, slot → `AVAILABLE`, session → `COMPLETED`.
+2. **Check-out** — charge computed from the vehicle type's `PricingPolicy`, session → `AWAITING_PAYMENT`, slot stays `OCCUPIED`.
+3. **Payment settled** — slot → `AVAILABLE`, session → `COMPLETED`.
 
 Conflicts: non-available slot → 409; closing a closed session → 409; no pricing
 policy for the type at checkout → 409.

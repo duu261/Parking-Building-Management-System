@@ -14,7 +14,7 @@ No integration tests (real DB) or E2E automation in scope — SWP391 capstone sc
 
 ---
 
-## 2. Existing Unit Tests (13 files)
+## 2. Existing Unit Tests (14 files)
 
 | Test class | What it covers | Domain |
 |---|---|---|
@@ -31,6 +31,7 @@ No integration tests (real DB) or E2E automation in scope — SWP391 capstone sc
 | `ExceptionReportServiceTest` | Create, resolve, open list filter | Exceptions |
 | `ReportServiceTest` | Revenue daily, by type, check-ins by hour, duration | Reports |
 | `PeakHoursTest` | Peak-hour detection logic | Common |
+| `MonthlyPassServiceTest` | Issue, revoke, overlap guard, active-pass check | Monthly pass |
 
 Run: `cd backend && mvnd test`
 
