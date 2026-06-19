@@ -48,7 +48,7 @@ class SessionTicketTest {
         when(session.getStatus()).thenReturn(SessionStatus.ACTIVE);
         when(sessions.findByTicketCode("scan-me")).thenReturn(Optional.of(session));
 
-        var service = new ParkingSessionService(sessions, null, null, null, null, null, null);
+        var service = new ParkingSessionService(sessions, null, null, null, null, null, null, null);
 
         var res = service.byTicket("scan-me");
 
@@ -60,7 +60,7 @@ class SessionTicketTest {
     void byTicketUnknownCodeThrows() {
         var sessions = mock(ParkingSessionRepository.class);
         when(sessions.findByTicketCode("nope")).thenReturn(Optional.empty());
-        var service = new ParkingSessionService(sessions, null, null, null, null, null, null);
+        var service = new ParkingSessionService(sessions, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.byTicket("nope")).isInstanceOf(ApiException.class);
     }

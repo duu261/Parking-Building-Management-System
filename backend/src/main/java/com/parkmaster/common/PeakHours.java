@@ -9,7 +9,7 @@ public final class PeakHours {
 
     // VN local time: 7-9 AM and 5-7 PM.
     private static final Set<Integer> PEAK_HOURS = Set.of(7, 8, 17, 18);
-    private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    public static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private PeakHours() {}
 

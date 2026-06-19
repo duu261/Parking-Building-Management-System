@@ -34,6 +34,7 @@ class ParkingSessionServiceTest {
     private SlotAllocationService allocation;
     private PaymentService payments;
     private com.parkmaster.reservation.ReservationService reservationService;
+    private com.parkmaster.pass.MonthlyPassService monthlyPasses;
     private ParkingSessionService service;
 
     @BeforeEach
@@ -45,14 +46,34 @@ class ParkingSessionServiceTest {
         allocation = Mockito.mock(SlotAllocationService.class);
         payments = Mockito.mock(PaymentService.class);
         reservationService = Mockito.mock(com.parkmaster.reservation.ReservationService.class);
+        monthlyPasses = Mockito.mock(com.parkmaster.pass.MonthlyPassService.class);
         service = new ParkingSessionService(sessions, slots, vehicleTypes, policies, allocation,
-                payments, reservationService);
+                payments, reservationService, monthlyPasses);
     }
 
     private ParkingSlot slot(SlotStatus status) {
         ParkingSlot s = new ParkingSlot(new Floor(new ParkingBuilding("B", null), 1, "P1"), "A1");
         s.setStatus(status);
         return s;
+    }
+
+    @Test
+    void checkOutWithActivePassIsFree() {
+        VehicleType car = new VehicleType("Car", null);
+        ParkingSlot slot = slot(SlotStatus.OCCUPIED);
+        ParkingSession session = new ParkingSession(slot, car, "51A-123", false);
+        session.setCheckInAt(java.time.Instant.now().minusSeconds(5 * 3600));
+        when(sessions.findById(1L)).thenReturn(Optional.of(session));
+        when(policies.findByVehicleTypeId(any()))
+                .thenReturn(Optional.of(new PricingPolicy(car, new BigDecimal("3.00"), null, 0)));
+        when(monthlyPasses.hasActivePass(any(), any(), any())).thenReturn(true);
+
+        var resp = service.checkOut(1L);
+
+        assertThat(resp.amountCharged()).isEqualByComparingTo("0.00");
+        assertThat(resp.status()).isEqualTo(SessionStatus.COMPLETED);
+        assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+        verify(payments).createForSession(session, session.getAmountCharged());
     }
 
     @Test
