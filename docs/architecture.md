@@ -194,29 +194,45 @@ Staff UI                    Backend                         DB
 
 ## Data Flow: Check-out + Payment
 
+Two phases. The slot is NOT freed at check-out — it stays OCCUPIED until the
+charge is settled, so the AI allocator cannot hand it out while the car is
+still physically at the payment booth.
+
 ```
 Staff UI                    Backend                         DB
   │                           │                              │
   │  POST /{id}/check-out     │                              │
   │──────────────────────────▶│                              │
   │                           │  ChargeCalculator            │
-  │                           │  .calculate(session, policy) │
+  │                           │  .charge(session, policy)    │
   │                           │  → amount (grace + cap)      │
   │                           │                              │
   │                           │  UPDATE session SET          │
-  │                           │  status=COMPLETED,           │
+  │                           │  status=AWAITING_PAYMENT,    │
   │                           │  check_out_at, amount        │
-  │                           │──────────────────────────────▶│
-  │                           │  UPDATE slot SET             │
-  │                           │  status=AVAILABLE            │
+  │                           │  (slot stays OCCUPIED)       │
   │                           │──────────────────────────────▶│
   │                           │  INSERT payment              │
   │                           │  (status=PENDING)            │
   │                           │──────────────────────────────▶│
-  │                           │                              │
   │  {session + charge info}  │                              │
   │◀──────────────────────────│                              │
+  │                           │                              │
+  │  POST /payments/{id}/settle (cash) — or driver pays ONLINE │
+  │──────────────────────────▶│                              │
+  │                           │  UPDATE payment SET          │
+  │                           │  status=PAID,                │
+  │                           │  processed_by_staff_id       │
+  │                           │──────────────────────────────▶│
+  │                           │  UPDATE session COMPLETED,   │
+  │                           │  UPDATE slot AVAILABLE        │
+  │                           │──────────────────────────────▶│
+  │◀──────────────────────────│                              │
 ```
+
+A zero-charge (free) exit skips the waiting state: the payment auto-settles and
+the session completes with the slot freed immediately. A voided charge (waived
+at the booth) also completes the session and frees the slot.
 
 ---
 
@@ -239,3 +255,26 @@ ENV:
             JWT_SECRET=<secret>
             CORS_ORIGINS=https://parkmaster.vercel.app
 ```
+
+---
+
+## Security Context
+
+- **Stateless JWT auth.** The access token is a signed JWT (HS256, 256-bit
+  secret from `PARKMASTER_JWT_SECRET`). No server session state; every request
+  carries `Authorization: Bearer <token>`. `JwtAuthFilter` validates and sets
+  the role; `SecurityConfig` routes `/api/{admin,manager,staff,driver}/**` by
+  role.
+- **Token storage.** The frontend keeps the token in `localStorage`. The XSS
+  exposure this implies is mitigated by a strict Content-Security-Policy and by
+  sanitizing any user-rendered HTML with DOMPurify, so injected script cannot
+  read storage. Tokens are short-lived (TTL via `PARKMASTER_JWT_TTL`) and the
+  client force-logs-out after 15 min of inactivity.
+- **Production upgrade path.** Move the token to an `HttpOnly`, `Secure`,
+  `SameSite=Strict` cookie so it is unreachable from JavaScript entirely; pair
+  with a CSRF token. Identified as the next hardening step, not required for the
+  demo.
+- **Other boundaries.** Passwords are BCrypt-hashed; input is bean-validated at
+  the DTO layer; ownership is enforced server-side (a driver fetching another
+  driver's session/payment gets 404, never a leak); CORS is locked to the
+  configured `FRONTEND_ORIGIN`.
