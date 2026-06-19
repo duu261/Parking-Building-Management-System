@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   SquareParking,
   LogIn,
@@ -102,7 +102,6 @@ function UserBadge({ user }) {
 export default function AppLayout() {
   useInactivityLogout();
   const navigate = useNavigate();
-  const location = useLocation();
   const { theme, toggle } = useTheme();
   const user = getUser();
   const items = NAV[user?.role] ?? [];

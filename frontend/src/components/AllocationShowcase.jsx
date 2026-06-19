@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { Sparkles, Trophy, ArrowRight } from "lucide-react";
 import { publicApi } from "../lib/endpoints";
+import { Spinner } from "./ui";
+
+const MotionDiv = motion.div;
+const MotionSpan = motion.span;
 
 // The grading feature, made visible to anyone (no login): pick a building + vehicle
 // type and watch the allocator score every open slot live, best-first, with the
@@ -14,13 +19,47 @@ const CRITERIA = [
   { key: "peakHour", label: "Peak-hour boost", max: 10, reason: "it eases the peak-hour crush" },
 ];
 
-const SELECT_CLASS =
-  "appearance-none rounded-[var(--radius)] border border-line bg-surface px-3 py-2 text-sm outline-none transition focus:border-text/40";
-
 // The criterion the winner scored highest on, as a fraction of its own weight.
 function topReason(slot) {
   return CRITERIA.reduce((best, c) =>
     slot[c.key] / c.max > slot[best.key] / best.max ? c : best,
+  );
+}
+
+// Segmented picker: every option visible, accent highlight slides on selection.
+function ToggleRow({ label, options, value, onChange }) {
+  const reduce = useReducedMotion();
+  return (
+    <div>
+      <p className="mb-2 text-xs font-medium text-muted">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const active = String(value) === o.id;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => onChange(o.id)}
+              aria-pressed={active}
+              className={`relative rounded-[var(--radius)] border px-3.5 py-2 text-sm transition active:translate-y-px ${
+                active
+                  ? "border-accent text-accent-fg"
+                  : "border-line bg-surface text-muted hover:border-text/30 hover:text-text"
+              }`}
+            >
+              {active && (
+                <MotionSpan
+                  layoutId={`toggle-${label}`}
+                  className="absolute inset-0 rounded-[var(--radius)] bg-accent"
+                  transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 32 }}
+                />
+              )}
+              <span className="relative">{o.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -30,6 +69,7 @@ export default function AllocationShowcase() {
   const [buildingId, setBuildingId] = useState("");
   const [vehicleTypeId, setVehicleTypeId] = useState("");
   const [ranked, setRanked] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -45,15 +85,19 @@ export default function AllocationShowcase() {
 
   useEffect(() => {
     if (!buildingId || !vehicleTypeId) return;
+    let active = true; // guard: drop stale responses from fast toggles
     setError("");
-    setRanked(null);
+    setLoading(true);
     publicApi
       .allocationPreview(buildingId, vehicleTypeId, 6)
-      .then(setRanked)
-      .catch((e) => setError(e.message));
+      .then((r) => active && setRanked(r))
+      .catch((e) => active && setError(e.message))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
   }, [buildingId, vehicleTypeId]);
 
-  // Hide rather than render an empty shell on a fresh database.
+  const reduce = useReducedMotion();
+
   if (error || (buildings.length === 0 && ranked === null)) return null;
 
   const winner = ranked && ranked[0];
@@ -61,7 +105,15 @@ export default function AllocationShowcase() {
   const typeName = types.find((t) => String(t.vehicleTypeId) === String(vehicleTypeId))?.vehicleTypeName;
 
   return (
-    <div>
+    <section className="border-t border-line bg-surface/40">
+      <MotionDiv
+        className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20"
+        initial={reduce ? false : { opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      >
+      <div>
       <div className="flex items-center gap-2 text-accent">
         <Sparkles size={16} />
         <span className="text-xs font-medium uppercase tracking-wide">Live AI slot allocation</span>
@@ -74,25 +126,33 @@ export default function AllocationShowcase() {
         criteria, best first. This is the live engine, no login.
       </p>
 
-      <div className="mt-7 grid gap-3 sm:max-w-md sm:grid-cols-2">
-        <select value={buildingId} onChange={(e) => setBuildingId(e.target.value)} className={SELECT_CLASS}>
-          {buildings.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
-        </select>
-        <select value={vehicleTypeId} onChange={(e) => setVehicleTypeId(e.target.value)} className={SELECT_CLASS}>
-          {types.map((t) => (
-            <option key={t.vehicleTypeId} value={t.vehicleTypeId}>{t.vehicleTypeName}</option>
-          ))}
-        </select>
+      <div className="mt-7 space-y-4">
+        <ToggleRow
+          label="Building"
+          value={buildingId}
+          onChange={setBuildingId}
+          options={buildings.map((b) => ({ id: String(b.id), name: b.name }))}
+        />
+        <ToggleRow
+          label="Vehicle type"
+          value={vehicleTypeId}
+          onChange={setVehicleTypeId}
+          options={types.map((t) => ({ id: String(t.vehicleTypeId), name: t.vehicleTypeName }))}
+        />
       </div>
+
+      {loading && (
+        <div className="mt-4">
+          <Spinner label="Re-scoring slots…" />
+        </div>
+      )}
 
       {ranked && ranked.length === 0 && (
         <p className="mt-6 text-sm text-muted">This building is full. No slot to allocate right now.</p>
       )}
 
       {winner && (
-        <div className="mt-7 grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+        <div className={`mt-7 grid gap-6 transition-opacity lg:grid-cols-[1.4fr_1fr] lg:items-start ${loading ? "opacity-50" : ""}`}>
           <div
             className="rounded-[var(--radius)] border-2 bg-surface p-6 shadow-[var(--shadow-pop)]"
             style={{ borderColor: "var(--accent)" }}
@@ -123,13 +183,14 @@ export default function AllocationShowcase() {
                     <span className="text-muted">{label}</span>
                     <span className="nums text-text">{winner[key]} / {max}</span>
                   </div>
-                  <div className="mt-1.5 h-px w-full bg-line">
-                    <div
-                      className="h-px"
-                      style={{
-                        width: `${Math.min(100, (winner[key] / max) * 100)}%`,
-                        backgroundColor: "var(--accent)",
-                      }}
+                  <div className="mt-1.5 h-0.5 w-full">
+                    <MotionDiv
+                      key={`${winner.slotId}-${key}`}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: "var(--accent)" }}
+                      initial={reduce ? false : { width: 0 }}
+                      animate={{ width: `${Math.min(100, (winner[key] / max) * 100)}%` }}
+                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                     />
                   </div>
                 </div>
@@ -163,5 +224,7 @@ export default function AllocationShowcase() {
         </div>
       )}
     </div>
+      </MotionDiv>
+    </section>
   );
 }

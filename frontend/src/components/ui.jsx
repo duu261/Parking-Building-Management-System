@@ -54,7 +54,7 @@ export function Textarea({ className, ...rest }) {
 
 export function Select({ className, children, ...rest }) {
   return (
-    <select className={cx(controlClass, "appearance-none", className)} {...rest}>
+    <select className={cx(controlClass, "select-chevron appearance-none pr-9", className)} {...rest}>
       {children}
     </select>
   );

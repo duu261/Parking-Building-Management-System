@@ -4,6 +4,7 @@ import AppLayout from "./components/AppLayout";
 import DriverLayout from "./components/DriverLayout";
 import Placeholder from "./components/Placeholder";
 import LandingPage from "./pages/public/LandingPage";
+import PublicPricingPage from "./pages/public/PricingPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
 import CheckInPage from "./pages/staff/CheckInPage";
@@ -32,6 +33,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/pricing" element={<PublicPricingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
 

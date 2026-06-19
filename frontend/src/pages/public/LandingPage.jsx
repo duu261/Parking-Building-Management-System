@@ -79,6 +79,14 @@ function SlotMap() {
           />
         ))}
       </div>
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-line pt-3">
+        {LEGEND.map(([status, label]) => (
+          <div key={status} className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full" style={{ backgroundColor: STATUS_COLOR[status] }} />
+            <span className="text-xs text-muted">{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -91,12 +99,20 @@ export default function LandingPage() {
           <SquareParking className="text-text" size={22} />
           <span className="font-semibold tracking-tight">ParkMaster</span>
         </div>
-        <Link
-          to="/login"
-          className="rounded-[var(--radius)] px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-text"
-        >
-          Sign in
-        </Link>
+        <nav className="flex items-center gap-1">
+          <Link
+            to="/pricing"
+            className="rounded-[var(--radius)] px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-text"
+          >
+            Pricing
+          </Link>
+          <Link
+            to="/login"
+            className="rounded-[var(--radius)] px-3 py-1.5 text-sm text-muted transition hover:bg-elevated hover:text-text"
+          >
+            Sign in
+          </Link>
+        </nav>
       </header>
 
       <main className="flex-1">
@@ -117,15 +133,6 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            <dl className="mt-12 flex flex-wrap gap-x-8 gap-y-4 border-t border-line pt-8">
-              {LEGEND.map(([status, label]) => (
-                <div key={status} className="flex items-center gap-2">
-                  <span className="size-2.5 rounded-full" style={{ backgroundColor: STATUS_COLOR[status] }} />
-                  <dt className="text-sm font-medium">{label}</dt>
-                  <dd className="text-xs uppercase tracking-wide text-muted">{status}</dd>
-                </div>
-              ))}
-            </dl>
           </Reveal>
 
           <Reveal className="lg:pl-6" delay={0.1}>
@@ -133,13 +140,7 @@ export default function LandingPage() {
           </Reveal>
         </section>
 
-        <section className="border-t border-line bg-surface/40">
-          <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">
-            <Reveal>
-              <AllocationShowcase />
-            </Reveal>
-          </div>
-        </section>
+        <AllocationShowcase />
 
         <section className="border-t border-line">
           <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">
@@ -167,8 +168,14 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="mx-auto w-full max-w-6xl px-6 py-6 text-xs text-muted">
-        ParkMaster · Parking Building Management System
+      <footer className="border-t border-line">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 text-xs text-muted">
+          <span>ParkMaster</span>
+          <div className="flex gap-4">
+            <Link to="/login" className="transition hover:text-text">Sign in</Link>
+            <Link to="/signup" className="transition hover:text-text">Create account</Link>
+          </div>
+        </div>
       </footer>
     </div>
   );
