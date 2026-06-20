@@ -4,6 +4,7 @@
 - Every check-out creates a Payment record for the computed charge.
 - Charged exits start PENDING; free exits (within the grace window) are auto-PAID.
 - Staff settle a payment by method (CASH or mock ONLINE); double-settle is rejected.
+- Drivers can pay online for real via VNPay — see [VNPay Online Payment](vnpay-payment.md).
 - Managers read revenue (sum of PAID + count) for any time window.
 - Pricing supports a peak-hour multiplier: a vehicle type's rate is surcharged
   when check-in falls in peak hours (7-9 AM, 5-7 PM), sharing one peak-hour

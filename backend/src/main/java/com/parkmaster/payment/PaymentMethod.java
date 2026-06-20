@@ -1,7 +1,8 @@
 package com.parkmaster.payment;
 
-/** CASH collected by staff; ONLINE is mock-confirmed (no real gateway yet). */
+/** CASH collected by staff; ONLINE is mock-confirmed; VNPAY is gateway-confirmed. */
 public enum PaymentMethod {
     CASH,
-    ONLINE
+    ONLINE,
+    VNPAY
 }

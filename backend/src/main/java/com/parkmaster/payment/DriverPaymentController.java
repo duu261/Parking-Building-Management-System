@@ -1,6 +1,8 @@
 package com.parkmaster.payment;
 
 import com.parkmaster.payment.PaymentDtos.PaymentResponse;
+import com.parkmaster.payment.PaymentDtos.VnPayStartResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,5 +30,20 @@ class DriverPaymentController {
     @PostMapping("/{id}/pay")
     PaymentResponse pay(@PathVariable Long id, Authentication auth) {
         return service.payOwn(auth.getName(), id);
+    }
+
+    /** Start a real VNPay checkout; returns the gateway URL for the client to redirect to. */
+    @PostMapping("/{id}/vnpay")
+    VnPayStartResponse startVnPay(@PathVariable Long id, Authentication auth,
+            HttpServletRequest request) {
+        return new VnPayStartResponse(service.startVnPay(auth.getName(), id, clientIp(request)));
+    }
+
+    private static String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

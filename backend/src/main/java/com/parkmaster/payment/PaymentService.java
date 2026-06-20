@@ -9,8 +9,13 @@ import com.parkmaster.session.SessionStatus;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,12 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PaymentService {
 
+    private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
     private final PaymentRepository payments;
     private final UserRepository users;
+    private final VnPayService vnPay;
 
-    public PaymentService(PaymentRepository payments, UserRepository users) {
+    public PaymentService(PaymentRepository payments, UserRepository users, VnPayService vnPay) {
         this.payments = payments;
         this.users = users;
+        this.vnPay = vnPay;
     }
 
     /** Called at check-out. Zero-charge exits are auto-settled; otherwise PENDING. */
@@ -108,15 +117,10 @@ public class PaymentService {
                 .map(PaymentResponse::from).toList();
     }
 
-    /** Driver pays their own session online. Ownership enforced; non-owner gets 404. */
+    /** Driver pays their own session online (mock-confirmed). Ownership enforced; non-owner 404. */
     @Transactional
     public PaymentResponse payOwn(String email, Long id) {
-        Payment payment = payments.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found"));
-        var owner = payment.getSession().getUser();
-        if (owner == null || !owner.getEmail().equals(email)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Payment not found");
-        }
+        Payment payment = ownedPayment(email, id);
         if (payment.getStatus() == PaymentStatus.PAID) {
             throw new ApiException(HttpStatus.CONFLICT, "Payment already settled");
         }
@@ -125,6 +129,76 @@ public class PaymentService {
         payment.setPaidAt(Instant.now());
         completeCheckedOutSession(payment);
         return PaymentResponse.from(payment);
+    }
+
+    /**
+     * Begin a VNPay payment for the driver's own pending payment. Generates a unique gateway ref,
+     * stores it, and returns the hosted-checkout URL to redirect to. Ownership enforced (404).
+     */
+    @Transactional
+    public String startVnPay(String email, Long id, String clientIp) {
+        Payment payment = ownedPayment(email, id);
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new ApiException(HttpStatus.CONFLICT, "Payment already settled");
+        }
+        if (payment.getStatus() == PaymentStatus.VOIDED) {
+            throw new ApiException(HttpStatus.CONFLICT, "Payment was voided");
+        }
+        String txnRef = id + "_" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+                .format(ZonedDateTime.now(VN_ZONE));
+        payment.setGatewayRef(txnRef);
+        payment.setMethod(PaymentMethod.VNPAY);
+        payments.save(payment);
+        return vnPay.buildPaymentUrl(txnRef, amountVnd(payment),
+                "Thanh toan ve gui xe #" + id, clientIp);
+    }
+
+    /**
+     * Handle a verified VNPay return/callback. Idempotent: marks the matched payment PAID on a
+     * successful, amount-matching, signature-valid response; otherwise records the outcome only.
+     */
+    @Transactional
+    public VnPayResult handleVnPayReturn(Map<String, String> params) {
+        if (!vnPay.isValidSignature(params)) {
+            return VnPayResult.INVALID_SIGNATURE;
+        }
+        Payment payment = payments.findByGatewayRef(params.get("vnp_TxnRef")).orElse(null);
+        if (payment == null) {
+            return VnPayResult.NOT_FOUND;
+        }
+        payment.setGatewayResponseCode(params.get("vnp_ResponseCode"));
+        payment.setGatewayTxnNo(params.get("vnp_TransactionNo"));
+
+        boolean ok = "00".equals(params.get("vnp_ResponseCode"))
+                && "00".equals(params.get("vnp_TransactionStatus"));
+        if (!ok) {
+            return VnPayResult.FAILED;
+        }
+        if (Long.parseLong(params.get("vnp_Amount")) != amountVnd(payment) * 100) {
+            return VnPayResult.AMOUNT_MISMATCH;
+        }
+        if (payment.getStatus() == PaymentStatus.PENDING) {
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(Instant.now());
+            completeCheckedOutSession(payment);
+        }
+        return VnPayResult.SUCCESS;
+    }
+
+    /** Resolve a payment owned by the given driver, else 404 (no ownership leak). */
+    private Payment ownedPayment(String email, Long id) {
+        Payment payment = payments.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found"));
+        var owner = payment.getSession().getUser();
+        if (owner == null || !owner.getEmail().equals(email)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Payment not found");
+        }
+        return payment;
+    }
+
+    /** Whole-đồng VND amount for the gateway (VNPay multiplies by 100 itself). */
+    private static long amountVnd(Payment payment) {
+        return payment.getAmount().setScale(0, RoundingMode.HALF_UP).longValueExact();
     }
 
     @Transactional(readOnly = true)

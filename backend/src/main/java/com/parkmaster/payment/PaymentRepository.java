@@ -12,6 +12,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findBySessionId(Long sessionId);
 
+    Optional<Payment> findByGatewayRef(String gatewayRef);
+
     List<Payment> findByStatusOrderByCreatedAt(PaymentStatus status);
 
     List<Payment> findBySession_User_EmailOrderByCreatedAtDesc(String email);

@@ -70,6 +70,18 @@ public class Payment {
     @Column(name = "void_reason")
     private String voidReason;
 
+    /** VNPay transaction reference we generated (vnp_TxnRef); unique per pay attempt. */
+    @Column(name = "gateway_ref", unique = true)
+    private String gatewayRef;
+
+    /** VNPay's own transaction number (vnp_TransactionNo) returned on callback. */
+    @Column(name = "gateway_txn_no")
+    private String gatewayTxnNo;
+
+    /** VNPay response code (vnp_ResponseCode); "00" means success. */
+    @Column(name = "gateway_response_code")
+    private String gatewayResponseCode;
+
     public Payment(ParkingSession session, BigDecimal amount) {
         this.session = session;
         this.amount = amount;

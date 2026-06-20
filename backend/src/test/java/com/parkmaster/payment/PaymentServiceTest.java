@@ -36,7 +36,10 @@ class PaymentServiceTest {
         payments = Mockito.mock(PaymentRepository.class);
         users = Mockito.mock(com.parkmaster.user.UserRepository.class);
         when(payments.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
-        service = new PaymentService(payments, users);
+        VnPayService vnPay = new VnPayService("TESTCODE", "TESTSECRETKEY1234567890",
+                "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+                "http://localhost:5000/api/public/payments/vnpay-return");
+        service = new PaymentService(payments, users, vnPay);
     }
 
     @Test

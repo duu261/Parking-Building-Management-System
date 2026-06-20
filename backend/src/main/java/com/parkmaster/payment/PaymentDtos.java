@@ -25,4 +25,7 @@ public final class PaymentDtos {
     }
 
     public record RevenueResponse(Instant from, Instant to, BigDecimal totalPaid, long count) {}
+
+    /** VNPay checkout URL the driver is redirected to. */
+    public record VnPayStartResponse(String paymentUrl) {}
 }
