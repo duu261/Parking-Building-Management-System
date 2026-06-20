@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { Sparkles, Hand, CheckCircle2, Search } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Sparkles, Hand, CheckCircle2, Search, Camera, X } from "lucide-react";
 import { Card, Field, Input, Select, Button, Alert, StatusBadge } from "../../components/ui";
 import { staffApi } from "../../lib/endpoints";
 
-const MODE = { AUTO: "auto", MANUAL: "manual" };
+const MODE = { AUTO: "auto", MANUAL: "manual", RESERVATION: "reservation" };
 
 export default function CheckInPage() {
   const [vehicleTypes, setVehicleTypes] = useState([]);
@@ -12,6 +12,7 @@ export default function CheckInPage() {
   const [slots, setSlots] = useState([]);
 
   const [mode, setMode] = useState(MODE.AUTO);
+  const [reservationId, setReservationId] = useState("");
   const [plate, setPlate] = useState("");
   const [vehicleTypeId, setVehicleTypeId] = useState("");
   const [buildingId, setBuildingId] = useState("");
@@ -73,14 +74,20 @@ export default function CheckInPage() {
     setResult(null);
     setLoading(true);
     try {
-      const body = { licensePlate: plate.trim(), vehicleTypeId: Number(vehicleTypeId) };
-      if (mode === MODE.AUTO) body.buildingId = Number(buildingId);
-      else body.slotId = Number(slotId);
+      let body;
+      if (mode === MODE.RESERVATION) {
+        body = { reservationId: Number(reservationId) };
+      } else {
+        body = { licensePlate: plate.trim(), vehicleTypeId: Number(vehicleTypeId) };
+        if (mode === MODE.AUTO) body.buildingId = Number(buildingId);
+        else body.slotId = Number(slotId);
+      }
 
       const session = await staffApi.checkIn(body);
       setResult(session);
       setPlate("");
       setSlotId("");
+      setReservationId("");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -91,10 +98,35 @@ export default function CheckInPage() {
   return (
     <div className="mx-auto max-w-xl">
       <h1 className="text-xl font-semibold tracking-tight">Check in a vehicle</h1>
-      <p className="mt-1 text-sm text-muted">Auto-allocate a slot, or pick one manually.</p>
+      <p className="mt-1 text-sm text-muted">Auto-allocate, pick manually, or check in a reservation.</p>
 
       <Card className="mt-6 p-6">
         <form onSubmit={submit} className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            <ModeButton active={mode === MODE.AUTO} onClick={() => selectMode(MODE.AUTO)} icon={Sparkles}>
+              Auto-allocate
+            </ModeButton>
+            <ModeButton active={mode === MODE.MANUAL} onClick={() => selectMode(MODE.MANUAL)} icon={Hand}>
+              Manual pick
+            </ModeButton>
+            <ModeButton active={mode === MODE.RESERVATION} onClick={() => setMode(MODE.RESERVATION)} icon={CheckCircle2}>
+              Reservation
+            </ModeButton>
+          </div>
+
+          {mode === MODE.RESERVATION ? (
+            <Field label="Reservation ID">
+              <Input
+                className="nums"
+                type="number"
+                value={reservationId}
+                onChange={(e) => setReservationId(e.target.value)}
+                placeholder="e.g. 1"
+                required
+              />
+            </Field>
+          ) : (
+          <>
           <Field label="License plate">
             <Input
               className="nums"
@@ -118,15 +150,6 @@ export default function CheckInPage() {
               ))}
             </Select>
           </Field>
-
-          <div className="grid grid-cols-2 gap-2">
-            <ModeButton active={mode === MODE.AUTO} onClick={() => selectMode(MODE.AUTO)} icon={Sparkles}>
-              Auto-allocate
-            </ModeButton>
-            <ModeButton active={mode === MODE.MANUAL} onClick={() => selectMode(MODE.MANUAL)} icon={Hand}>
-              Manual pick
-            </ModeButton>
-          </div>
 
           <Field label="Building">
             <Select value={buildingId} onChange={onBuilding} required>
@@ -169,6 +192,8 @@ export default function CheckInPage() {
               </Field>
             </>
           )}
+          </>
+          )}
 
           <Alert>{error}</Alert>
           <Button type="submit" loading={loading} className="w-full">
@@ -205,22 +230,72 @@ function TicketLookup() {
   const [found, setFound] = useState(null);
   const [lookupErr, setLookupErr] = useState("");
   const [searching, setSearching] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const scannerRef = useRef(null);
+  const readerRef = useRef(null);
 
-  const search = async (e) => {
-    e.preventDefault();
-    if (!code.trim()) return;
+  const [checkedIn, setCheckedIn] = useState(null);
+
+  const lookup = async (scannedText) => {
+    const text = scannedText.trim();
+    if (!text) return;
     setSearching(true);
     setLookupErr("");
     setFound(null);
+    setCheckedIn(null);
     try {
-      const session = await staffApi.sessionByTicket(code.trim());
-      setFound(session);
+      if (text.startsWith("RES:")) {
+        const resId = Number(text.slice(4));
+        const session = await staffApi.checkIn({ reservationId: resId });
+        setCheckedIn(session);
+      } else {
+        const session = await staffApi.sessionByTicket(text);
+        setFound(session);
+      }
     } catch (err) {
       setLookupErr(err.message);
     } finally {
       setSearching(false);
     }
   };
+
+  const search = (e) => {
+    e.preventDefault();
+    lookup(code);
+  };
+
+  const stopScanner = async () => {
+    if (readerRef.current) {
+      try { await readerRef.current.stop(); } catch {}
+      readerRef.current = null;
+    }
+    setScanning(false);
+  };
+
+  const startScanner = async () => {
+    setScanning(true);
+    setLookupErr("");
+    const { Html5Qrcode } = await import("html5-qrcode");
+    const reader = new Html5Qrcode(scannerRef.current.id);
+    readerRef.current = reader;
+    try {
+      await reader.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (text) => {
+          setCode(text);
+          stopScanner();
+          lookup(text);
+        },
+        () => {},
+      );
+    } catch {
+      setLookupErr("Camera access denied or unavailable.");
+      setScanning(false);
+    }
+  };
+
+  useEffect(() => () => { if (readerRef.current) readerRef.current.stop().catch(() => {}); }, []);
 
   return (
     <Card className="mt-6 p-5">
@@ -233,16 +308,41 @@ function TicketLookup() {
           className="flex-1"
         />
         <Button type="submit" variant="secondary" loading={searching}>
-          <Search size={16} /> Look up
+          <Search size={16} />
+        </Button>
+        <Button type="button" variant="secondary" onClick={scanning ? stopScanner : startScanner}>
+          {scanning ? <X size={16} /> : <Camera size={16} />}
         </Button>
       </form>
+
+      {scanning && (
+        <div className="mt-3 overflow-hidden rounded-[var(--radius)] border border-line">
+          <div id="qr-reader" ref={scannerRef} />
+        </div>
+      )}
+
       {lookupErr && <p className="mt-2 text-sm text-occupied">{lookupErr}</p>}
       {found && (
-        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-          <Info label="Session" value={<span className="nums">#{found.id}</span>} />
-          <Info label="Plate" value={<span className="nums">{found.licensePlate}</span>} />
-          <Info label="Status" value={<StatusBadge status={found.status} />} />
-          <Info label="Checked in" value={new Date(found.checkedInAt).toLocaleString()} />
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+            <Info label="Session" value={<span className="nums">#{found.id}</span>} />
+            <Info label="Plate" value={<span className="nums">{found.licensePlate}</span>} />
+            <Info label="Status" value={<StatusBadge status={found.status} />} />
+            <Info label="Checked in" value={new Date(found.checkedInAt).toLocaleString()} />
+          </div>
+          {found.status === "CHECKED_IN" && (
+            <CheckOutAction sessionId={found.id} onDone={() => lookup(code)} />
+          )}
+        </>
+      )}
+      {checkedIn && (
+        <div className="mt-3">
+          <p className="flex items-center gap-1 text-sm text-available"><CheckCircle2 size={14} /> Reservation checked in</p>
+          <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+            <Info label="Session" value={<span className="nums">#{checkedIn.id}</span>} />
+            <Info label="Plate" value={<span className="nums">{checkedIn.licensePlate}</span>} />
+            <Info label="Slot" value={<span className="nums">{checkedIn.slotId}</span>} />
+          </div>
         </div>
       )}
     </Card>
@@ -261,6 +361,37 @@ function ModeButton({ active, onClick, icon: Icon, children }) {
       {Icon && <Icon size={16} />}
       {children}
     </button>
+  );
+}
+
+function CheckOutAction({ sessionId, onDone }) {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState(false);
+
+  const doCheckOut = async () => {
+    setLoading(true);
+    setErr("");
+    try {
+      await staffApi.checkOut(sessionId);
+      setDone(true);
+      setTimeout(onDone, 1500);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (done) return <p className="mt-3 text-sm text-available flex items-center gap-1"><CheckCircle2 size={14} /> Checked out</p>;
+
+  return (
+    <div className="mt-3">
+      {err && <p className="mb-2 text-sm text-occupied">{err}</p>}
+      <Button onClick={doCheckOut} loading={loading} className="w-full">
+        Check out session #{sessionId}
+      </Button>
+    </div>
   );
 }
 

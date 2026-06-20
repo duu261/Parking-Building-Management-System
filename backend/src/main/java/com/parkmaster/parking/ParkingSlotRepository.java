@@ -10,6 +10,8 @@ public interface ParkingSlotRepository extends JpaRepository<ParkingSlot, Long> 
 
     List<ParkingSlot> findByFloor_Building_IdAndStatus(Long buildingId, SlotStatus status);
 
+    long countByFloor_Building_Id(Long buildingId);
+
     long countByFloorId(Long floorId);
 
     long countByFloorIdAndStatus(Long floorId, SlotStatus status);

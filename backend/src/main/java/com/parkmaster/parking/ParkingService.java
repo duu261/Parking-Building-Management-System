@@ -55,8 +55,9 @@ public class ParkingService {
     @Transactional(readOnly = true)
     public BuildingAvailability getAvailability(Long id) {
         ParkingBuilding b = building(id);
+        long total = slots.countByFloor_Building_Id(id);
         long available = slots.findByFloor_Building_IdAndStatus(id, SlotStatus.AVAILABLE).size();
-        return new BuildingAvailability(b.getId(), b.getName(), available);
+        return new BuildingAvailability(b.getId(), b.getName(), total, available);
     }
 
     @Transactional

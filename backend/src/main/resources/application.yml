@@ -31,7 +31,7 @@ parkmaster:
     access-token-ttl-minutes: ${PARKMASTER_JWT_TTL:120}
   cors:
     # Comma-separated. Set FRONTEND_ORIGIN to the deployed frontend URL in prod.
-    allowed-origins: ${FRONTEND_ORIGIN:http://localhost:5173}
+    allowed-origins: ${FRONTEND_ORIGIN:http://localhost:5173,http://192.168.1.16:5173,https://localhost:5173,https://192.168.1.16:5173}
 
 logging:
   level:

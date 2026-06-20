@@ -10,7 +10,7 @@ public final class PassDtos {
     private PassDtos() {}
 
     public record IssueRequest(
-            @NotNull Long userId,
+            @NotBlank String email,
             @NotNull Long vehicleTypeId,
             @NotBlank String licensePlate,
             @NotNull LocalDate validFrom,

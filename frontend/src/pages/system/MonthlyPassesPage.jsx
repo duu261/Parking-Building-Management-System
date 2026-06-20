@@ -11,13 +11,12 @@ import {
   Alert,
   StatusBadge,
 } from "../../components/ui";
-import { managerApi, adminApi } from "../../lib/endpoints";
+import { managerApi } from "../../lib/endpoints";
 
 const STATUS_FILTER = ["ALL", "ACTIVE", "EXPIRED"];
 
 export default function MonthlyPassesPage() {
   const [passes, setPasses] = useState(null);
-  const [users, setUsers] = useState([]);
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [filter, setFilter] = useState("ALL");
   const [error, setError] = useState("");
@@ -25,10 +24,9 @@ export default function MonthlyPassesPage() {
 
   const load = () => {
     setError("");
-    Promise.all([managerApi.passes(), adminApi.users(), managerApi.vehicleTypes()])
-      .then(([p, u, vt]) => {
+    Promise.all([managerApi.passes(), managerApi.vehicleTypes()])
+      .then(([p, vt]) => {
         setPasses(p);
-        setUsers(u);
         setVehicleTypes(vt);
       })
       .catch((e) => setError(e.message));
@@ -71,7 +69,6 @@ export default function MonthlyPassesPage() {
 
       {showForm && (
         <IssueForm
-          users={users}
           vehicleTypes={vehicleTypes}
           onIssued={() => {
             setShowForm(false);
@@ -120,9 +117,9 @@ export default function MonthlyPassesPage() {
   );
 }
 
-function IssueForm({ users, vehicleTypes, onIssued, onError }) {
+function IssueForm({ vehicleTypes, onIssued, onError }) {
   const [form, setForm] = useState({
-    userId: "",
+    email: "",
     vehicleTypeId: "",
     licensePlate: "",
     validFrom: new Date().toISOString().slice(0, 10),
@@ -138,7 +135,7 @@ function IssueForm({ users, vehicleTypes, onIssued, onError }) {
     onError("");
     try {
       await managerApi.issuePass({
-        userId: Number(form.userId),
+        email: form.email.trim(),
         vehicleTypeId: Number(form.vehicleTypeId),
         licensePlate: form.licensePlate.trim(),
         validFrom: form.validFrom,
@@ -155,17 +152,8 @@ function IssueForm({ users, vehicleTypes, onIssued, onError }) {
   return (
     <Card className="mt-4 p-5">
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="Driver">
-          <Select required value={form.userId} onChange={set("userId")}>
-            <option value="">Select driver...</option>
-            {users
-              .filter((u) => u.role === "USER")
-              .map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.fullName} ({u.email})
-                </option>
-              ))}
-          </Select>
+        <Field label="Driver email">
+          <Input type="email" required placeholder="driver@parkmaster.dev" value={form.email} onChange={set("email")} />
         </Field>
         <Field label="Vehicle type">
           <Select required value={form.vehicleTypeId} onChange={set("vehicleTypeId")}>

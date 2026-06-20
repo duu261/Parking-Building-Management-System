@@ -50,5 +50,5 @@ public final class ParkingDtos {
 
     public record AllocationAnalytics(Long buildingId, List<FloorFillRate> floors) {}
 
-    public record BuildingAvailability(Long buildingId, String name, long availableSlots) {}
+    public record BuildingAvailability(Long buildingId, String name, long totalSlots, long availableSlots) {}
 }

@@ -1,6 +1,7 @@
 package com.parkmaster.dev;
 
 import com.parkmaster.parking.ParkingDtos.BuildingRequest;
+import com.parkmaster.parking.ParkingDtos.BuildingResponse;
 import com.parkmaster.parking.ParkingDtos.FloorRequest;
 import com.parkmaster.parking.ParkingDtos.FloorResponse;
 import com.parkmaster.parking.ParkingDtos.SlotRequest;
@@ -8,6 +9,8 @@ import com.parkmaster.parking.ParkingService;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.pass.MonthlyPass;
+import com.parkmaster.pass.MonthlyPassRepository;
 import com.parkmaster.payment.Payment;
 import com.parkmaster.payment.PaymentMethod;
 import com.parkmaster.payment.PaymentRepository;
@@ -18,6 +21,8 @@ import com.parkmaster.pricing.PricingDtos.VehicleTypeResponse;
 import com.parkmaster.pricing.PricingService;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
+import com.parkmaster.reservation.Reservation;
+import com.parkmaster.reservation.ReservationRepository;
 import com.parkmaster.session.ParkingSession;
 import com.parkmaster.session.ParkingSessionRepository;
 import com.parkmaster.session.SessionStatus;
@@ -67,10 +72,13 @@ class DevDataSeeder implements CommandLineRunner {
     private final ParkingSlotRepository slots;
     private final ParkingSessionRepository sessions;
     private final PaymentRepository payments;
+    private final ReservationRepository reservations;
+    private final MonthlyPassRepository passes;
 
     DevDataSeeder(UserRepository users, AdminUserService adminUsers, ParkingService parking,
             PricingService pricing, VehicleTypeRepository vehicleTypes, ParkingSlotRepository slots,
-            ParkingSessionRepository sessions, PaymentRepository payments) {
+            ParkingSessionRepository sessions, PaymentRepository payments,
+            ReservationRepository reservations, MonthlyPassRepository passes) {
         this.users = users;
         this.adminUsers = adminUsers;
         this.parking = parking;
@@ -79,6 +87,8 @@ class DevDataSeeder implements CommandLineRunner {
         this.slots = slots;
         this.sessions = sessions;
         this.payments = payments;
+        this.reservations = reservations;
+        this.passes = passes;
     }
 
     @Override
@@ -93,8 +103,11 @@ class DevDataSeeder implements CommandLineRunner {
         User driver = seedUsers();
         VehicleTypeResponse[] vt = seedVehicleTypes();
         seedBuilding(vt);
+        seedBuilding2(vt);
         seedHistory(vt, driver);
         seedLiveDriverSession(vt, driver);
+        seedReservation(vt, driver);
+        seedMonthlyPass(vt, driver);
 
         log.info("Dev seed complete. Logins (password '{}'): admin@parkmaster.dev, "
                 + "manager@parkmaster.dev, staff@parkmaster.dev, driver@parkmaster.dev", PASSWORD);
@@ -229,5 +242,43 @@ class DevDataSeeder implements CommandLineRunner {
     private static String plate(Random rnd) {
         char letter = (char) ('A' + rnd.nextInt(26));
         return String.format("51%c-%05d", letter, rnd.nextInt(100000));
+    }
+
+    private void seedBuilding2(VehicleTypeResponse[] vt) {
+        var b2 = parking.createBuilding(new BuildingRequest("Campus Parking", "FPT University, Thu Duc"));
+
+        var f1 = parking.createFloor(b2.id(), new FloorRequest(1, "Ground - Car"));
+        parking.setFloorVehicleType(f1.id(), vt[0].id());
+        fillSlots(f1, "G", 15);
+
+        var f2 = parking.createFloor(b2.id(), new FloorRequest(2, "Basement - Motorbike"));
+        parking.setFloorVehicleType(f2.id(), vt[1].id());
+        fillSlots(f2, "D", 25);
+
+        log.info("Campus Parking seeded: 2 floors, 40 slots");
+    }
+
+    private void seedReservation(VehicleTypeResponse[] vt, User driver) {
+        VehicleType carType = vehicleTypes.findById(vt[0].id()).orElseThrow();
+        ParkingSlot slot = slots.findAll().stream()
+                .filter(s -> s.getStatus() == SlotStatus.AVAILABLE
+                        && s.getFloor().getVehicleType() != null
+                        && s.getFloor().getVehicleType().getId().equals(carType.getId()))
+                .skip(1).findFirst().orElseThrow();
+        slot.setStatus(SlotStatus.RESERVED);
+        slots.save(slot);
+        Reservation reservation = new Reservation(driver, slot, carType, "51A-999.99",
+                Instant.now().plus(Duration.ofMinutes(30)));
+        reservations.save(reservation);
+        log.info("Reservation seeded for driver (slot {})", slot.getCode());
+    }
+
+    private void seedMonthlyPass(VehicleTypeResponse[] vt, User driver) {
+        VehicleType motoType = vehicleTypes.findById(vt[1].id()).orElseThrow();
+        MonthlyPass pass = new MonthlyPass(driver, motoType, "59C-123.45",
+                java.time.LocalDate.now().minusDays(5),
+                java.time.LocalDate.now().plusDays(25));
+        passes.save(pass);
+        log.info("Monthly pass seeded for driver (plate {})", pass.getLicensePlate());
     }
 }

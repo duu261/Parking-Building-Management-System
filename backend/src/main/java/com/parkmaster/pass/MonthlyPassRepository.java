@@ -17,4 +17,6 @@ public interface MonthlyPassRepository extends JpaRepository<MonthlyPass, Long> 
             String licensePlate, Long vehicleTypeId, PassStatus status);
 
     List<MonthlyPass> findAllByOrderByCreatedAtDesc();
+
+    List<MonthlyPass> findByUser_EmailOrderByCreatedAtDesc(String email);
 }

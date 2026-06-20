@@ -40,12 +40,12 @@ class MonthlyPassServiceTest {
     }
 
     private IssueRequest req(LocalDate from, LocalDate until) {
-        return new IssueRequest(1L, 2L, "51A-123", from, until);
+        return new IssueRequest("d@x.com", 2L, "51A-123", from, until);
     }
 
     @Test
     void issuePersistsAndReturns() {
-        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(users.findByEmail("d@x.com")).thenReturn(Optional.of(user));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(car));
         when(passes.findByLicensePlateIgnoreCaseAndVehicleType_IdAndStatus(any(), any(), any()))
                 .thenReturn(List.of());
@@ -75,7 +75,7 @@ class MonthlyPassServiceTest {
 
     @Test
     void issueRejectsOverlappingActivePass() {
-        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(users.findByEmail("d@x.com")).thenReturn(Optional.of(user));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(car));
         MonthlyPass existing = new MonthlyPass(user, car, "51A-123",
                 LocalDate.of(2026, 7, 15), LocalDate.of(2026, 8, 15));
@@ -89,7 +89,7 @@ class MonthlyPassServiceTest {
 
     @Test
     void issueAllowsNonOverlappingActivePass() {
-        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(users.findByEmail("d@x.com")).thenReturn(Optional.of(user));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(car));
         MonthlyPass existing = new MonthlyPass(user, car, "51A-123",
                 LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));

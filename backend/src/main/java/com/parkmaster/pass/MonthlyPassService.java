@@ -33,7 +33,7 @@ public class MonthlyPassService {
             throw new ApiException(HttpStatus.BAD_REQUEST,
                     "validUntil must be on or after validFrom");
         }
-        User user = users.findById(req.userId())
+        User user = users.findByEmail(req.email())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         VehicleType type = vehicleTypes.findById(req.vehicleTypeId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Vehicle type not found"));

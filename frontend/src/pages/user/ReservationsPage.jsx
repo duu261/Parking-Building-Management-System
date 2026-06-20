@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarClock, MapPin, X } from "lucide-react";
+import { CalendarClock, MapPin, X, QrCode } from "lucide-react";
 import { Card, Button, Field, Input, Select, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
 
@@ -119,28 +119,49 @@ export default function ReservationsPage() {
       ) : (
         <div className="mt-6 space-y-3">
           {list.map((r) => (
-            <Card key={r.id} className="flex items-center gap-4 p-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2.5">
-                  <span className="nums font-semibold">{r.licensePlate}</span>
-                  <StatusBadge status={r.status} />
+            <Card key={r.id} className="p-4">
+              <div className="flex items-center gap-4">
+                {r.status === "PENDING" && <ReservationQr id={r.id} />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className="nums font-semibold">{r.licensePlate}</span>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={14} /> slot <span className="nums text-text">{r.slotCode}</span>
+                    </span>
+                    {r.status === "PENDING" && <span className="nums">held until {time(r.holdUntil)}</span>}
+                  </div>
+                  {r.status === "PENDING" && (
+                    <div className="mt-1 flex items-center gap-1 text-xs text-muted">
+                      <QrCode size={12} /> Show QR to staff for check-in
+                    </div>
+                  )}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-                  <span className="flex items-center gap-1">
-                    <MapPin size={14} /> slot <span className="nums text-text">{r.slotCode}</span>
-                  </span>
-                  {r.status === "PENDING" && <span className="nums">held until {time(r.holdUntil)}</span>}
-                </div>
+                {r.status === "PENDING" && (
+                  <Button variant="secondary" onClick={() => cancel(r.id)} loading={cancelling === r.id}>
+                    <X size={16} /> Cancel
+                  </Button>
+                )}
               </div>
-              {r.status === "PENDING" && (
-                <Button variant="secondary" onClick={() => cancel(r.id)} loading={cancelling === r.id}>
-                  <X size={16} /> Cancel
-                </Button>
-              )}
             </Card>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function ReservationQr({ id }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    let objectUrl;
+    driverApi.reservationQr(id).then((u) => { objectUrl = u; setUrl(u); }).catch(() => {});
+    return () => objectUrl && URL.revokeObjectURL(objectUrl);
+  }, [id]);
+  if (!url) return <div className="w-20 aspect-square animate-pulse rounded bg-elevated shrink-0" />;
+  return (
+    <img src={url} alt="Reservation QR" className="block w-20 aspect-square shrink-0" />
   );
 }

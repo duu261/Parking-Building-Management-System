@@ -95,7 +95,9 @@ export const driverApi = {
   pay: (id, method = "ONLINE") =>
     apiRequest(`/driver/payments/${id}/pay`, { method: "POST", body: { method } }),
 
+  passes: () => apiRequest("/driver/passes"),
   reservations: () => apiRequest("/driver/reservations"),
+  reservationQr: (id) => apiBlobUrl(`/driver/reservations/${id}/qr.png`),
   reserve: (body) => apiRequest("/driver/reservations", { method: "POST", body }),
   cancelReservation: (id) =>
     apiRequest(`/driver/reservations/${id}/cancel`, { method: "POST" }),

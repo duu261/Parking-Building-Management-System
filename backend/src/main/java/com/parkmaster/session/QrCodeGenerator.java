@@ -13,16 +13,18 @@ import java.io.IOException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 
-/** Renders a string (the ticket code) into a PNG QR image. Pure, no Spring needed. */
-final class QrCodeGenerator {
+/** Renders a string into a PNG QR image. Pure, no Spring needed. */
+public final class QrCodeGenerator {
 
     private static final int SIZE_PX = 300;
 
     private QrCodeGenerator() {}
 
-    static byte[] pngFor(String content) {
+    public static byte[] pngFor(String content) {
         try {
-            var hints = Map.of(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+            var hints = Map.of(
+                    EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M,
+                    EncodeHintType.MARGIN, 0);
             BitMatrix matrix = new QRCodeWriter()
                     .encode(content, BarcodeFormat.QR_CODE, SIZE_PX, SIZE_PX, hints);
             ByteArrayOutputStream out = new ByteArrayOutputStream();

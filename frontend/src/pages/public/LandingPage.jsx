@@ -53,7 +53,7 @@ function LiveAvailability() {
           list.map(async (b) => {
             try {
               const a = await publicApi.availability(b.id);
-              return { ...b, availableSlots: a.availableSlots };
+              return { ...b, ...a };
             } catch {
               return { ...b, availableSlots: null };
             }
@@ -70,24 +70,48 @@ function LiveAvailability() {
         <h2 className="text-center text-lg font-semibold tracking-tight">Live availability</h2>
         <p className="mt-1 text-center text-sm text-muted">Real-time open slots across all buildings.</p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {buildings.map((b) => (
-            <div
-              key={b.id}
-              className="flex items-center gap-4 rounded-[var(--radius)] border border-line bg-surface p-5 shadow-[var(--shadow-card)]"
-            >
-              <Building2 size={20} className="shrink-0 text-muted" />
-              <div className="min-w-0 flex-1">
-                <div className="font-medium tracking-tight">{b.name}</div>
-                {b.address && <div className="mt-0.5 truncate text-xs text-muted">{b.address}</div>}
-              </div>
-              <div className="text-right">
-                <div className="nums text-2xl font-semibold text-available">
-                  {b.availableSlots ?? "-"}
+          {buildings.map((b) => {
+            const total = b.totalSlots ?? 0;
+            const open = b.availableSlots ?? 0;
+            const pct = total > 0 ? Math.round((open / total) * 100) : 0;
+            return (
+              <div
+                key={b.id}
+                className="rounded-[var(--radius)] border border-line bg-surface p-5 shadow-[var(--shadow-card)]"
+              >
+                <div className="flex items-center gap-4">
+                  <Building2 size={20} className="shrink-0 text-muted" />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium tracking-tight">{b.name}</div>
+                    {b.address && <div className="mt-0.5 truncate text-xs text-muted">{b.address}</div>}
+                  </div>
+                  <div className="text-right">
+                    <div className="nums text-2xl font-semibold text-available">{open}</div>
+                    <div className="nums text-[11px] text-muted">{open}/{total}</div>
+                  </div>
                 </div>
-                <div className="text-[11px] text-muted">open</div>
+                <div className="mt-3 h-1.5 rounded-full bg-elevated overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor: pct > 50 ? "var(--available)" : pct > 20 ? "var(--reserved)" : "var(--occupied)",
+                    }}
+                  />
+                </div>
+                {b.floors?.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted">
+                    {b.floors.map((f) => (
+                      <div key={f.id} className="flex justify-between">
+                        <span>{f.name}</span>
+                        <span className="nums">{f.availableSlots ?? "–"}/{f.totalSlots ?? "–"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
