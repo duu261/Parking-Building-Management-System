@@ -26,6 +26,7 @@ AI slot-allocation algorithm.
 - AI slot allocation — scores slots by load balance, vehicle-type match, distance, and peak hour
 - Exception reports — lost ticket, wrong plate, overtime, wrong zone
 - Monthly passes — manager-issued free parking for a date range
+- AI chat assistant — public hybrid assistant (local FAQ always on, Google Gemini when keyed)
 
 See `docs/features/` for per-feature notes.
 
@@ -41,6 +42,20 @@ mvnd test                # tests
 
 Requires JDK 21+ and a PostgreSQL database. A local Postgres is provided via
 `docker-compose.yml` at the repo root (`docker compose up -d`).
+
+### AI assistant key (optional)
+
+The chat assistant works with no config (local FAQ). To enable Google Gemini answers,
+get a free key at <https://aistudio.google.com/apikey>, then:
+
+```bash
+cd backend
+cp .env.example .env      # then edit .env: GEMINI_API_KEY=...
+./run-local.sh            # loads .env and starts the backend (dev profile)
+```
+
+`.env` is gitignored. On Render, set `GEMINI_API_KEY` (and optional `GEMINI_MODEL`,
+default `gemini-2.5-flash`) as service env vars instead.
 
 ### Frontend (port 5173)
 
