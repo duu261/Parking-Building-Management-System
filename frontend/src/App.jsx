@@ -16,6 +16,7 @@ import AnalyticsPage from "./pages/system/AnalyticsPage";
 import BuildingsPage from "./pages/system/BuildingsPage";
 import PricingPage from "./pages/system/PricingPage";
 import UsersPage from "./pages/system/UsersPage";
+import MonthlyPassesPage from "./pages/system/MonthlyPassesPage";
 import MyParkingPage from "./pages/user/MyParkingPage";
 import MySessionsPage from "./pages/user/MySessionsPage";
 import ReservationsPage from "./pages/user/ReservationsPage";
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="pricing" element={<PricingPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="passes" element={<MonthlyPassesPage />} />
           </Route>
         </Route>
 

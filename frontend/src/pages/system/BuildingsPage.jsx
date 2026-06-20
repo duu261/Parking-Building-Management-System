@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Building2, Plus, Trash2, ChevronRight } from "lucide-react";
+import { Building2, Plus, Trash2, ChevronRight, Pencil, Check, X } from "lucide-react";
 import { Card, Button, Field, Input, Select, Skeleton, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { managerApi } from "../../lib/endpoints";
 
@@ -9,6 +9,7 @@ export default function BuildingsPage() {
   const [buildings, setBuildings] = useState(null);
   const [types, setTypes] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", address: "" });
   const [creating, setCreating] = useState(false);
@@ -51,6 +52,17 @@ export default function BuildingsPage() {
     }
   };
 
+  const saveEdit = async (id, data) => {
+    setError("");
+    try {
+      await managerApi.updateBuilding(id, data);
+      setEditing(null);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-xl font-semibold tracking-tight">Buildings</h1>
@@ -86,37 +98,94 @@ export default function BuildingsPage() {
         </div>
       ) : (
         <Card className="mt-6 divide-y divide-line">
-          {buildings.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => setSelected(selected?.id === b.id ? null : b)}
-              className={`flex w-full items-center gap-4 px-5 py-3.5 text-left transition hover:bg-elevated ${
-                selected?.id === b.id ? "bg-elevated" : ""
-              }`}
-            >
-              <ChevronRight size={16} className={`text-muted transition ${selected?.id === b.id ? "rotate-90" : ""}`} />
-              <div className="min-w-0 flex-1">
-                <div className="font-medium">{b.name}</div>
-                {b.address && <div className="mt-0.5 text-xs text-muted">{b.address}</div>}
-              </div>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  remove(b.id);
-                }}
-                className="rounded-[var(--radius)] p-2 text-muted transition hover:bg-surface hover:text-occupied"
-                aria-label="Delete building"
+          {buildings.map((b) =>
+            editing?.id === b.id ? (
+              <EditRow key={b.id} building={b} onSave={(d) => saveEdit(b.id, d)} onCancel={() => setEditing(null)} />
+            ) : (
+              <button
+                key={b.id}
+                onClick={() => setSelected(selected?.id === b.id ? null : b)}
+                className={`flex w-full items-center gap-4 px-5 py-3.5 text-left transition hover:bg-elevated ${
+                  selected?.id === b.id ? "bg-elevated" : ""
+                }`}
               >
-                <Trash2 size={16} />
-              </span>
-            </button>
-          ))}
+                <ChevronRight size={16} className={`text-muted transition ${selected?.id === b.id ? "rotate-90" : ""}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{b.name}</div>
+                  {b.address && <div className="mt-0.5 text-xs text-muted">{b.address}</div>}
+                </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); setEditing(b); }}
+                  className="rounded-[var(--radius)] p-2 text-muted transition hover:bg-surface hover:text-text"
+                  aria-label="Edit building"
+                >
+                  <Pencil size={15} />
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); remove(b.id); }}
+                  className="rounded-[var(--radius)] p-2 text-muted transition hover:bg-surface hover:text-occupied"
+                  aria-label="Delete building"
+                >
+                  <Trash2 size={16} />
+                </span>
+              </button>
+            ),
+          )}
         </Card>
       )}
 
       {selected && <FloorsPanel building={selected} types={types} onError={setError} />}
+      {selected && <AllocationPanel buildingId={selected.id} />}
+    </div>
+  );
+}
+
+function AllocationPanel({ buildingId }) {
+  const [analytics, setAnalytics] = useState(null);
+  useEffect(() => {
+    managerApi.allocationAnalytics(buildingId).then(setAnalytics).catch(() => setAnalytics(null));
+  }, [buildingId]);
+  if (!analytics?.floors?.length) return null;
+  return (
+    <Card className="mt-4 p-5">
+      <h2 className="mb-3 text-sm font-semibold tracking-tight">Floor utilization</h2>
+      <div className="space-y-2">
+        {analytics.floors.map((f) => (
+          <div key={f.floorId} className="flex items-center gap-3 text-sm">
+            <span className="w-28 truncate font-medium">{f.name || `Floor ${f.level}`}</span>
+            <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-elevated">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-accent transition-all"
+                style={{ width: `${Math.round(f.fillRate * 100)}%` }}
+              />
+            </div>
+            <span className="nums w-16 text-right text-xs text-muted">
+              {f.occupiedSlots}/{f.totalSlots}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function EditRow({ building, onSave, onCancel }) {
+  const [name, setName] = useState(building.name);
+  const [address, setAddress] = useState(building.address ?? "");
+  return (
+    <div className="flex items-center gap-3 px-5 py-3 bg-elevated">
+      <Input value={name} onChange={(e) => setName(e.target.value)} className="flex-1" placeholder="Name" />
+      <Input value={address} onChange={(e) => setAddress(e.target.value)} className="flex-1" placeholder="Address" />
+      <Button variant="ghost" onClick={() => onSave({ name, address: address || null })} aria-label="Save">
+        <Check size={16} />
+      </Button>
+      <Button variant="ghost" onClick={onCancel} aria-label="Cancel">
+        <X size={16} />
+      </Button>
     </div>
   );
 }

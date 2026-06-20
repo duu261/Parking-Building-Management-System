@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { SquareParking, ArrowRight, Building2, ScanLine, Smartphone } from "lucide-react";
 import { STATUS_COLOR } from "../../lib/status";
+import { publicApi } from "../../lib/endpoints";
 import AllocationShowcase from "../../components/AllocationShowcase";
 
 const LEGEND = [
@@ -41,6 +43,57 @@ const ROLES = [
 
 // Light scroll-reveal. Collapses to instant under reduced motion (MOTION dial 3).
 const MotionDiv = motion.div;
+function LiveAvailability() {
+  const [buildings, setBuildings] = useState(null);
+  useEffect(() => {
+    publicApi
+      .buildings()
+      .then(async (list) => {
+        const withAvail = await Promise.all(
+          list.map(async (b) => {
+            try {
+              const a = await publicApi.availability(b.id);
+              return { ...b, availableSlots: a.availableSlots };
+            } catch {
+              return { ...b, availableSlots: null };
+            }
+          }),
+        );
+        setBuildings(withAvail);
+      })
+      .catch(() => {});
+  }, []);
+  if (!buildings?.length) return null;
+  return (
+    <section className="border-t border-line">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16">
+        <h2 className="text-center text-lg font-semibold tracking-tight">Live availability</h2>
+        <p className="mt-1 text-center text-sm text-muted">Real-time open slots across all buildings.</p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {buildings.map((b) => (
+            <div
+              key={b.id}
+              className="flex items-center gap-4 rounded-[var(--radius)] border border-line bg-surface p-5 shadow-[var(--shadow-card)]"
+            >
+              <Building2 size={20} className="shrink-0 text-muted" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium tracking-tight">{b.name}</div>
+                {b.address && <div className="mt-0.5 truncate text-xs text-muted">{b.address}</div>}
+              </div>
+              <div className="text-right">
+                <div className="nums text-2xl font-semibold text-available">
+                  {b.availableSlots ?? "-"}
+                </div>
+                <div className="text-[11px] text-muted">open</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Reveal({ children, className, delay = 0 }) {
   const reduce = useReducedMotion();
   return (
@@ -141,6 +194,8 @@ export default function LandingPage() {
         </section>
 
         <AllocationShowcase />
+
+        <LiveAvailability />
 
         <section className="border-t border-line">
           <div className="mx-auto w-full max-w-6xl px-6 py-16 lg:py-20">

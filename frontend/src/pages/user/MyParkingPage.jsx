@@ -21,12 +21,16 @@ function TicketQr({ id }) {
     return () => objectUrl && URL.revokeObjectURL(objectUrl);
   }, [id]);
 
-  const box = "size-36 rounded-[var(--radius)] border border-line";
+  const box = "w-44 rounded-[var(--radius)] border border-line";
   if (failed) {
-    return <div className={`${box} flex items-center justify-center bg-elevated text-[11px] text-muted`}>QR unavailable</div>;
+    return <div className={`${box} aspect-square flex items-center justify-center bg-elevated text-[11px] text-muted`}>QR unavailable</div>;
   }
-  if (!url) return <div className={`${box} animate-pulse bg-elevated`} />;
-  return <img src={url} alt={`Ticket QR for session ${id}`} className={`${box} bg-white p-2`} />;
+  if (!url) return <div className={`${box} aspect-square animate-pulse bg-elevated`} />;
+  return (
+    <div className={`${box} bg-white p-3`}>
+      <img src={url} alt={`Ticket QR for session ${id}`} className="block h-auto w-full" />
+    </div>
+  );
 }
 
 const money = (n) => `$${Number(n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;

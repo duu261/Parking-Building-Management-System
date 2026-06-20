@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Hand, CheckCircle2 } from "lucide-react";
+import { Sparkles, Hand, CheckCircle2, Search } from "lucide-react";
 import { Card, Field, Input, Select, Button, Alert, StatusBadge } from "../../components/ui";
 import { staffApi } from "../../lib/endpoints";
 
@@ -194,7 +194,58 @@ export default function CheckInPage() {
           </div>
         </Card>
       )}
+
+      <TicketLookup />
     </div>
+  );
+}
+
+function TicketLookup() {
+  const [code, setCode] = useState("");
+  const [found, setFound] = useState(null);
+  const [lookupErr, setLookupErr] = useState("");
+  const [searching, setSearching] = useState(false);
+
+  const search = async (e) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setSearching(true);
+    setLookupErr("");
+    setFound(null);
+    try {
+      const session = await staffApi.sessionByTicket(code.trim());
+      setFound(session);
+    } catch (err) {
+      setLookupErr(err.message);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <Card className="mt-6 p-5">
+      <h2 className="mb-3 text-sm font-semibold tracking-tight">Ticket lookup</h2>
+      <form onSubmit={search} className="flex gap-2">
+        <Input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Enter ticket code..."
+          className="flex-1"
+        />
+        <Button type="submit" variant="secondary" loading={searching}>
+          <Search size={16} /> Look up
+        </Button>
+      </form>
+      {lookupErr && <p className="mt-2 text-sm text-occupied">{lookupErr}</p>}
+      {found && (
+        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+          <Info label="Session" value={<span className="nums">#{found.id}</span>} />
+          <Info label="Plate" value={<span className="nums">{found.licensePlate}</span>} />
+          <Info label="Status" value={<StatusBadge status={found.status} />} />
+          <Info label="Checked in" value={new Date(found.checkedInAt).toLocaleString()} />
+        </div>
+      )}
+    </Card>
   );
 }
 

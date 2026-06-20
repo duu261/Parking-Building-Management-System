@@ -20,6 +20,8 @@ export const staffApi = {
   voidPayment: (id, reason) =>
     apiRequest(`/staff/payments/${id}/void`, { method: "POST", body: { reason } }),
 
+  sessionByTicket: (code) => apiRequest(`/staff/sessions/by-ticket/${encodeURIComponent(code)}`),
+
   exceptions: () => apiRequest("/staff/exceptions/open"),
   reportException: (body) => apiRequest("/staff/exceptions", { method: "POST", body }),
   resolveException: (id, resolutionNote) =>
@@ -67,6 +69,12 @@ export const managerApi = {
     apiRequest(`/manager/reports/duration-by-vehicle-type?from=${from}&to=${to}`),
   allocationComparison: (from, to) =>
     apiRequest(`/manager/reports/allocation-comparison?from=${from}&to=${to}`),
+  passes: () => apiRequest("/manager/passes"),
+  pass: (id) => apiRequest(`/manager/passes/${id}`),
+  issuePass: (body) => apiRequest("/manager/passes", { method: "POST", body }),
+  revokePass: (id) => apiRequest(`/manager/passes/${id}`, { method: "DELETE" }),
+  allocationAnalytics: (buildingId) =>
+    apiRequest(`/manager/buildings/${buildingId}/analytics/allocation`),
 };
 
 // ADMIN: user management and role assignment.

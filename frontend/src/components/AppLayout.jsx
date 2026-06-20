@@ -13,6 +13,7 @@ import {
   ListChecks,
   TriangleAlert,
   Banknote,
+  IdCard,
   Menu,
   X,
 } from "lucide-react";
@@ -33,6 +34,7 @@ const NAV = {
     { to: "/app/buildings", label: "Buildings", icon: Building2 },
     { to: "/app/pricing", label: "Pricing", icon: Tags },
     { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
+    { to: "/app/passes", label: "Passes", icon: IdCard },
   ],
   ADMIN: [
     { to: "/app", label: "Overview", icon: BarChart3, end: true },

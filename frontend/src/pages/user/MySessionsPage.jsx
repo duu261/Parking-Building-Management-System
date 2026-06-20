@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { History } from "lucide-react";
+import { History, ChevronDown } from "lucide-react";
 import { Card, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi } from "../../lib/endpoints";
 
@@ -10,6 +10,7 @@ const time = (iso) =>
 export default function MySessionsPage() {
   const [sessions, setSessions] = useState(null);
   const [payBySession, setPayBySession] = useState({});
+  const [expanded, setExpanded] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -37,32 +38,75 @@ export default function MySessionsPage() {
         <Card className="mt-6 divide-y divide-line">
           {sessions.map((s) => {
             const pay = payBySession[s.id];
+            const open = expanded === s.id;
             return (
-              <div key={s.id} className="flex items-center gap-4 px-5 py-3.5">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
-                    <StatusBadge status={s.status} />
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                    <span className="nums">{time(s.checkInAt)}</span>
-                    <span className="text-line">|</span>
-                    <span className="nums">{s.checkOutAt ? time(s.checkOutAt) : "parked"}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="nums text-sm font-semibold">{money(s.amountCharged)}</div>
-                  {pay && (
-                    <div className="text-[11px] text-muted">
-                      {pay.status === "PAID" ? "paid" : pay.status.toLowerCase()}
+              <div key={s.id}>
+                <button
+                  onClick={() => setExpanded(open ? null : s.id)}
+                  className="flex w-full items-center gap-4 px-5 py-3.5 text-left transition hover:bg-elevated"
+                >
+                  <ChevronDown
+                    size={15}
+                    className={`shrink-0 text-muted transition ${open ? "rotate-180" : ""}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5">
+                      <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
+                      <StatusBadge status={s.status} />
                     </div>
-                  )}
-                </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
+                      <span className="nums">{time(s.checkInAt)}</span>
+                      <span className="text-line">|</span>
+                      <span className="nums">{s.checkOutAt ? time(s.checkOutAt) : "parked"}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="nums text-sm font-semibold">{money(s.amountCharged)}</div>
+                    {pay && (
+                      <div className="text-[11px] text-muted">
+                        {pay.status === "PAID" ? "paid" : pay.status.toLowerCase()}
+                      </div>
+                    )}
+                  </div>
+                </button>
+                {open && <SessionDetail session={s} payment={pay} />}
               </div>
             );
           })}
         </Card>
       )}
+    </div>
+  );
+}
+
+function SessionDetail({ session: s, payment: pay }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-6 gap-y-2 border-t border-line bg-elevated/50 px-5 py-4 text-sm sm:grid-cols-3">
+      <Info label="Session ID" value={`#${s.id}`} />
+      <Info label="License plate" value={s.licensePlate} />
+      <Info label="Vehicle type" value={s.vehicleTypeName ?? "-"} />
+      <Info label="Building" value={s.buildingName ?? "-"} />
+      <Info label="Slot" value={s.slotId ?? "-"} />
+      <Info label="Allocation" value={s.autoAllocated ? "Auto" : "Manual"} />
+      <Info label="Checked in" value={time(s.checkInAt)} />
+      <Info label="Checked out" value={s.checkOutAt ? time(s.checkOutAt) : "Still parked"} />
+      <Info label="Charge" value={money(s.amountCharged)} />
+      {pay && (
+        <>
+          <Info label="Payment status" value={pay.status} />
+          <Info label="Payment method" value={pay.method ?? "-"} />
+          <Info label="Paid at" value={pay.paidAt ? time(pay.paidAt) : "-"} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function Info({ label, value }) {
+  return (
+    <div>
+      <div className="text-xs text-muted">{label}</div>
+      <div className="nums mt-0.5 font-medium">{value}</div>
     </div>
   );
 }
