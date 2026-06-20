@@ -113,4 +113,7 @@ export const publicApi = {
       `/public/buildings/${id}/allocation-preview?vehicleTypeId=${vehicleTypeId}&limit=${limit}`,
       { auth: false },
     ),
+  // AI assistant: hybrid (Gemini when configured, local FAQ fallback). No auth.
+  assistantChat: (message, history = []) =>
+    apiRequest("/public/assistant/chat", { method: "POST", body: { message, history }, auth: false }),
 };

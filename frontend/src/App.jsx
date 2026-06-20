@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
+import AiAssistant from "./components/AiAssistant";
 import LandingPage from "./pages/public/LandingPage";
 import PublicPricingPage from "./pages/public/PricingPage";
 import LoginPage from "./pages/auth/LoginPage";
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/me/*" element={<Navigate to="/app" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <AiAssistant />
     </BrowserRouter>
   );
 }
