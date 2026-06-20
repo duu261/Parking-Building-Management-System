@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { MessageCircle, X, Send, Bot } from "lucide-react";
 import { publicApi } from "../lib/endpoints";
+import { Button } from "./ui";
+
+const RADIUS = "rounded-[var(--radius)]";
 
 const GREETING = {
   role: "assistant",
@@ -42,45 +46,48 @@ export default function AiAssistant() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 flex h-[30rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-          <header className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-white">
-            <div>
-              <p className="text-sm font-semibold">ParkMaster Assistant</p>
-              <p className="text-xs text-indigo-100">Parking help, anytime</p>
+        <div
+          className={`fixed bottom-24 right-5 z-50 flex h-[30rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden border border-line bg-surface shadow-[var(--shadow-pop)] ${RADIUS}`}
+        >
+          <header className="flex items-center justify-between bg-accent px-4 py-3 text-accent-fg">
+            <div className="flex items-center gap-2">
+              <Bot size={18} />
+              <div>
+                <p className="text-sm font-semibold leading-tight">ParkMaster Assistant</p>
+                <p className="text-xs opacity-70">Parking help, anytime</p>
+              </div>
             </div>
             <button
               onClick={() => setOpen(false)}
               aria-label="Close assistant"
-              className="rounded-full p-1 text-indigo-100 transition hover:bg-white/20 hover:text-white"
+              className="rounded-full p-1 opacity-80 transition hover:bg-accent-fg/15 hover:opacity-100"
             >
-              ✕
+              <X size={18} />
             </button>
           </header>
 
-          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-slate-50 px-4 py-3">
+          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-bg px-4 py-3">
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
                 <p
-                  className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3 py-2 text-sm ${
+                  className={`max-w-[85%] whitespace-pre-line px-3 py-2 text-sm ${RADIUS} ${
                     m.role === "user"
-                      ? "rounded-br-sm bg-indigo-600 text-white"
-                      : "rounded-bl-sm bg-white text-slate-700 shadow-sm"
+                      ? "bg-accent text-accent-fg"
+                      : "border border-line bg-surface text-text shadow-[var(--shadow-card)]"
                   }`}
                 >
                   {m.text}
                 </p>
               </div>
             ))}
-            {sending && (
-              <p className="text-xs text-slate-400">Assistant is typing…</p>
-            )}
+            {sending && <p className="text-xs text-muted">Assistant is typing…</p>}
             {messages.length === 1 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs text-indigo-700 transition hover:bg-indigo-50"
+                    className="rounded-full border border-line bg-surface px-3 py-1 text-xs text-muted transition hover:bg-elevated hover:text-text"
                   >
                     {s}
                   </button>
@@ -94,21 +101,17 @@ export default function AiAssistant() {
               e.preventDefault();
               send(input);
             }}
-            className="flex items-center gap-2 border-t border-slate-200 bg-white px-3 py-2"
+            className="flex items-center gap-2 border-t border-line bg-surface px-3 py-2"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about parking…"
-              className="flex-1 rounded-full border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+              className={`flex-1 border border-line bg-surface px-3 py-2 text-sm text-text outline-none transition placeholder:text-muted/70 focus:border-text/40 focus:ring-2 focus:ring-text/15 ${RADIUS}`}
             />
-            <button
-              type="submit"
-              disabled={sending || !input.trim()}
-              className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:opacity-50"
-            >
-              Send
-            </button>
+            <Button type="submit" disabled={sending || !input.trim()} aria-label="Send message">
+              <Send size={16} />
+            </Button>
           </form>
         </div>
       )}
@@ -116,9 +119,9 @@ export default function AiAssistant() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close assistant" : "Open assistant"}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-2xl text-white shadow-lg transition hover:scale-105"
+        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[var(--shadow-pop)] transition hover:opacity-90 active:translate-y-px"
       >
-        {open ? "✕" : "💬"}
+        {open ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
     </>
   );

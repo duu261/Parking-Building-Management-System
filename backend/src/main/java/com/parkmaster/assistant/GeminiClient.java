@@ -31,7 +31,7 @@ class GeminiClient {
             HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     GeminiClient(@Value("${parkmaster.gemini.api-key:}") String apiKey,
-            @Value("${parkmaster.gemini.model:gemini-2.0-flash}") String model,
+            @Value("${parkmaster.gemini.model:gemini-2.5-flash}") String model,
             ObjectMapper mapper) {
         this.apiKey = apiKey;
         this.model = model;
@@ -81,6 +81,9 @@ class GeminiClient {
         var gen = root.putObject("generationConfig");
         gen.put("temperature", 0.4);
         gen.put("maxOutputTokens", 500);
+        // Disable "thinking" (2.5 models) — a chat widget doesn't need it, and it burns
+        // free-tier token quota + latency. Ignored by models without thinking.
+        gen.putObject("thinkingConfig").put("thinkingBudget", 0);
         return mapper.writeValueAsString(root);
     }
 
