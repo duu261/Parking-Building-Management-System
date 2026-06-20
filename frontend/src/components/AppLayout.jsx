@@ -14,6 +14,9 @@ import {
   TriangleAlert,
   Banknote,
   IdCard,
+  Car,
+  CalendarClock,
+  History,
   Menu,
   X,
 } from "lucide-react";
@@ -41,6 +44,11 @@ const NAV = {
     { to: "/app/users", label: "Users", icon: Users },
     { to: "/app/buildings", label: "Buildings", icon: Building2 },
     { to: "/app/pricing", label: "Pricing", icon: Tags },
+  ],
+  USER: [
+    { to: "/app", label: "My parking", icon: Car, end: true },
+    { to: "/app/reservations", label: "Reservations", icon: CalendarClock },
+    { to: "/app/sessions", label: "Sessions", icon: History },
   ],
 };
 

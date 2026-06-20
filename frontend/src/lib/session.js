@@ -32,6 +32,6 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
-export function homePathForRole(role) {
-  return role === "USER" ? "/me" : "/app";
+export function homePathForRole() {
+  return "/app";
 }

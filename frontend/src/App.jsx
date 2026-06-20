@@ -1,8 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
-import DriverLayout from "./components/DriverLayout";
-import Placeholder from "./components/Placeholder";
 import LandingPage from "./pages/public/LandingPage";
 import PublicPricingPage from "./pages/public/PricingPage";
 import LoginPage from "./pages/auth/LoginPage";
@@ -22,10 +20,10 @@ import MySessionsPage from "./pages/user/MySessionsPage";
 import ReservationsPage from "./pages/user/ReservationsPage";
 import { getUser } from "./lib/session";
 
-// /app index: staff land on check-in; managers/admins on the overview.
 function AppHome() {
   const role = getUser()?.role;
   if (role === "STAFF") return <CheckInPage />;
+  if (role === "USER") return <MyParkingPage />;
   return <OverviewPage />;
 }
 
@@ -38,29 +36,28 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
 
-        <Route element={<ProtectedRoute allow={["ADMIN", "MANAGER", "STAFF"]} />}>
+        <Route element={<ProtectedRoute allow={["ADMIN", "MANAGER", "STAFF", "USER"]} />}>
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<AppHome />} />
+            {/* Staff */}
             <Route path="check-in" element={<CheckInPage />} />
             <Route path="active" element={<ActiveSessionsPage />} />
             <Route path="exceptions" element={<ExceptionsPage />} />
             <Route path="payments" element={<PaymentsPage />} />
+            {/* Manager / Admin */}
             <Route path="buildings" element={<BuildingsPage />} />
             <Route path="pricing" element={<PricingPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="passes" element={<MonthlyPassesPage />} />
-          </Route>
-        </Route>
-
-        <Route element={<ProtectedRoute allow={["USER"]} />}>
-          <Route path="/me" element={<DriverLayout />}>
-            <Route index element={<MyParkingPage />} />
+            {/* Driver */}
             <Route path="reservations" element={<ReservationsPage />} />
             <Route path="sessions" element={<MySessionsPage />} />
           </Route>
         </Route>
 
+        <Route path="/me" element={<Navigate to="/app" replace />} />
+        <Route path="/me/*" element={<Navigate to="/app" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
