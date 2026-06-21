@@ -6,5 +6,7 @@ public enum VnPayResult {
     FAILED,
     INVALID_SIGNATURE,
     NOT_FOUND,
-    AMOUNT_MISMATCH
+    AMOUNT_MISMATCH;
+
+    record Outcome(VnPayResult result, boolean passPayment) {}
 }

@@ -17,9 +17,10 @@ public final class PaymentDtos {
             BigDecimal penaltyAmount, PaymentMethod method, PaymentStatus status, Instant createdAt,
             Instant paidAt, Instant voidedAt, String voidReason, String processedByStaff) {
         static PaymentResponse from(Payment p) {
-            return new PaymentResponse(p.getId(), p.getSession().getId(), p.getAmount(),
-                    p.getPenaltyAmount(), p.getMethod(), p.getStatus(), p.getCreatedAt(),
-                    p.getPaidAt(), p.getVoidedAt(), p.getVoidReason(),
+            return new PaymentResponse(p.getId(),
+                    p.getSession() != null ? p.getSession().getId() : null,
+                    p.getAmount(), p.getPenaltyAmount(), p.getMethod(), p.getStatus(),
+                    p.getCreatedAt(), p.getPaidAt(), p.getVoidedAt(), p.getVoidReason(),
                     p.getProcessedByStaff() == null ? null : p.getProcessedByStaff().getFullName());
         }
     }

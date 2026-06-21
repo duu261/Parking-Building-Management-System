@@ -10,6 +10,7 @@ import com.parkmaster.parking.Floor;
 import com.parkmaster.parking.ParkingBuilding;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.pass.MonthlyPassRepository;
 import com.parkmaster.pass.MonthlyPassService;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.session.ParkingSession;
@@ -31,6 +32,7 @@ class PaymentServiceTest {
     private PaymentRepository payments;
     private com.parkmaster.user.UserRepository users;
     private MonthlyPassService passService;
+    private MonthlyPassRepository passRepo;
     private PaymentService service;
 
     @BeforeEach
@@ -38,11 +40,12 @@ class PaymentServiceTest {
         payments = Mockito.mock(PaymentRepository.class);
         users = Mockito.mock(com.parkmaster.user.UserRepository.class);
         passService = Mockito.mock(MonthlyPassService.class);
+        passRepo = Mockito.mock(MonthlyPassRepository.class);
         when(payments.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
         VnPayService vnPay = new VnPayService("TESTCODE", "TESTSECRETKEY1234567890",
                 "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
                 "http://localhost:5000/api/public/payments/vnpay-return");
-        service = new PaymentService(payments, users, vnPay, passService);
+        service = new PaymentService(payments, users, vnPay, passService, passRepo);
     }
 
     @Test

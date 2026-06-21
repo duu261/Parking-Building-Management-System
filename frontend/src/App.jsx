@@ -23,7 +23,7 @@ import MySessionsPage from "./pages/user/MySessionsPage";
 import ReservationsPage from "./pages/user/ReservationsPage";
 import PassesPage from "./pages/user/PassesPage";
 import AccountPage from "./pages/user/AccountPage";
-import { getUser } from "./lib/session";
+import { getUser, isAuthed } from "./lib/session";
 
 function AppHome() {
   const role = getUser()?.role;
@@ -36,7 +36,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={isAuthed() ? <Navigate to="/app" replace /> : <LandingPage />} />
         <Route path="/pricing" element={<PublicPricingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
@@ -60,7 +60,6 @@ export default function App() {
             {/* Driver */}
             <Route path="reservations" element={<ReservationsPage />} />
             <Route path="sessions" element={<MySessionsPage />} />
-            <Route path="payments" element={<MySessionsPage />} />
             <Route path="my-passes" element={<PassesPage />} />
             <Route path="account" element={<AccountPage />} />
           </Route>

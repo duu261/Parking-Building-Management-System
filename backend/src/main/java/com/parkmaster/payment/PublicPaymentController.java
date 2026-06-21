@@ -31,9 +31,10 @@ class PublicPaymentController {
 
     @GetMapping("/vnpay-return")
     ResponseEntity<Void> vnpayReturn(@RequestParam Map<String, String> params) {
-        VnPayResult result = service.handleVnPayReturn(params);
+        VnPayResult.Outcome outcome = service.handleVnPayReturn(params);
         String ref = params.getOrDefault("vnp_TxnRef", "");
-        String target = resultUrl + "?status=" + result.name().toLowerCase()
+        String page = outcome.passPayment() ? "/my-passes" : "/sessions";
+        String target = resultUrl + page + "?status=" + outcome.result().name().toLowerCase()
                 + "&ref=" + URLEncoder.encode(ref, StandardCharsets.UTF_8);
         return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(target)).build();
     }

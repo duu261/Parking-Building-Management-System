@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { IdCard, Plus, QrCode } from "lucide-react";
 import { Card, Button, Field, Input, Select, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
@@ -6,11 +7,21 @@ import { driverApi, publicApi } from "../../lib/endpoints";
 const fmtVnd = (v) => v != null ? Number(v).toLocaleString("vi-VN") + " ₫" : null;
 
 export default function PassesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [passes, setPasses] = useState(null);
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [error, setError] = useState("");
+  const [vnpayMsg, setVnpayMsg] = useState("");
   const PAST_PAGE_SIZE = 8;
   const [pastVisible, setPastVisible] = useState(PAST_PAGE_SIZE);
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    if (status) {
+      setVnpayMsg(status === "success" ? "Payment successful — pass activated!" : "Payment failed or cancelled.");
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
 
   const load = () => {
     setError("");
@@ -38,6 +49,11 @@ export default function PassesPage() {
         An active pass means zero charge at check-out for the covered vehicle type.
       </p>
 
+      {vnpayMsg && (
+        <div className={`mt-4 rounded-lg px-4 py-3 text-sm font-medium ${vnpayMsg.includes("successful") ? "bg-available/10 text-available" : "bg-occupied/10 text-occupied"}`}>
+          {vnpayMsg}
+        </div>
+      )}
       {error && <div className="mt-4"><Alert>{error}</Alert></div>}
 
       <RegisterPassForm vehicleTypes={vehicleTypes} onDone={load} />
@@ -108,19 +124,23 @@ function PassCard({ pass: p }) {
   const isActive = p.status === "ACTIVE";
   const isPending = p.status === "PENDING";
   const [paying, setPaying] = useState(false);
+  const [err, setErr] = useState("");
 
   const payNow = async () => {
     setPaying(true);
+    setErr("");
     try {
       const { paymentUrl } = await driverApi.vnpay(p.paymentId);
       window.location.href = paymentUrl;
-    } catch {
+    } catch (e) {
+      setErr(e.message);
       setPaying(false);
     }
   };
 
   return (
     <Card className="p-4">
+      {err && <p className="mb-2 text-sm text-occupied">{err}</p>}
       <div className="flex items-center gap-3">
         {isActive ? (
           <div className="flex shrink-0 flex-col items-center">
@@ -187,10 +207,6 @@ function RegisterPassForm({ vehicleTypes, onDone }) {
       setForm({ vehicleTypeId: "", licensePlate: "", validFrom: todayStr() });
       setOpen(false);
       onDone();
-      if (pass.paymentId) {
-        const { url } = await driverApi.vnpay(pass.paymentId);
-        window.location.href = url;
-      }
     } catch (e) {
       setErr(e.message);
     } finally {

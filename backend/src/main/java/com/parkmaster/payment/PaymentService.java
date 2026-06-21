@@ -2,6 +2,8 @@ package com.parkmaster.payment;
 
 import com.parkmaster.common.ApiException;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.pass.MonthlyPass;
+import com.parkmaster.pass.MonthlyPassRepository;
 import com.parkmaster.pass.MonthlyPassService;
 import com.parkmaster.payment.PaymentDtos.PaymentResponse;
 import com.parkmaster.payment.PaymentDtos.RevenueResponse;
@@ -30,13 +32,15 @@ public class PaymentService {
     private final UserRepository users;
     private final VnPayService vnPay;
     private final MonthlyPassService passService;
+    private final MonthlyPassRepository passRepo;
 
     public PaymentService(PaymentRepository payments, UserRepository users, VnPayService vnPay,
-            MonthlyPassService passService) {
+            MonthlyPassService passService, MonthlyPassRepository passRepo) {
         this.payments = payments;
         this.users = users;
         this.vnPay = vnPay;
         this.passService = passService;
+        this.passRepo = passRepo;
     }
 
     /** Called at check-out. Zero-charge exits are auto-settled; otherwise PENDING. */
@@ -122,7 +126,13 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public List<PaymentResponse> listForUser(String email) {
-        return payments.findBySession_User_EmailOrderByCreatedAtDesc(email).stream()
+        List<Payment> sessionPayments = payments.findBySession_User_EmailOrderByCreatedAtDesc(email);
+        List<Long> passPaymentIds = passRepo.findByUser_EmailOrderByCreatedAtDesc(email).stream()
+                .filter(p -> p.getPayment() != null).map(p -> p.getPayment().getId()).toList();
+        List<Payment> passPayments = passPaymentIds.isEmpty() ? List.of()
+                : payments.findAllById(passPaymentIds);
+        return java.util.stream.Stream.concat(sessionPayments.stream(), passPayments.stream())
+                .sorted(java.util.Comparator.comparing(Payment::getCreatedAt).reversed())
                 .map(PaymentResponse::from).toList();
     }
 
@@ -168,24 +178,25 @@ public class PaymentService {
      * successful, amount-matching, signature-valid response; otherwise records the outcome only.
      */
     @Transactional
-    public VnPayResult handleVnPayReturn(Map<String, String> params) {
+    public VnPayResult.Outcome handleVnPayReturn(Map<String, String> params) {
         if (!vnPay.isValidSignature(params)) {
-            return VnPayResult.INVALID_SIGNATURE;
+            return new VnPayResult.Outcome(VnPayResult.INVALID_SIGNATURE, false);
         }
         Payment payment = payments.findByGatewayRef(params.get("vnp_TxnRef")).orElse(null);
         if (payment == null) {
-            return VnPayResult.NOT_FOUND;
+            return new VnPayResult.Outcome(VnPayResult.NOT_FOUND, false);
         }
+        boolean isPass = payment.getSession() == null;
         payment.setGatewayResponseCode(params.get("vnp_ResponseCode"));
         payment.setGatewayTxnNo(params.get("vnp_TransactionNo"));
 
         boolean ok = "00".equals(params.get("vnp_ResponseCode"))
                 && "00".equals(params.get("vnp_TransactionStatus"));
         if (!ok) {
-            return VnPayResult.FAILED;
+            return new VnPayResult.Outcome(VnPayResult.FAILED, isPass);
         }
         if (Long.parseLong(params.get("vnp_Amount")) != amountVnd(payment) * 100) {
-            return VnPayResult.AMOUNT_MISMATCH;
+            return new VnPayResult.Outcome(VnPayResult.AMOUNT_MISMATCH, isPass);
         }
         if (payment.getStatus() == PaymentStatus.PENDING) {
             payment.setStatus(PaymentStatus.PAID);
@@ -193,15 +204,22 @@ public class PaymentService {
             completeCheckedOutSession(payment);
             activateLinkedPass(payment);
         }
-        return VnPayResult.SUCCESS;
+        return new VnPayResult.Outcome(VnPayResult.SUCCESS, isPass);
     }
 
     /** Resolve a payment owned by the given driver, else 404 (no ownership leak). */
     private Payment ownedPayment(String email, Long id) {
         Payment payment = payments.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Payment not found"));
-        var owner = payment.getSession().getUser();
-        if (owner == null || !owner.getEmail().equals(email)) {
+        String ownerEmail = null;
+        if (payment.getSession() != null) {
+            User owner = payment.getSession().getUser();
+            if (owner != null) ownerEmail = owner.getEmail();
+        } else {
+            ownerEmail = passRepo.findByPayment_Id(id)
+                    .map(p -> p.getUser().getEmail()).orElse(null);
+        }
+        if (ownerEmail == null || !ownerEmail.equals(email)) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Payment not found");
         }
         return payment;

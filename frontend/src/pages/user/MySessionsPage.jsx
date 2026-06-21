@@ -134,7 +134,7 @@ function SessionDetail({ session: s, payment: pay, feedback: fb, onPaid }) {
           </>
         )}
       </div>
-      {pay?.status === "PENDING" && (
+      {pay?.status === "PENDING" && s.status !== "ACTIVE" && (
         <PayButton paymentId={pay.id} onDone={onPaid} />
       )}
       {s.status === "COMPLETED" && (
