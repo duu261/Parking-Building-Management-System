@@ -89,11 +89,14 @@ function ChangePasswordSection() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  const touched = form.next.length > 0 || form.confirm.length > 0;
+  const nextTooShort = form.next.length > 0 && form.next.length < 8;
+  const mismatch = form.confirm.length > 0 && form.next !== form.confirm;
   const canSubmit = form.current && form.next.length >= 8 && form.next === form.confirm;
 
   const save = async (e) => {
     e.preventDefault();
-    if (form.next !== form.confirm) { setErr("Passwords don't match"); return; }
+    if (!canSubmit) return;
     setSaving(true);
     setErr("");
     setMsg("");
@@ -121,9 +124,11 @@ function ChangePasswordSection() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="New password">
             <Input type="password" value={form.next} onChange={set("next")} minLength={8} maxLength={100} required />
+            {nextTooShort && <p className="mt-1 text-xs text-occupied">At least 8 characters ({8 - form.next.length} more needed)</p>}
           </Field>
           <Field label="Confirm new password">
             <Input type="password" value={form.confirm} onChange={set("confirm")} required />
+            {mismatch && <p className="mt-1 text-xs text-occupied">Passwords don't match</p>}
           </Field>
         </div>
         {err && <p className="text-sm text-occupied">{err}</p>}
@@ -131,6 +136,9 @@ function ChangePasswordSection() {
           <p className="flex items-center gap-1 text-sm text-available">
             <Check size={14} /> {msg}
           </p>
+        )}
+        {touched && !canSubmit && !nextTooShort && !mismatch && !form.current && (
+          <p className="text-xs text-muted">Enter your current password to continue</p>
         )}
         <Button type="submit" loading={saving} disabled={!canSubmit}>Change password</Button>
       </form>

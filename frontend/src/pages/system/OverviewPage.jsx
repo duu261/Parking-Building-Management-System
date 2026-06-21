@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DollarSign, Building2, Car, Gauge, TrendingUp, Clock, IdCard } from "lucide-react";
+import { Banknote, Building2, Car, Gauge, TrendingUp, Clock, IdCard } from "lucide-react";
 import { Card, Spinner, Alert, StatusBadge } from "../../components/ui";
 import { AreaLine } from "../../components/charts";
 import { managerApi, staffApi } from "../../lib/endpoints";
@@ -48,7 +48,7 @@ export default function OverviewPage() {
       <p className="mt-1 text-sm text-muted">Last 30 days at a glance.</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={DollarSign} label="Revenue (30d)" value={money(monthTotal)} />
+        <Stat icon={Banknote} label="Revenue (30d)" value={money(monthTotal)} />
         <Stat icon={Car} label="Sessions (30d)" value={monthSessions} />
         <Stat icon={Gauge} label="Avg / day" value={money(avgPerDay)} />
         <Stat icon={Building2} label="Buildings" value={data.buildings.length} />

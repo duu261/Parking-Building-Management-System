@@ -16,7 +16,7 @@ function windowFor(days) {
   return [from.toISOString(), to.toISOString()];
 }
 
-const money = (n) => `$${Number(n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+const money = (n) => Number(n ?? 0).toLocaleString("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
 const mins = (n) => `${Math.round(Number(n ?? 0))}m`;
 const dayLabel = (iso) => new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
 
