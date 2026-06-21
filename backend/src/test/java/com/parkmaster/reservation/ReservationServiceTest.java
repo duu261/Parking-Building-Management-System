@@ -13,6 +13,7 @@ import com.parkmaster.parking.SlotStatus;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
 import com.parkmaster.session.SlotAllocationService;
+import com.parkmaster.session.SlotAllocationService.ScoreBreakdown;
 import com.parkmaster.user.Role;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
@@ -57,7 +58,8 @@ class ReservationServiceTest {
         ParkingSlot slot = slot(SlotStatus.AVAILABLE);
         when(users.findByEmail("driver@x.com")).thenReturn(Optional.of(driver()));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
-        when(allocation.allocate(10L, 2L)).thenReturn(slot);
+        var scoreBreakdown = new ScoreBreakdown(slot, 20.0, 15.0, 10.0, 5.0);
+        when(allocation.rank(10L, 2L)).thenReturn(List.of(scoreBreakdown));
         when(reservations.save(any(Reservation.class))).thenAnswer(inv -> inv.getArgument(0));
 
         var resp = service.create("driver@x.com", 10L, 2L, "51A-123");
@@ -74,7 +76,9 @@ class ReservationServiceTest {
         // Allocator returns a slot that was taken concurrently (already RESERVED).
         when(users.findByEmail("driver@x.com")).thenReturn(Optional.of(driver()));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
-        when(allocation.allocate(10L, 2L)).thenReturn(slot(SlotStatus.RESERVED));
+        var reservedSlot = slot(SlotStatus.RESERVED);
+        var scoreBreakdown = new ScoreBreakdown(reservedSlot, 20.0, 15.0, 10.0, 5.0);
+        when(allocation.rank(10L, 2L)).thenReturn(List.of(scoreBreakdown));
 
         assertThatThrownBy(() -> service.create("driver@x.com", 10L, 2L, "51A-123"))
                 .isInstanceOf(ApiException.class);

@@ -84,7 +84,7 @@ export default function OverviewPage() {
                 <span className="nums font-medium">{s.licensePlate}</span>
                 <span className="text-muted">{s.vehicleTypeName}</span>
                 <span className="ml-auto text-xs text-muted">
-                  {new Date(s.checkedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(s.checkInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
                 <StatusBadge status={s.status} />
               </div>

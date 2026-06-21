@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import { Sparkles, CheckCircle2, Search, Camera, X } from "lucide-react";
+import { Sparkles, CheckCircle2, Search, Camera, X, Hand } from "lucide-react";
 import { Card, Field, Input, Select, Button, Alert, StatusBadge } from "../../components/ui";
 import { staffApi } from "../../lib/endpoints";
 import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
 
-const MODE = { AUTO: "auto", RESERVATION: "reservation" };
+const MODE = { AUTO: "auto", RESERVATION: "reservation", MANUAL: "manual" };
 
 export default function CheckInPage() {
   const [vehicleTypes, setVehicleTypes] = useState([]);
@@ -20,6 +20,12 @@ export default function CheckInPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
+  // Manual mode states
+  const [floors, setFloors] = useState([]);
+  const [floorId, setFloorId] = useState("");
+  const [slots, setSlots] = useState([]);
+  const [slotId, setSlotId] = useState("");
+
   // Initial lookups.
   useEffect(() => {
     Promise.all([staffApi.vehicleTypes(), staffApi.buildings()])
@@ -33,6 +39,13 @@ export default function CheckInPage() {
 
   const selectMode = (next) => {
     setMode(next);
+    // Reset manual mode states when switching modes
+    if (next !== MODE.MANUAL) {
+      setFloorId("");
+      setFloors([]);
+      setSlotId("");
+      setSlots([]);
+    }
   };
 
   const submit = async (e) => {
@@ -44,7 +57,10 @@ export default function CheckInPage() {
       let body;
       if (mode === MODE.RESERVATION) {
         body = { reservationId: Number(reservationId) };
+      } else if (mode === MODE.MANUAL) {
+        body = { slotId: Number(slotId), licensePlate: plate.trim(), vehicleTypeId: Number(vehicleTypeId) };
       } else {
+        // AUTO mode
         body = { licensePlate: plate.trim(), vehicleTypeId: Number(vehicleTypeId), buildingId: Number(buildingId) };
       }
 
@@ -52,12 +68,40 @@ export default function CheckInPage() {
       setResult(session);
       setPlate("");
       setReservationId("");
+      setSlotId("");
+      setFloorId("");
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  // Load floors when buildingId changes (manual mode only)
+  useEffect(() => {
+    if (mode === MODE.MANUAL && buildingId) {
+      staffApi.floors(buildingId)
+        .then((f) => {
+          setFloors(f);
+          setFloorId("");
+          setSlots([]);
+          setSlotId("");
+        })
+        .catch((e) => setError(e.message));
+    }
+  }, [buildingId, mode]);
+
+  // Load slots when floorId changes (manual mode only)
+  useEffect(() => {
+    if (mode === MODE.MANUAL && floorId) {
+      staffApi.slots(floorId)
+        .then((s) => {
+          setSlots(s);
+          setSlotId("");
+        })
+        .catch((e) => setError(e.message));
+    }
+  }, [floorId, mode]);
 
   return (
     <div className="mx-auto max-w-xl">
@@ -66,12 +110,15 @@ export default function CheckInPage() {
 
       <Card className="mt-6 p-6">
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <ModeButton active={mode === MODE.AUTO} onClick={() => selectMode(MODE.AUTO)} icon={Sparkles}>
               Auto-allocate
             </ModeButton>
-            <ModeButton active={mode === MODE.RESERVATION} onClick={() => setMode(MODE.RESERVATION)} icon={CheckCircle2}>
+            <ModeButton active={mode === MODE.RESERVATION} onClick={() => selectMode(MODE.RESERVATION)} icon={CheckCircle2}>
               Reservation
+            </ModeButton>
+            <ModeButton active={mode === MODE.MANUAL} onClick={() => selectMode(MODE.MANUAL)} icon={Hand}>
+              Manual
             </ModeButton>
           </div>
 
@@ -112,18 +159,80 @@ export default function CheckInPage() {
                 </Select>
               </Field>
 
-              <Field label="Building">
-                <Select value={buildingId} onChange={(e) => setBuildingId(e.target.value)} required>
-                  <option value="" disabled>
-                    Select building
-                  </option>
-                  {buildings.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
+              {mode === MODE.AUTO && (
+                <Field label="Building">
+                  <Select value={buildingId} onChange={(e) => setBuildingId(e.target.value)} required>
+                    <option value="" disabled>
+                      Select building
                     </option>
-                  ))}
-                </Select>
-              </Field>
+                    {buildings.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+
+              {mode === MODE.MANUAL && (
+                <>
+                  <Field label="Building">
+                    <Select value={buildingId} onChange={(e) => setBuildingId(e.target.value)} required>
+                      <option value="" disabled>
+                        Select building
+                      </option>
+                      {buildings.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  {buildingId && (
+                    <Field label="Floor">
+                      <Select value={floorId} onChange={(e) => setFloorId(e.target.value)} required>
+                        <option value="" disabled>
+                          Select floor
+                        </option>
+                        {floors.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  )}
+
+                  {slots.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-muted mb-2">
+                        {slots.filter(s => s.status === "AVAILABLE").length} available of {slots.length}
+                      </div>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {slots.map((s) => {
+                          const available = s.status === "AVAILABLE";
+                          const selected = slotId === String(s.id);
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              disabled={!available}
+                              onClick={() => setSlotId(String(s.id))}
+                              className={`rounded-[var(--radius)] border px-2 py-1.5 text-xs font-medium nums transition
+                                ${selected ? "border-accent bg-accent/10 text-accent ring-1 ring-accent" : ""}
+                                ${available && !selected ? "border-line bg-surface hover:border-accent/50 hover:bg-accent/5 cursor-pointer" : ""}
+                                ${!available ? "border-line/50 bg-elevated/30 text-muted/40 cursor-not-allowed" : ""}`}
+                            >
+                              {s.code}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
 

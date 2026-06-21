@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles, Hand } from "lucide-react";
 import { Card, Select, Spinner, Alert } from "../../components/ui";
-import { Bars, AreaLine } from "../../components/charts";
+import { Bars, HorizontalBars, AreaLine } from "../../components/charts";
 import { managerApi } from "../../lib/endpoints";
 
 const RANGES = [
@@ -93,13 +93,13 @@ export default function AnalyticsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <ChartCard title="Revenue by vehicle type" hint="Where the money comes from.">
-              <Bars
+              <HorizontalBars
                 format={money}
                 data={data.byType.points.map((p) => ({ label: p.vehicleType, value: Number(p.total) }))}
               />
             </ChartCard>
             <ChartCard title="Avg parked duration" hint="Minutes parked, by vehicle type.">
-              <Bars
+              <HorizontalBars
                 format={mins}
                 data={data.duration.points.map((p) => ({
                   label: p.vehicleType,

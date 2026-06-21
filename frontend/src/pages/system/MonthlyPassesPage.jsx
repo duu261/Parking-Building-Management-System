@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { IdCard, Plus, X } from "lucide-react";
+import { IdCard, Plus, X, Calendar } from "lucide-react";
 import {
   Card,
   Button,
@@ -49,8 +49,38 @@ export default function MonthlyPassesPage() {
     }
   };
 
+  const countByStatus = (status) =>
+    passes?.filter((p) => p.status === status).length || 0;
+
+  const stats = [
+    {
+      label: "Total",
+      count: passes?.length || 0,
+      color: "from-slate-50 to-slate-100",
+      textColor: "text-slate-700",
+    },
+    {
+      label: "Active",
+      count: countByStatus("ACTIVE"),
+      color: "from-green-50 to-green-100",
+      textColor: "text-green-700",
+    },
+    {
+      label: "Pending",
+      count: countByStatus("PENDING"),
+      color: "from-amber-50 to-amber-100",
+      textColor: "text-amber-700",
+    },
+    {
+      label: "Expired",
+      count: countByStatus("EXPIRED"),
+      color: "from-gray-50 to-gray-100",
+      textColor: "text-gray-700",
+    },
+  ];
+
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Monthly passes</h1>
@@ -61,6 +91,21 @@ export default function MonthlyPassesPage() {
         <Button onClick={() => setShowForm(!showForm)}>
           {showForm ? <><X size={16} /> Cancel</> : <><Plus size={16} /> Issue pass</>}
         </Button>
+      </div>
+
+      {/* Stats Row */}
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className={`bg-gradient-to-br ${stat.color} rounded-lg border border-gray-200 p-4`}
+          >
+            <p className="text-xs font-medium text-gray-600">{stat.label}</p>
+            <p className={`mt-2 text-2xl font-bold ${stat.textColor}`}>
+              {stat.count}
+            </p>
+          </div>
+        ))}
       </div>
 
       {error && (
@@ -80,7 +125,7 @@ export default function MonthlyPassesPage() {
         />
       )}
 
-      <div className="mt-5 flex gap-1.5">
+      <div className="mt-6 flex gap-1.5">
         {STATUS_FILTER.map((s) => (
           <button
             key={s}
@@ -199,28 +244,92 @@ function IssueForm({ vehicleTypes, onIssued, onError }) {
 }
 
 function PassCard({ pass, onRevoke }) {
-  const isActive = pass.status === "ACTIVE";
+  const startDate = new Date(pass.validFrom);
+  const endDate = new Date(pass.validUntil);
+  const today = new Date();
+  const daysRemaining = Math.max(
+    0,
+    Math.ceil((endDate - today) / (1000 * 60 * 60 * 24))
+  );
+
+  const statusStyles = {
+    ACTIVE: "border-l-4 border-l-green-500 bg-green-50/40 hover:bg-green-50/60",
+    PENDING: "border-l-4 border-l-amber-500 bg-amber-50/40 hover:bg-amber-50/60",
+    EXPIRED: "border-l-4 border-l-gray-400 bg-gray-50/40 hover:bg-gray-50/60",
+    REVOKED: "border-l-4 border-l-red-400 bg-red-50/40 hover:bg-red-50/60",
+  };
+
   return (
-    <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold tracking-tight">{pass.licensePlate}</span>
-          <StatusBadge status={pass.status} />
+    <Card
+      className={`flex flex-col gap-4 p-4 transition ${
+        statusStyles[pass.status] || statusStyles.EXPIRED
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="text-lg font-bold tracking-tight">
+              {pass.licensePlate}
+            </span>
+            <StatusBadge status={pass.status} />
+          </div>
+          <p className="mt-1 font-medium text-gray-900">{pass.userFullName}</p>
+          {pass.userEmail && (
+            <p className="text-xs text-gray-600">{pass.userEmail}</p>
+          )}
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted">
-          <span>{pass.userFullName}</span>
-          <span>{pass.vehicleTypeName}</span>
-          <span>
-            {pass.validFrom} &rarr; {pass.validUntil}
-          </span>
-          {pass.price != null && <span>{fmtVnd(pass.price)}</span>}
+        {pass.status !== "REVOKED" && (
+          <Button
+            variant="ghost"
+            onClick={onRevoke}
+            size="sm"
+            className="shrink-0 text-occupied"
+          >
+            Revoke
+          </Button>
+        )}
+      </div>
+
+      <div className="border-t border-gray-200 pt-3">
+        <div className="grid gap-3 text-sm sm:grid-cols-4">
+          <div>
+            <p className="font-semibold uppercase text-gray-600">
+              Vehicle Type
+            </p>
+            <p className="mt-1 text-gray-900">{pass.vehicleTypeName}</p>
+          </div>
+          <div>
+            <p className="font-semibold uppercase text-gray-600">Valid Period</p>
+            <p className="mt-1 text-gray-900">
+              {pass.validFrom} → {pass.validUntil}
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold uppercase text-gray-600">Price</p>
+            <p className="mt-1 font-medium text-gray-900">
+              {pass.price != null ? fmtVnd(pass.price) : "—"}
+            </p>
+          </div>
+          {pass.status === "ACTIVE" && (
+            <div>
+              <p className="font-semibold uppercase text-gray-600">
+                Days Left
+              </p>
+              <p className="mt-1 font-medium text-green-700">
+                {daysRemaining} days
+              </p>
+            </div>
+          )}
+          {pass.status === "PENDING" && (
+            <div>
+              <p className="font-semibold uppercase text-gray-600">Status</p>
+              <p className="mt-1 font-medium text-amber-700">
+                Awaiting payment
+              </p>
+            </div>
+          )}
         </div>
       </div>
-      {isActive && (
-        <Button variant="ghost" onClick={onRevoke} className="shrink-0 text-occupied">
-          Revoke
-        </Button>
-      )}
     </Card>
   );
 }

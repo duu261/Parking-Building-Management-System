@@ -77,6 +77,7 @@ public class ReportService {
         Map<String, BigDecimal> totals = new java.util.HashMap<>();
         Map<String, Long> counts = new java.util.HashMap<>();
         for (Payment p : paidIn(from, to)) {
+            if (p.getSession() == null) continue;
             String type = p.getSession().getVehicleType().getName();
             totals.merge(type, p.getAmount(), BigDecimal::add);
             counts.merge(type, 1L, Long::sum);
