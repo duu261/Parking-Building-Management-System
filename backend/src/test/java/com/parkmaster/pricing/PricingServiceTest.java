@@ -57,7 +57,7 @@ class PricingServiceTest {
         when(policies.findByVehicleTypeId(1L)).thenReturn(Optional.empty());
         when(policies.save(any(PricingPolicy.class))).thenAnswer(inv -> inv.getArgument(0));
         var resp = service.setPolicy(1L, new PricingPolicyRequest(new BigDecimal("3.00"),
-                new BigDecimal("20.00"), 15, new BigDecimal("1.5")));
+                new BigDecimal("20.00"), 15, new BigDecimal("1.5"), new BigDecimal("200000")));
         assertThat(resp.ratePerHour()).isEqualByComparingTo("3.00");
         assertThat(resp.dailyCap()).isEqualByComparingTo("20.00");
         assertThat(resp.graceMinutes()).isEqualTo(15);
@@ -72,7 +72,7 @@ class PricingServiceTest {
         when(policies.findByVehicleTypeId(1L)).thenReturn(Optional.of(existing));
         when(policies.save(any(PricingPolicy.class))).thenAnswer(inv -> inv.getArgument(0));
         var resp = service.setPolicy(1L, new PricingPolicyRequest(new BigDecimal("5.00"), null, 10,
-                BigDecimal.ONE));
+                BigDecimal.ONE, null));
         assertThat(resp.ratePerHour()).isEqualByComparingTo("5.00");
         assertThat(existing.getRatePerHour()).isEqualByComparingTo("5.00");
         assertThat(existing.getGraceMinutes()).isEqualTo(10);

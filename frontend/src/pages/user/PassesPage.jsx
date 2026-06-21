@@ -3,6 +3,8 @@ import { IdCard, Plus, QrCode } from "lucide-react";
 import { Card, Button, Field, Input, Select, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
 
+const fmtVnd = (v) => v != null ? Number(v).toLocaleString("vi-VN") + " ₫" : null;
+
 export default function PassesPage() {
   const [passes, setPasses] = useState(null);
   const [vehicleTypes, setVehicleTypes] = useState([]);
@@ -25,8 +27,9 @@ export default function PassesPage() {
   if (error && passes === null) return <Alert>{error}</Alert>;
   if (passes === null) return <Spinner label="Loading passes" />;
 
+  const pending = passes.filter((p) => p.status === "PENDING");
   const active = passes.filter((p) => p.status === "ACTIVE");
-  const past = passes.filter((p) => p.status !== "ACTIVE");
+  const past = passes.filter((p) => p.status !== "ACTIVE" && p.status !== "PENDING");
 
   return (
     <div>
@@ -45,6 +48,14 @@ export default function PassesPage() {
         </div>
       ) : (
         <>
+          {pending.length > 0 && (
+            <section className="mt-6">
+              <h2 className="mb-3 text-sm font-semibold text-muted">Awaiting payment</h2>
+              <div className="space-y-3">
+                {pending.map((p) => <PassCard key={p.id} pass={p} />)}
+              </div>
+            </section>
+          )}
           {active.length > 0 && (
             <section className="mt-6">
               <h2 className="mb-3 text-sm font-semibold text-muted">Active</h2>
@@ -95,6 +106,19 @@ function PassQr({ id }) {
 
 function PassCard({ pass: p }) {
   const isActive = p.status === "ACTIVE";
+  const isPending = p.status === "PENDING";
+  const [paying, setPaying] = useState(false);
+
+  const payNow = async () => {
+    setPaying(true);
+    try {
+      const { url } = await driverApi.vnpay(p.paymentId);
+      window.location.href = url;
+    } catch {
+      setPaying(false);
+    }
+  };
+
   return (
     <Card className="p-4">
       <div className="flex items-center gap-3">
@@ -115,18 +139,37 @@ function PassCard({ pass: p }) {
           </div>
           <div className="mt-0.5 text-sm text-muted">
             {p.vehicleTypeName} &middot; {p.validFrom} &mdash; {p.validUntil}
+            {fmtVnd(p.price) && <> &middot; {fmtVnd(p.price)}</>}
           </div>
         </div>
+        {isPending && p.paymentId && (
+          <Button variant="secondary" onClick={payNow} loading={paying} className="shrink-0">
+            Pay now
+          </Button>
+        )}
       </div>
     </Card>
   );
 }
 
+function addMonth(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function RegisterPassForm({ vehicleTypes, onDone }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ vehicleTypeId: "", licensePlate: "", validFrom: "", validUntil: "" });
+  const today = todayStr();
+  const [form, setForm] = useState({ vehicleTypeId: "", licensePlate: "", validFrom: today });
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
+
+  const validUntil = form.validFrom ? addMonth(form.validFrom) : "";
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -135,15 +178,19 @@ function RegisterPassForm({ vehicleTypes, onDone }) {
     setSubmitting(true);
     setErr("");
     try {
-      await driverApi.registerPass({
+      const pass = await driverApi.registerPass({
         vehicleTypeId: Number(form.vehicleTypeId),
         licensePlate: form.licensePlate.trim(),
         validFrom: form.validFrom,
-        validUntil: form.validUntil,
+        validUntil,
       });
-      setForm({ vehicleTypeId: "", licensePlate: "", validFrom: "", validUntil: "" });
+      setForm({ vehicleTypeId: "", licensePlate: "", validFrom: todayStr() });
       setOpen(false);
       onDone();
+      if (pass.paymentId) {
+        const { url } = await driverApi.vnpay(pass.paymentId);
+        window.location.href = url;
+      }
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -159,7 +206,7 @@ function RegisterPassForm({ vehicleTypes, onDone }) {
     );
   }
 
-  const canSubmit = form.vehicleTypeId && form.licensePlate.trim() && form.validFrom && form.validUntil;
+  const canSubmit = form.vehicleTypeId && form.licensePlate.trim() && form.validFrom;
 
   return (
     <Card className="mt-4 p-5">
@@ -176,11 +223,11 @@ function RegisterPassForm({ vehicleTypes, onDone }) {
         <Field label="License plate">
           <Input value={form.licensePlate} onChange={set("licensePlate")} placeholder="51A-12345" maxLength={20} required />
         </Field>
-        <Field label="Valid from">
-          <Input type="date" value={form.validFrom} onChange={set("validFrom")} required />
+        <Field label="Start date">
+          <Input type="date" value={form.validFrom} onChange={set("validFrom")} min={today} required />
         </Field>
-        <Field label="Valid until">
-          <Input type="date" value={form.validUntil} onChange={set("validUntil")} required />
+        <Field label="End date (auto: +1 month)">
+          <Input type="date" value={validUntil} disabled className="bg-elevated text-muted" />
         </Field>
         {err && <p className="sm:col-span-2 text-sm text-occupied">{err}</p>}
         <div className="sm:col-span-2 flex gap-2">

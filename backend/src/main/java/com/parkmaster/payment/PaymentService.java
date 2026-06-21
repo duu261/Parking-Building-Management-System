@@ -2,6 +2,7 @@ package com.parkmaster.payment;
 
 import com.parkmaster.common.ApiException;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.pass.MonthlyPassService;
 import com.parkmaster.payment.PaymentDtos.PaymentResponse;
 import com.parkmaster.payment.PaymentDtos.RevenueResponse;
 import com.parkmaster.session.ParkingSession;
@@ -28,11 +29,14 @@ public class PaymentService {
     private final PaymentRepository payments;
     private final UserRepository users;
     private final VnPayService vnPay;
+    private final MonthlyPassService passService;
 
-    public PaymentService(PaymentRepository payments, UserRepository users, VnPayService vnPay) {
+    public PaymentService(PaymentRepository payments, UserRepository users, VnPayService vnPay,
+            MonthlyPassService passService) {
         this.payments = payments;
         this.users = users;
         this.vnPay = vnPay;
+        this.passService = passService;
     }
 
     /** Called at check-out. Zero-charge exits are auto-settled; otherwise PENDING. */
@@ -58,6 +62,7 @@ public class PaymentService {
         payment.setPaidAt(Instant.now());
         payment.setProcessedByStaff(staff(staffEmail));
         completeCheckedOutSession(payment);
+        activateLinkedPass(payment);
         return PaymentResponse.from(payment);
     }
 
@@ -91,6 +96,10 @@ public class PaymentService {
      * complete the session and free its slot. No-op for sessions in any other
      * state, so refunding an already-completed session leaves its slot untouched.
      */
+    private void activateLinkedPass(Payment payment) {
+        passService.activatePass(payment);
+    }
+
     private void completeCheckedOutSession(Payment payment) {
         ParkingSession session = payment.getSession();
         if (session != null && session.getStatus() == SessionStatus.AWAITING_PAYMENT) {
@@ -128,6 +137,7 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaidAt(Instant.now());
         completeCheckedOutSession(payment);
+        activateLinkedPass(payment);
         return PaymentResponse.from(payment);
     }
 
@@ -181,6 +191,7 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(Instant.now());
             completeCheckedOutSession(payment);
+            activateLinkedPass(payment);
         }
         return VnPayResult.SUCCESS;
     }

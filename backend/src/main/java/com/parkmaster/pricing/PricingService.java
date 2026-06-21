@@ -70,6 +70,7 @@ public class PricingService {
         p.setDailyCap(req.dailyCap());
         p.setGraceMinutes(req.graceMinutes());
         p.setPeakMultiplier(req.peakMultiplier());
+        p.setMonthlyPassPrice(req.monthlyPassPrice());
         return PricingPolicyResponse.from(policies.save(p));
     }
 

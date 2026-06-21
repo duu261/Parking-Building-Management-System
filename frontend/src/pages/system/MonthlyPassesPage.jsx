@@ -13,7 +13,9 @@ import {
 } from "../../components/ui";
 import { managerApi } from "../../lib/endpoints";
 
-const STATUS_FILTER = ["ALL", "ACTIVE", "EXPIRED"];
+const STATUS_FILTER = ["ALL", "PENDING", "ACTIVE", "EXPIRED"];
+
+const fmtVnd = (v) => v != null ? Number(v).toLocaleString("vi-VN") + " ₫" : "—";
 
 export default function MonthlyPassesPage() {
   const [passes, setPasses] = useState(null);
@@ -211,6 +213,7 @@ function PassCard({ pass, onRevoke }) {
           <span>
             {pass.validFrom} &rarr; {pass.validUntil}
           </span>
+          {pass.price != null && <span>{fmtVnd(pass.price)}</span>}
         </div>
       </div>
       {isActive && (

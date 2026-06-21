@@ -25,15 +25,17 @@ public final class PricingDtos {
             @NotNull @PositiveOrZero BigDecimal ratePerHour,
             @PositiveOrZero BigDecimal dailyCap,
             @PositiveOrZero int graceMinutes,
-            @NotNull @DecimalMin("1.0") BigDecimal peakMultiplier) {}
+            @NotNull @DecimalMin("1.0") BigDecimal peakMultiplier,
+            @PositiveOrZero BigDecimal monthlyPassPrice) {}
 
     public record PricingPolicyResponse(Long id, Long vehicleTypeId, String vehicleTypeName,
             BigDecimal ratePerHour, BigDecimal dailyCap, int graceMinutes, BigDecimal peakMultiplier,
-            boolean active) {
+            boolean active, BigDecimal monthlyPassPrice) {
         static PricingPolicyResponse from(PricingPolicy p) {
             return new PricingPolicyResponse(p.getId(), p.getVehicleType().getId(),
                     p.getVehicleType().getName(), p.getRatePerHour(), p.getDailyCap(),
-                    p.getGraceMinutes(), p.getPeakMultiplier(), p.isActive());
+                    p.getGraceMinutes(), p.getPeakMultiplier(), p.isActive(),
+                    p.getMonthlyPassPrice());
         }
     }
 }

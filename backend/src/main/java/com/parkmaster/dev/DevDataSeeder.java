@@ -126,13 +126,16 @@ class DevDataSeeder implements CommandLineRunner {
         var bike = pricing.createVehicleType(new VehicleTypeRequest("Motorbike", "2-wheel vehicle"));
         var ev = pricing.createVehicleType(new VehicleTypeRequest("EV", "Electric vehicle, charging bay"));
 
-        // ratePerHour, dailyCap, graceMinutes, peakMultiplier
+        // ratePerHour (VND), dailyCap (VND), graceMinutes, peakMultiplier, monthlyPassPrice
         pricing.setPolicy(car.id(), new PricingPolicyRequest(
-                new BigDecimal("3.00"), new BigDecimal("24.00"), 15, new BigDecimal("1.5")));
+                new BigDecimal("10000"), new BigDecimal("80000"), 15, new BigDecimal("1.5"),
+                new BigDecimal("200000")));
         pricing.setPolicy(bike.id(), new PricingPolicyRequest(
-                new BigDecimal("1.00"), new BigDecimal("8.00"), 15, new BigDecimal("1.2")));
+                new BigDecimal("5000"), new BigDecimal("30000"), 15, new BigDecimal("1.2"),
+                new BigDecimal("100000")));
         pricing.setPolicy(ev.id(), new PricingPolicyRequest(
-                new BigDecimal("4.00"), new BigDecimal("30.00"), 10, new BigDecimal("1.5")));
+                new BigDecimal("15000"), new BigDecimal("100000"), 10, new BigDecimal("1.5"),
+                new BigDecimal("300000")));
         return new VehicleTypeResponse[] {car, bike, ev};
     }
 
@@ -169,7 +172,7 @@ class DevDataSeeder implements CommandLineRunner {
             vehicleTypes.findById(vt[1].id()).orElseThrow(),
             vehicleTypes.findById(vt[2].id()).orElseThrow(),
         };
-        BigDecimal[] rates = {new BigDecimal("3.00"), new BigDecimal("1.00"), new BigDecimal("4.00")};
+        BigDecimal[] rates = {new BigDecimal("10000"), new BigDecimal("5000"), new BigDecimal("15000")};
         List<ParkingSlot> allSlots = slots.findAll();
         Random rnd = new Random(42);
         int total = 0;
@@ -227,7 +230,7 @@ class DevDataSeeder implements CommandLineRunner {
         slot.setStatus(SlotStatus.OCCUPIED);
         slots.save(slot);
 
-        Payment p = new Payment(s, charge(new BigDecimal("3.00"), 45));
+        Payment p = new Payment(s, charge(new BigDecimal("10000"), 45));
         p.setMethod(PaymentMethod.ONLINE);
         // status defaults to PENDING; no paidAt yet.
         payments.save(p);
@@ -275,9 +278,17 @@ class DevDataSeeder implements CommandLineRunner {
 
     private void seedMonthlyPass(VehicleTypeResponse[] vt, User driver) {
         VehicleType motoType = vehicleTypes.findById(vt[1].id()).orElseThrow();
+
+        Payment payment = new Payment(new BigDecimal("100000"));
+        payment.setMethod(PaymentMethod.ONLINE);
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(Instant.now().minus(Duration.ofDays(5)));
+        payments.save(payment);
+
         MonthlyPass pass = new MonthlyPass(driver, motoType, "59C-123.45",
-                java.time.LocalDate.now().minusDays(5),
-                java.time.LocalDate.now().plusDays(25));
+                LocalDate.now().minusDays(5), LocalDate.now().plusDays(25));
+        pass.setStatus(com.parkmaster.pass.PassStatus.ACTIVE);
+        pass.setPayment(payment);
         passes.save(pass);
         log.info("Monthly pass seeded for driver (plate {})", pass.getLicensePlate());
     }

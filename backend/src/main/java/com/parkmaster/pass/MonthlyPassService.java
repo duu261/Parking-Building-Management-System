@@ -3,10 +3,16 @@ package com.parkmaster.pass;
 import com.parkmaster.common.ApiException;
 import com.parkmaster.pass.PassDtos.IssueRequest;
 import com.parkmaster.pass.PassDtos.PassResponse;
+import com.parkmaster.payment.Payment;
+import com.parkmaster.payment.PaymentMethod;
+import com.parkmaster.payment.PaymentRepository;
+import com.parkmaster.pricing.PricingPolicy;
+import com.parkmaster.pricing.PricingPolicyRepository;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -19,12 +25,17 @@ public class MonthlyPassService {
     private final MonthlyPassRepository passes;
     private final UserRepository users;
     private final VehicleTypeRepository vehicleTypes;
+    private final PricingPolicyRepository pricingPolicies;
+    private final PaymentRepository paymentRepo;
 
     public MonthlyPassService(MonthlyPassRepository passes, UserRepository users,
-            VehicleTypeRepository vehicleTypes) {
+            VehicleTypeRepository vehicleTypes, PricingPolicyRepository pricingPolicies,
+            PaymentRepository paymentRepo) {
         this.passes = passes;
         this.users = users;
         this.vehicleTypes = vehicleTypes;
+        this.pricingPolicies = pricingPolicies;
+        this.paymentRepo = paymentRepo;
     }
 
     @Transactional
@@ -41,10 +52,11 @@ public class MonthlyPassService {
         // ponytail: check-then-save races if two managers issue the same plate+type
         // concurrently; manual admin action, near-zero contention. Add a btree_gist
         // exclusion constraint on (license_plate, vehicle_type_id, daterange) if it matters.
-        boolean overlap = passes
-                .findByLicensePlateIgnoreCaseAndVehicleType_IdAndStatus(
-                        req.licensePlate(), req.vehicleTypeId(), PassStatus.ACTIVE)
-                .stream()
+        List<MonthlyPass> existing = passes
+                .findByLicensePlateIgnoreCaseAndVehicleType_IdAndStatusIn(
+                        req.licensePlate(), req.vehicleTypeId(),
+                        List.of(PassStatus.ACTIVE, PassStatus.PENDING));
+        boolean overlap = existing.stream()
                 .anyMatch(p -> !p.getValidFrom().isAfter(req.validUntil())
                         && !p.getValidUntil().isBefore(req.validFrom()));
         if (overlap) {
@@ -52,8 +64,24 @@ public class MonthlyPassService {
                     "An active pass already covers this period for this vehicle");
         }
 
+        // Look up pass price
+        PricingPolicy pricing = pricingPolicies.findByVehicleTypeId(req.vehicleTypeId())
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST,
+                        "No pricing policy for this vehicle type"));
+        BigDecimal passPrice = pricing.getMonthlyPassPrice();
+        if (passPrice == null || passPrice.signum() == 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Monthly pass price not configured for this vehicle type");
+        }
+
         MonthlyPass pass = new MonthlyPass(user, type, req.licensePlate(),
                 req.validFrom(), req.validUntil());
+
+        Payment payment = new Payment(passPrice);
+        payment.setMethod(PaymentMethod.ONLINE);
+        paymentRepo.save(payment);
+
+        pass.setPayment(payment);
         return PassResponse.from(passes.save(pass));
     }
 
@@ -85,5 +113,14 @@ public class MonthlyPassService {
         return passes
                 .existsByLicensePlateIgnoreCaseAndVehicleType_IdAndStatusAndValidFromLessThanEqualAndValidUntilGreaterThanEqual(
                         licensePlate, vehicleTypeId, PassStatus.ACTIVE, onDate, onDate);
+    }
+
+    @Transactional
+    public void activatePass(Payment payment) {
+        passes.findByPayment_Id(payment.getId()).ifPresent(pass -> {
+            if (pass.getStatus() == PassStatus.PENDING) {
+                pass.setStatus(PassStatus.ACTIVE);
+            }
+        });
     }
 }

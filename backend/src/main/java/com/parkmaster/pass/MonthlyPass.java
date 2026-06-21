@@ -1,5 +1,6 @@
 package com.parkmaster.pass;
 
+import com.parkmaster.payment.Payment;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.user.User;
 import jakarta.persistence.Column;
@@ -42,6 +43,10 @@ public class MonthlyPass {
     @Column(name = "license_plate", nullable = false)
     private String licensePlate;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_id")
+    private Payment payment;
+
     @Column(name = "valid_from", nullable = false)
     private LocalDate validFrom;
 
@@ -50,7 +55,7 @@ public class MonthlyPass {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PassStatus status = PassStatus.ACTIVE;
+    private PassStatus status = PassStatus.PENDING;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

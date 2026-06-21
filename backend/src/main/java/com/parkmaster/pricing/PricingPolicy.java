@@ -48,6 +48,9 @@ public class PricingPolicy {
     @Column(name = "peak_multiplier", nullable = false)
     private BigDecimal peakMultiplier = BigDecimal.ONE;
 
+    @Column(name = "monthly_pass_price")
+    private BigDecimal monthlyPassPrice;
+
     /** Soft-disable flag: a retired tariff stays for audit but is no longer billable. */
     @Column(name = "is_active", nullable = false)
     private boolean active = true;

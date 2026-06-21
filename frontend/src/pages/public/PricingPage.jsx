@@ -47,7 +47,7 @@ const RULES = [
 ];
 
 function PolicyCard({ policy }) {
-  const { vehicleTypeName, ratePerHour, dailyCap, graceMinutes, peakMultiplier } = policy;
+  const { vehicleTypeName, ratePerHour, dailyCap, graceMinutes, peakMultiplier, monthlyPassPrice } = policy;
   return (
     <div className="flex flex-col rounded-[var(--radius)] border border-line bg-surface p-6 shadow-[var(--shadow-card)]">
       <h3 className="text-base font-semibold tracking-tight">{vehicleTypeName}</h3>
@@ -68,6 +68,12 @@ function PolicyCard({ policy }) {
           <dt className="text-muted">Peak rate</dt>
           <dd className="nums text-text">{peakMultiplier}&times;</dd>
         </div>
+        {monthlyPassPrice > 0 && (
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-muted">Monthly pass</dt>
+            <dd className="nums text-text">{money(monthlyPassPrice)}</dd>
+          </div>
+        )}
       </dl>
     </div>
   );

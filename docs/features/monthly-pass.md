@@ -1,44 +1,96 @@
-# Monthly Pass (Free Parking for Regular Commuters)
+# Monthly Pass — Self-Service Purchase with VNPay
 
 ## What it does
-- A manager issues a monthly pass to a driver for one vehicle type and plate,
-  valid over a date range (e.g. the calendar month).
-- While the pass is active, that vehicle parks for free: check-out computes a
-  zero charge instead of the per-hour rate.
-- A manager can list, inspect, and revoke passes. Revoking flips status to
-  EXPIRED so the next check-out bills normally again.
-- Backend only for now: drivers do not self-purchase (no payment flow yet).
+- Drivers buy monthly passes themselves: pick vehicle type, enter plate,
+  choose start date (end = +1 month), pay via VNPay online.
+- Manager sets the monthly pass price per vehicle type on the Pricing page
+  (new `monthlyPassPrice` column on `PricingPolicy`).
+- A pass starts **PENDING** until payment settles, then auto-activates to
+  **ACTIVE**. While active, check-out charge is zero for that plate+type.
+- Manager can still issue passes directly (admin override). Manager can also
+  list all passes and revoke active ones.
 
-## Flow
-1. **Issue** (manager) - validates the date range, resolves the driver and
-   vehicle type, rejects a pass that overlaps an existing ACTIVE pass for the
-   same plate+type, then saves it ACTIVE.
-2. **Check-out** (staff, any vehicle) - the session service asks
-   `hasActivePass(plate, vehicleTypeId, today)`. If true, charge is 0 and the
-   existing free-exit path runs: session COMPLETED, slot released to AVAILABLE.
-   If false, normal per-hour billing (grace, daily cap, peak multiplier).
-3. **Revoke** (manager) - ACTIVE -> EXPIRED; future check-outs bill again.
+## Purchase flow
+1. **Driver registers pass** (`POST /api/driver/passes`) — backend looks up
+   the monthly pass price from `PricingPolicy`, creates a `Payment` (PENDING,
+   method=ONLINE), links it to the pass. Pass saved as PENDING.
+2. **Frontend auto-redirects** to VNPay gateway (`POST /api/driver/payments/{id}/vnpay`).
+   If the driver abandons payment, a "Pay now" button appears on the PENDING
+   pass card for retry.
+3. **VNPay return** — `handleVnPayReturn()` verifies the signature, marks
+   Payment as PAID, then calls `activateLinkedPass(payment)` which flips the
+   pass from PENDING to ACTIVE.
+4. **Check-out** — `hasActivePass(plate, vehicleTypeId, today)` returns true,
+   charge is 0, session completes normally.
+
+## Payment settlement paths
+All three settlement methods activate a linked pass if one exists:
+- `settle()` — staff settles cash payment at counter
+- `payOwn()` — driver pays online from My Payments
+- `handleVnPayReturn()` — VNPay callback after gateway redirect
 
 ## API
-- `POST   /api/manager/passes` - body `{ userId, vehicleTypeId, licensePlate, validFrom, validUntil }`, returns `201` + `PassResponse`
-- `GET    /api/manager/passes` - all passes, newest first
-- `GET    /api/manager/passes/{id}`
-- `DELETE /api/manager/passes/{id}` - revoke (sets EXPIRED)
 
-`PassResponse`: `{ id, userId, userFullName, vehicleTypeId, vehicleTypeName, licensePlate, validFrom, validUntil, status, createdAt }`. MANAGER (or ADMIN) role required.
+### Driver (self-service)
+- `POST /api/driver/passes` — body `{ vehicleTypeId, licensePlate, validFrom, validUntil }`,
+  returns `201` + `PassResponse` (includes `paymentId`, `price`)
+- `GET  /api/driver/passes` — own passes
+- `POST /api/driver/payments/{id}/vnpay` — start VNPay checkout, returns `{ url }`
+
+### Manager (admin)
+- `POST   /api/manager/passes` — issue directly (also creates payment)
+- `GET    /api/manager/passes` — all passes, newest first
+- `GET    /api/manager/passes/{id}`
+- `DELETE /api/manager/passes/{id}` — revoke (ACTIVE -> EXPIRED)
+
+### Public
+- `GET /api/public/pricing` — includes `monthlyPassPrice` per vehicle type
+
+## PassResponse
+```json
+{
+  "id": 1,
+  "userId": 5,
+  "userFullName": "Driver D",
+  "vehicleTypeId": 2,
+  "vehicleTypeName": "Car",
+  "licensePlate": "51A-12345",
+  "validFrom": "2026-07-01",
+  "validUntil": "2026-07-31",
+  "status": "PENDING",
+  "paymentId": 42,
+  "price": 200000,
+  "createdAt": "2026-06-21T10:00:00Z"
+}
+```
+
+## Pass lifecycle
+```
+PENDING  ──(payment settles)──>  ACTIVE  ──(manager revoke / expiry)──>  EXPIRED
+```
+
+## Overlap guard
+Issuing rejects a new pass whose date range overlaps an existing ACTIVE **or
+PENDING** pass for the same plate+type. Prevents duplicate purchases.
+
+## Pricing configuration
+Manager sets `monthlyPassPrice` alongside hourly rate on the Pricing page.
+If not configured (null or zero), pass registration returns 400.
+
+## Frontend changes
+- **Manager Pricing page** — new "Monthly pass" field in the 5-column form
+- **Manager Passes page** — PENDING filter tab, pass price shown on cards
+- **Driver Passes page** — "Awaiting payment" section for PENDING passes,
+  "Pay now" button, auto-redirect to VNPay after registration
+- **Public Pricing page** — monthly pass price row in each vehicle type card
 
 ## Validity & timezone
-The active-pass check pushes the date-range filter into the DB query
-(`validFrom <= today AND validUntil >= today`, indexed on plate+type+status).
-"Today" is `LocalDate.now(Asia/Ho_Chi_Minh)` - the app calendar day - so a pass
-does not expire a few hours early on UTC midnight.
+Active-pass check uses `LocalDate.now(Asia/Ho_Chi_Minh)` so a pass does not
+expire early on UTC midnight.
 
-## Duplicate-overlap guard
-Issuing rejects a new pass whose range overlaps an existing ACTIVE pass for the
-same plate+type, preventing two overlapping free windows on one vehicle.
-
-## Deliberate scope cut
-No driver self-service purchase and no payment for the pass itself - issuance is
-a manager action only. The extensibility point is clear: a driver endpoint plus
-a Payment on the pass would layer on top of the same entity and active-pass
-check without touching the check-out logic.
+## Database migration (V19)
+```sql
+ALTER TABLE pricing_policy ADD COLUMN monthly_pass_price NUMERIC(10, 0);
+ALTER TABLE monthly_pass ADD COLUMN payment_id BIGINT REFERENCES payment(id);
+ALTER TABLE payment ALTER COLUMN session_id DROP NOT NULL;
+```

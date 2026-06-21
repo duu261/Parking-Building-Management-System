@@ -4,7 +4,7 @@ import { Card, Button, Field, Input, Skeleton, EmptyState, Alert } from "../../c
 import { managerApi } from "../../lib/endpoints";
 
 // Defaults mirror PricingPolicyRequest validation (rate >= 0, peakMultiplier >= 1.0).
-const EMPTY_POLICY = { ratePerHour: "", dailyCap: "", graceMinutes: "", peakMultiplier: "" };
+const EMPTY_POLICY = { ratePerHour: "", dailyCap: "", graceMinutes: "", peakMultiplier: "", monthlyPassPrice: "" };
 
 export default function PricingPage() {
   const [types, setTypes] = useState(null);
@@ -120,6 +120,7 @@ function TypeCard({ type, policy, onRemove, onSaved, onError }) {
           dailyCap: policy.dailyCap ?? "",
           graceMinutes: policy.graceMinutes,
           peakMultiplier: policy.peakMultiplier,
+          monthlyPassPrice: policy.monthlyPassPrice ?? "",
         }
       : EMPTY_POLICY,
   );
@@ -135,6 +136,7 @@ function TypeCard({ type, policy, onRemove, onSaved, onError }) {
         dailyCap: form.dailyCap === "" ? null : Number(form.dailyCap),
         graceMinutes: Number(form.graceMinutes || 0),
         peakMultiplier: Number(form.peakMultiplier),
+        monthlyPassPrice: form.monthlyPassPrice === "" ? null : Number(form.monthlyPassPrice),
       });
       onSaved();
     } catch (err) {
@@ -158,12 +160,12 @@ function TypeCard({ type, policy, onRemove, onSaved, onError }) {
         </Button>
       </div>
 
-      <form onSubmit={save} className="mt-4 grid gap-3 sm:grid-cols-4">
+      <form onSubmit={save} className="mt-4 grid gap-3 sm:grid-cols-5">
         <Field label="Rate / hour">
-          <Input type="number" min="0" step="0.01" required value={form.ratePerHour} onChange={set("ratePerHour")} />
+          <Input type="number" min="0" step="1" required value={form.ratePerHour} onChange={set("ratePerHour")} />
         </Field>
         <Field label="Daily cap">
-          <Input type="number" min="0" step="0.01" value={form.dailyCap} onChange={set("dailyCap")} placeholder="None" />
+          <Input type="number" min="0" step="1" value={form.dailyCap} onChange={set("dailyCap")} placeholder="None" />
         </Field>
         <Field label="Grace (min)">
           <Input type="number" min="0" value={form.graceMinutes} onChange={set("graceMinutes")} />
@@ -171,7 +173,10 @@ function TypeCard({ type, policy, onRemove, onSaved, onError }) {
         <Field label="Peak x">
           <Input type="number" min="1" step="0.1" required value={form.peakMultiplier} onChange={set("peakMultiplier")} />
         </Field>
-        <div className="sm:col-span-4">
+        <Field label="Monthly pass">
+          <Input type="number" min="0" step="1000" value={form.monthlyPassPrice} onChange={set("monthlyPassPrice")} placeholder="None" />
+        </Field>
+        <div className="sm:col-span-5">
           <Button type="submit" variant="secondary" loading={saving}>
             {policy ? "Update pricing" : "Set pricing"}
           </Button>

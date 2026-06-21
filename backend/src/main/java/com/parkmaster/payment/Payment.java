@@ -33,8 +33,8 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "session_id", nullable = false, unique = true)
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "session_id", unique = true)
     private ParkingSession session;
 
     /** Total charged = base parking fee + penalty. */
@@ -84,6 +84,10 @@ public class Payment {
 
     public Payment(ParkingSession session, BigDecimal amount) {
         this.session = session;
+        this.amount = amount;
+    }
+
+    public Payment(BigDecimal amount) {
         this.amount = amount;
     }
 }
