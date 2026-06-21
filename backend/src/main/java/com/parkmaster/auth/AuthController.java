@@ -1,8 +1,11 @@
 package com.parkmaster.auth;
 
 import com.parkmaster.auth.AuthDtos.AuthResponse;
+import com.parkmaster.auth.AuthDtos.ForgotPasswordRequest;
 import com.parkmaster.auth.AuthDtos.LoginRequest;
+import com.parkmaster.auth.AuthDtos.MessageResponse;
 import com.parkmaster.auth.AuthDtos.RegisterRequest;
+import com.parkmaster.auth.AuthDtos.ResetPasswordRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,5 +32,17 @@ class AuthController {
     @PostMapping("/login")
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/forgot-password")
+    ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        String message = authService.forgotPassword(request);
+        return ResponseEntity.ok(new MessageResponse(message));
+    }
+
+    @PostMapping("/reset-password")
+    ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(new MessageResponse("Password has been reset successfully."));
     }
 }

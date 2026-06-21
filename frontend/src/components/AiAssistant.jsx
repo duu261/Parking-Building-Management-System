@@ -81,7 +81,7 @@ export default function AiAssistant() {
               </div>
             ))}
             {sending && <p className="text-xs text-muted">Assistant is typing…</p>}
-            {messages.length === 1 && (
+            {messages.length <= 3 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {SUGGESTIONS.map((s) => (
                   <button
@@ -119,7 +119,7 @@ export default function AiAssistant() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close assistant" : "Open assistant"}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[var(--shadow-pop)] transition hover:opacity-90 active:translate-y-px"
+        className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[var(--shadow-pop)] transition hover:opacity-90 active:translate-y-px"
       >
         {open ? <X size={22} /> : <MessageCircle size={22} />}
       </button>

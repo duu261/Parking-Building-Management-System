@@ -1,7 +1,52 @@
-import { useEffect, useState } from "react";
-import { QrCode, Car, MapPin, Building2, IdCard } from "lucide-react";
-import { Card, Button, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
+import { useEffect, useState, useMemo } from "react";
+import { QrCode, Car, MapPin, Building2, IdCard, Clock, Plus } from "lucide-react";
+import { Card, Button, Spinner, EmptyState, Alert, StatusBadge, Field, Input } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
+
+function estimateCharge(checkInIso, pricing) {
+  if (!pricing) return null;
+  const now = Date.now();
+  const checkIn = new Date(checkInIso).getTime();
+  const totalMinutes = Math.floor((now - checkIn) / 60000);
+  const billable = totalMinutes - (pricing.graceMinutes ?? 0);
+  if (billable <= 0) return 0;
+  const hours = Math.ceil(billable / 60);
+  let amount = (pricing.ratePerHour ?? 0) * hours;
+  if (pricing.dailyCap) {
+    const days = Math.max(1, Math.ceil(totalMinutes / 1440));
+    const cap = pricing.dailyCap * days;
+    if (amount > cap) amount = cap;
+  }
+  const peak = pricing.peakMultiplier ?? 1;
+  return amount * peak;
+}
+
+function LiveCost({ checkInAt, vehicleTypeId, pricingMap }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const pricing = pricingMap?.[vehicleTypeId];
+  const est = useMemo(() => estimateCharge(checkInAt, pricing), [checkInAt, pricing, tick]);
+  if (est === null) return null;
+  const elapsed = Math.floor((Date.now() - new Date(checkInAt).getTime()) / 60000);
+  const h = Math.floor(elapsed / 60);
+  const m = elapsed % 60;
+  return (
+    <div className="mt-3 flex items-center gap-3 rounded-[var(--radius)] border border-line bg-elevated/60 px-4 py-2.5">
+      <Clock size={14} className="text-muted shrink-0" />
+      <div className="flex-1 text-sm">
+        <span className="text-muted">Elapsed </span>
+        <span className="nums font-medium">{h}h {m}m</span>
+      </div>
+      <div className="text-right">
+        <div className="text-[11px] text-muted">Est. cost</div>
+        <div className="nums text-sm font-semibold">{money(est)}</div>
+      </div>
+    </div>
+  );
+}
 
 function TicketQr({ id }) {
   const [url, setUrl] = useState(null);
@@ -32,11 +77,102 @@ const money = (n) => `$${Number(n ?? 0).toLocaleString(undefined, { minimumFract
 const time = (iso) =>
   iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
 
+function RegisterPassForm({ vehicleTypes, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [vehicleTypeId, setVehicleTypeId] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
+  const [validFrom, setValidFrom] = useState("");
+  const [validUntil, setValidUntil] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState("");
+
+  const reset = () => {
+    setVehicleTypeId("");
+    setLicensePlate("");
+    setValidFrom("");
+    setValidUntil("");
+    setErr("");
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!vehicleTypeId || !licensePlate.trim() || !validFrom || !validUntil) {
+      setErr("All fields are required");
+      return;
+    }
+    if (validUntil <= validFrom) {
+      setErr("End date must be after start date");
+      return;
+    }
+    setErr("");
+    setSubmitting(true);
+    try {
+      await driverApi.registerPass({
+        vehicleTypeId: Number(vehicleTypeId),
+        licensePlate: licensePlate.trim().toUpperCase(),
+        validFrom,
+        validUntil,
+      });
+      reset();
+      setOpen(false);
+      onDone?.();
+    } catch (ex) {
+      setErr(ex.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="mt-3 flex items-center gap-1.5 text-sm text-accent hover:underline">
+        <Plus size={14} /> Register a monthly pass
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-3 space-y-3 rounded-[var(--radius)] border border-line bg-elevated/60 p-4">
+      {err && <Alert>{err}</Alert>}
+      <Field label="Vehicle type">
+        <select
+          value={vehicleTypeId}
+          onChange={(e) => setVehicleTypeId(e.target.value)}
+          className="w-full rounded-[var(--radius)] border border-line bg-surface px-3 py-2 text-sm"
+        >
+          <option value="">Select…</option>
+          {vehicleTypes.map((vt) => (
+            <option key={vt.id} value={vt.id}>{vt.name}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="License plate">
+        <Input value={licensePlate} onChange={(e) => setLicensePlate(e.target.value)} placeholder="e.g. 59A-123.45" />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="From">
+          <Input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+        </Field>
+        <Field label="Until">
+          <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button type="submit" loading={submitting}>Register</Button>
+        <button type="button" onClick={() => { reset(); setOpen(false); }} className="text-sm text-muted hover:text-text">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function MyParkingPage() {
   const [sessions, setSessions] = useState(null);
   const [payments, setPayments] = useState([]);
   const [passes, setPasses] = useState([]);
   const [buildings, setBuildings] = useState([]);
+  const [pricingMap, setPricingMap] = useState({});
   const [error, setError] = useState("");
   const [paying, setPaying] = useState(null);
 
@@ -50,6 +186,9 @@ export default function MyParkingPage() {
       .catch((e) => setError(e.message));
 
     driverApi.passes().then(setPasses).catch(() => {});
+    publicApi.pricing().then((list) => {
+      setPricingMap(Object.fromEntries(list.map((p) => [p.vehicleTypeId, p])));
+    }).catch(() => {});
 
     publicApi.buildings().then(async (list) => {
       const enriched = await Promise.all(
@@ -118,6 +257,7 @@ export default function MyParkingPage() {
                     </span>
                     <span className="nums">in {time(s.checkInAt)}</span>
                   </div>
+                  <LiveCost checkInAt={s.checkInAt} vehicleTypeId={s.vehicleTypeId} pricingMap={pricingMap} />
                   {pendingBySession[s.id] && (
                     <div className="mt-4 flex items-center justify-between gap-3 rounded-[var(--radius)] border border-line bg-elevated px-4 py-3">
                       <div className="text-sm">
@@ -161,6 +301,7 @@ export default function MyParkingPage() {
               ))}
             </div>
           )}
+          <RegisterPassForm vehicleTypes={Object.values(pricingMap).map((p) => ({ id: p.vehicleTypeId, name: p.vehicleTypeName }))} onDone={load} />
         </section>
 
         {/* Building availability */}

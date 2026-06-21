@@ -6,6 +6,8 @@ import LandingPage from "./pages/public/LandingPage";
 import PublicPricingPage from "./pages/public/PricingPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import CheckInPage from "./pages/staff/CheckInPage";
 import ActiveSessionsPage from "./pages/staff/ActiveSessionsPage";
 import ExceptionsPage from "./pages/staff/ExceptionsPage";
@@ -36,6 +38,8 @@ export default function App() {
         <Route path="/pricing" element={<PublicPricingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route element={<ProtectedRoute allow={["ADMIN", "MANAGER", "STAFF", "USER"]} />}>
           <Route path="/app" element={<AppLayout />}>
@@ -54,6 +58,7 @@ export default function App() {
             {/* Driver */}
             <Route path="reservations" element={<ReservationsPage />} />
             <Route path="sessions" element={<MySessionsPage />} />
+            <Route path="payments" element={<MySessionsPage />} />
           </Route>
         </Route>
 

@@ -3,6 +3,10 @@ import { apiRequest, apiBlobUrl } from "./api";
 export const authApi = {
   login: (body) => apiRequest("/auth/login", { method: "POST", body, auth: false }),
   register: (body) => apiRequest("/auth/register", { method: "POST", body, auth: false }),
+  forgotPassword: (email) =>
+    apiRequest("/auth/forgot-password", { method: "POST", body: { email }, auth: false }),
+  resetPassword: (token, newPassword) =>
+    apiRequest("/auth/reset-password", { method: "POST", body: { token, newPassword }, auth: false }),
 };
 
 export const staffApi = {
@@ -94,8 +98,15 @@ export const driverApi = {
   payments: () => apiRequest("/driver/payments"),
   pay: (id, method = "ONLINE") =>
     apiRequest(`/driver/payments/${id}/pay`, { method: "POST", body: { method } }),
+  vnpay: (id) =>
+    apiRequest(`/driver/payments/${id}/vnpay`, { method: "POST" }),
+
+  feedback: () => apiRequest("/driver/feedback"),
+  submitFeedback: (sessionId, rating, comment) =>
+    apiRequest("/driver/feedback", { method: "POST", body: { sessionId, rating, comment } }),
 
   passes: () => apiRequest("/driver/passes"),
+  registerPass: (body) => apiRequest("/driver/passes", { method: "POST", body }),
   reservations: () => apiRequest("/driver/reservations"),
   reservationQr: (id) => apiBlobUrl(`/driver/reservations/${id}/qr.png`),
   reserve: (body) => apiRequest("/driver/reservations", { method: "POST", body }),

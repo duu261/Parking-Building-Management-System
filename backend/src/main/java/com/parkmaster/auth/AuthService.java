@@ -1,29 +1,42 @@
 package com.parkmaster.auth;
 
 import com.parkmaster.auth.AuthDtos.AuthResponse;
+import com.parkmaster.auth.AuthDtos.ForgotPasswordRequest;
 import com.parkmaster.auth.AuthDtos.LoginRequest;
 import com.parkmaster.auth.AuthDtos.RegisterRequest;
+import com.parkmaster.auth.AuthDtos.ResetPasswordRequest;
 import com.parkmaster.common.ApiException;
 import com.parkmaster.security.JwtService;
 import com.parkmaster.user.Role;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
+
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PasswordResetTokenRepository resetTokens;
 
-    public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository users, PasswordEncoder passwordEncoder,
+                       JwtService jwtService, PasswordResetTokenRepository resetTokens) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.resetTokens = resetTokens;
     }
 
     @Transactional
@@ -50,6 +63,32 @@ public class AuthService {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
         return toResponse(user);
+    }
+
+    @Transactional
+    public String forgotPassword(ForgotPasswordRequest request) {
+        var user = users.findByEmail(request.email()).orElse(null);
+        if (user == null) {
+            return "If an account exists with that email, a reset link has been sent.";
+        }
+        String token = UUID.randomUUID().toString().replace("-", "");
+        var resetToken = new PasswordResetToken(user, token, Instant.now().plus(30, ChronoUnit.MINUTES));
+        resetTokens.save(resetToken);
+        log.info("Password reset token for {}: {}", user.getEmail(), token);
+        return "If an account exists with that email, a reset link has been sent.";
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        var resetToken = resetTokens.findByToken(request.token())
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token"));
+        if (resetToken.isUsed() || resetToken.isExpired()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token");
+        }
+        resetToken.markUsed();
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        users.save(user);
     }
 
     private AuthResponse toResponse(User user) {
