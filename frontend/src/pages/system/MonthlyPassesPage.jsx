@@ -53,30 +53,10 @@ export default function MonthlyPassesPage() {
     passes?.filter((p) => p.status === status).length || 0;
 
   const stats = [
-    {
-      label: "Total",
-      count: passes?.length || 0,
-      color: "from-slate-50 to-slate-100",
-      textColor: "text-slate-700",
-    },
-    {
-      label: "Active",
-      count: countByStatus("ACTIVE"),
-      color: "from-green-50 to-green-100",
-      textColor: "text-green-700",
-    },
-    {
-      label: "Pending",
-      count: countByStatus("PENDING"),
-      color: "from-amber-50 to-amber-100",
-      textColor: "text-amber-700",
-    },
-    {
-      label: "Expired",
-      count: countByStatus("EXPIRED"),
-      color: "from-gray-50 to-gray-100",
-      textColor: "text-gray-700",
-    },
+    { label: "Total", count: passes?.length || 0 },
+    { label: "Active", count: countByStatus("ACTIVE") },
+    { label: "Pending", count: countByStatus("PENDING") },
+    { label: "Expired", count: countByStatus("EXPIRED") },
   ];
 
   return (
@@ -98,10 +78,10 @@ export default function MonthlyPassesPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className={`bg-gradient-to-br ${stat.color} rounded-lg border border-gray-200 p-4`}
+            className="rounded-lg border border-line bg-surface p-4"
           >
-            <p className="text-xs font-medium text-gray-600">{stat.label}</p>
-            <p className={`mt-2 text-2xl font-bold ${stat.textColor}`}>
+            <p className="text-xs font-medium text-muted">{stat.label}</p>
+            <p className="mt-2 text-2xl font-bold text-text">
               {stat.count}
             </p>
           </div>
@@ -253,10 +233,10 @@ function PassCard({ pass, onRevoke }) {
   );
 
   const statusStyles = {
-    ACTIVE: "border-l-4 border-l-green-500 bg-green-50/40 hover:bg-green-50/60",
-    PENDING: "border-l-4 border-l-amber-500 bg-amber-50/40 hover:bg-amber-50/60",
-    EXPIRED: "border-l-4 border-l-gray-400 bg-gray-50/40 hover:bg-gray-50/60",
-    REVOKED: "border-l-4 border-l-red-400 bg-red-50/40 hover:bg-red-50/60",
+    ACTIVE: "border-l-4 border-l-available",
+    PENDING: "border-l-4 border-l-reserved",
+    EXPIRED: "border-l-4 border-l-line",
+    REVOKED: "border-l-4 border-l-occupied",
   };
 
   return (
@@ -273,9 +253,9 @@ function PassCard({ pass, onRevoke }) {
             </span>
             <StatusBadge status={pass.status} />
           </div>
-          <p className="mt-1 font-medium text-gray-900">{pass.userFullName}</p>
+          <p className="mt-1 font-medium text-text">{pass.userFullName}</p>
           {pass.userEmail && (
-            <p className="text-xs text-gray-600">{pass.userEmail}</p>
+            <p className="text-xs text-muted">{pass.userEmail}</p>
           )}
         </div>
         {pass.status !== "REVOKED" && (
@@ -290,42 +270,34 @@ function PassCard({ pass, onRevoke }) {
         )}
       </div>
 
-      <div className="border-t border-gray-200 pt-3">
+      <div className="border-t border-line pt-3">
         <div className="grid gap-3 text-sm sm:grid-cols-4">
           <div>
-            <p className="font-semibold uppercase text-gray-600">
-              Vehicle Type
-            </p>
-            <p className="mt-1 text-gray-900">{pass.vehicleTypeName}</p>
+            <p className="text-xs font-semibold uppercase text-muted">Vehicle Type</p>
+            <p className="mt-1 text-text">{pass.vehicleTypeName}</p>
           </div>
           <div>
-            <p className="font-semibold uppercase text-gray-600">Valid Period</p>
-            <p className="mt-1 text-gray-900">
+            <p className="text-xs font-semibold uppercase text-muted">Valid Period</p>
+            <p className="mt-1 text-text">
               {pass.validFrom} → {pass.validUntil}
             </p>
           </div>
           <div>
-            <p className="font-semibold uppercase text-gray-600">Price</p>
-            <p className="mt-1 font-medium text-gray-900">
+            <p className="text-xs font-semibold uppercase text-muted">Price</p>
+            <p className="mt-1 font-medium text-text">
               {pass.price != null ? fmtVnd(pass.price) : "—"}
             </p>
           </div>
           {pass.status === "ACTIVE" && (
             <div>
-              <p className="font-semibold uppercase text-gray-600">
-                Days Left
-              </p>
-              <p className="mt-1 font-medium text-green-700">
-                {daysRemaining} days
-              </p>
+              <p className="text-xs font-semibold uppercase text-muted">Days Left</p>
+              <p className="mt-1 font-medium text-available">{daysRemaining} days</p>
             </div>
           )}
           {pass.status === "PENDING" && (
             <div>
-              <p className="font-semibold uppercase text-gray-600">Status</p>
-              <p className="mt-1 font-medium text-amber-700">
-                Awaiting payment
-              </p>
+              <p className="text-xs font-semibold uppercase text-muted">Status</p>
+              <p className="mt-1 font-medium text-reserved">Awaiting payment</p>
             </div>
           )}
         </div>
