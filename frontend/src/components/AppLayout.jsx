@@ -19,6 +19,7 @@ import {
   History,
   Menu,
   X,
+  UserCircle,
 } from "lucide-react";
 import { getUser, clearSession } from "../lib/session";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
@@ -46,9 +47,11 @@ const NAV = {
     { to: "/app/pricing", label: "Pricing", icon: Tags },
   ],
   USER: [
-    { to: "/app", label: "My parking", icon: Car, end: true },
+    { to: "/app", label: "Dashboard", icon: Car, end: true },
     { to: "/app/reservations", label: "Reservations", icon: CalendarClock },
     { to: "/app/sessions", label: "Sessions", icon: History },
+    { to: "/app/my-passes", label: "Passes", icon: IdCard },
+    { to: "/app/account", label: "Account", icon: UserCircle },
   ],
 };
 

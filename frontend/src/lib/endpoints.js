@@ -106,12 +106,18 @@ export const driverApi = {
     apiRequest("/driver/feedback", { method: "POST", body: { sessionId, rating, comment } }),
 
   passes: () => apiRequest("/driver/passes"),
+  passQr: (id) => apiBlobUrl(`/driver/passes/${id}/qr.png`),
   registerPass: (body) => apiRequest("/driver/passes", { method: "POST", body }),
   reservations: () => apiRequest("/driver/reservations"),
   reservationQr: (id) => apiBlobUrl(`/driver/reservations/${id}/qr.png`),
   reserve: (body) => apiRequest("/driver/reservations", { method: "POST", body }),
   cancelReservation: (id) =>
     apiRequest(`/driver/reservations/${id}/cancel`, { method: "POST" }),
+
+  profile: () => apiRequest("/driver/profile"),
+  updateProfile: (body) => apiRequest("/driver/profile", { method: "PUT", body }),
+  changePassword: (currentPassword, newPassword) =>
+    apiRequest("/driver/profile/change-password", { method: "POST", body: { currentPassword, newPassword } }),
 };
 
 // PUBLIC (guest / SEO): no auth.

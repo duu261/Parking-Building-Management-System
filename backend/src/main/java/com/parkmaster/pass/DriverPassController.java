@@ -36,6 +36,20 @@ class DriverPassController {
                 req.validFrom(), req.validUntil()));
     }
 
+    @Transactional(readOnly = true)
+    @GetMapping(value = "/{id}/qr.png", produces = org.springframework.http.MediaType.IMAGE_PNG_VALUE)
+    byte[] passQr(@PathVariable Long id, Authentication auth) {
+        MonthlyPass pass = passes.findById(id)
+                .filter(p -> p.getUser().getEmail().equals(auth.getName()))
+                .orElseThrow(() -> new com.parkmaster.common.ApiException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Pass not found"));
+        String content = "PASS:%d|%s|%s|%s→%s".formatted(
+                pass.getId(), pass.getLicensePlate(),
+                pass.getVehicleType().getName(),
+                pass.getValidFrom(), pass.getValidUntil());
+        return com.parkmaster.session.QrCodeGenerator.pngFor(content);
+    }
+
     record DriverPassRequest(
             @NotNull Long vehicleTypeId,
             @NotBlank String licensePlate,

@@ -16,6 +16,8 @@ export default function MySessionsPage() {
   const [expanded, setExpanded] = useState(null);
   const [error, setError] = useState("");
   const [vnpayMsg, setVnpayMsg] = useState("");
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     const status = searchParams.get("status");
@@ -56,45 +58,55 @@ export default function MySessionsPage() {
           <EmptyState icon={History} title="No sessions yet" hint="Your parking history will appear here." />
         </div>
       ) : (
-        <Card className="mt-6 divide-y divide-line">
-          {sessions.map((s) => {
-            const pay = payBySession[s.id];
-            const open = expanded === s.id;
-            return (
-              <div key={s.id}>
-                <button
-                  onClick={() => setExpanded(open ? null : s.id)}
-                  className="flex w-full items-center gap-4 px-5 py-3.5 text-left transition hover:bg-elevated"
-                >
-                  <ChevronDown
-                    size={15}
-                    className={`shrink-0 text-muted transition ${open ? "rotate-180" : ""}`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2.5">
-                      <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
-                      <StatusBadge status={s.status} />
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                      <span className="nums">{time(s.checkInAt)}</span>
-                      <span className="text-line">|</span>
-                      <span className="nums">{s.checkOutAt ? time(s.checkOutAt) : "parked"}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="nums text-sm font-semibold">{money(s.amountCharged)}</div>
-                    {pay && (
-                      <div className="text-[11px] text-muted">
-                        {pay.status === "PAID" ? "paid" : (pay.status ?? "").toLowerCase()}
+        <>
+          <Card className="mt-6 divide-y divide-line">
+            {sessions.slice(0, visibleCount).map((s) => {
+              const pay = payBySession[s.id];
+              const open = expanded === s.id;
+              return (
+                <div key={s.id}>
+                  <button
+                    onClick={() => setExpanded(open ? null : s.id)}
+                    className="flex w-full items-center gap-4 px-5 py-3.5 text-left transition hover:bg-elevated"
+                  >
+                    <ChevronDown
+                      size={15}
+                      className={`shrink-0 text-muted transition ${open ? "rotate-180" : ""}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
+                        <StatusBadge status={s.status} />
                       </div>
-                    )}
-                  </div>
-                </button>
-                {open && <SessionDetail session={s} payment={pay} feedback={fbBySession[s.id]} onPaid={load} />}
-              </div>
-            );
-          })}
-        </Card>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
+                        <span className="nums">{time(s.checkInAt)}</span>
+                        <span className="text-line">|</span>
+                        <span className="nums">{s.checkOutAt ? time(s.checkOutAt) : "parked"}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="nums text-sm font-semibold">{money(s.amountCharged)}</div>
+                      {pay && (
+                        <div className="text-[11px] text-muted">
+                          {pay.status === "PAID" ? "paid" : (pay.status ?? "").toLowerCase()}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                  {open && <SessionDetail session={s} payment={pay} feedback={fbBySession[s.id]} onPaid={load} />}
+                </div>
+              );
+            })}
+          </Card>
+          {visibleCount < sessions.length && (
+            <button
+              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              className="mt-3 w-full rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-muted transition hover:bg-elevated hover:text-primary"
+            >
+              Show more ({sessions.length - visibleCount} remaining)
+            </button>
+          )}
+        </>
       )}
     </div>
   );

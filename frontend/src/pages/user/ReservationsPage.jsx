@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarClock, MapPin, X, QrCode } from "lucide-react";
+import { CalendarClock, MapPin, X, QrCode, Building2 } from "lucide-react";
 import { Card, Button, Field, Input, Select, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
 
@@ -16,6 +16,8 @@ export default function ReservationsPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(null);
+  const PAGE_SIZE = 8;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const load = () => {
     setError("");
@@ -112,44 +114,91 @@ export default function ReservationsPage() {
         </form>
       </Card>
 
+      <AvailabilityBar buildings={buildings} />
+
       {list.length === 0 ? (
         <div className="mt-6">
           <EmptyState icon={CalendarClock} title="No reservations yet" hint="Reserve a slot above and it will appear here." />
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
-          {list.map((r) => (
-            <Card key={r.id} className="p-4">
-              <div className="flex items-center gap-4">
-                {r.status === "PENDING" && <ReservationQr id={r.id} />}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <span className="nums font-semibold">{r.licensePlate}</span>
-                    <StatusBadge status={r.status} />
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={14} /> slot <span className="nums text-text">{r.slotCode}</span>
-                    </span>
-                    {r.status === "PENDING" && <span className="nums">held until {time(r.holdUntil)}</span>}
+        <>
+          <div className="mt-6 space-y-3">
+            {list.slice(0, visibleCount).map((r) => (
+              <Card key={r.id} className="p-4">
+                <div className="flex items-center gap-4">
+                  {r.status === "PENDING" && <ReservationQr id={r.id} />}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5">
+                      <span className="nums font-semibold">{r.licensePlate}</span>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={14} /> slot <span className="nums text-text">{r.slotCode}</span>
+                      </span>
+                      {r.status === "PENDING" && <span className="nums">held until {time(r.holdUntil)}</span>}
+                    </div>
+                    {r.status === "PENDING" && (
+                      <div className="mt-1 flex items-center gap-1 text-xs text-muted">
+                        <QrCode size={12} /> Show QR to staff for check-in
+                      </div>
+                    )}
                   </div>
                   {r.status === "PENDING" && (
-                    <div className="mt-1 flex items-center gap-1 text-xs text-muted">
-                      <QrCode size={12} /> Show QR to staff for check-in
-                    </div>
+                    <Button variant="secondary" onClick={() => cancel(r.id)} loading={cancelling === r.id}>
+                      <X size={16} /> Cancel
+                    </Button>
                   )}
                 </div>
-                {r.status === "PENDING" && (
-                  <Button variant="secondary" onClick={() => cancel(r.id)} loading={cancelling === r.id}>
-                    <X size={16} /> Cancel
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+          {visibleCount < list.length && (
+            <button
+              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              className="mt-3 w-full rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-muted transition hover:bg-elevated hover:text-primary"
+            >
+              Show more ({list.length - visibleCount} remaining)
+            </button>
+          )}
+        </>
       )}
     </div>
+  );
+}
+
+function AvailabilityBar({ buildings }) {
+  if (buildings.length === 0) return null;
+  return (
+    <section className="mt-6">
+      <h2 className="mb-3 text-sm font-semibold tracking-tight flex items-center gap-2">
+        <Building2 size={16} className="text-muted" /> Slot availability
+      </h2>
+      <div className="space-y-2">
+        {buildings.map((b) => {
+          const total = b.totalSlots ?? 0;
+          const open = b.availableSlots ?? 0;
+          const pct = total > 0 ? Math.round((open / total) * 100) : 0;
+          return (
+            <div key={b.id} className="rounded-[var(--radius)] border border-line bg-surface p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{b.name}</span>
+                <span className="nums text-xs text-muted">{open}/{total} open</span>
+              </div>
+              <div className="mt-2 h-1.5 rounded-full bg-elevated overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: pct > 50 ? "var(--available)" : pct > 20 ? "var(--reserved)" : "var(--occupied)",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

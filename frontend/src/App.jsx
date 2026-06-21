@@ -21,6 +21,8 @@ import MonthlyPassesPage from "./pages/system/MonthlyPassesPage";
 import MyParkingPage from "./pages/user/MyParkingPage";
 import MySessionsPage from "./pages/user/MySessionsPage";
 import ReservationsPage from "./pages/user/ReservationsPage";
+import PassesPage from "./pages/user/PassesPage";
+import AccountPage from "./pages/user/AccountPage";
 import { getUser } from "./lib/session";
 
 function AppHome() {
@@ -59,6 +61,8 @@ export default function App() {
             <Route path="reservations" element={<ReservationsPage />} />
             <Route path="sessions" element={<MySessionsPage />} />
             <Route path="payments" element={<MySessionsPage />} />
+            <Route path="my-passes" element={<PassesPage />} />
+            <Route path="account" element={<AccountPage />} />
           </Route>
         </Route>
 
