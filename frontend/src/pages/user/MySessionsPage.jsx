@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { History, ChevronDown, CreditCard, Star, MessageSquare } from "lucide-react";
 import { Card, Button, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi } from "../../lib/endpoints";
+import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
 
 const money = (n) => Number(n ?? 0).toLocaleString("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
 const time = (iso) =>
@@ -77,6 +78,7 @@ export default function MySessionsPage() {
                       <div className="flex items-center gap-2.5">
                         <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
                         <StatusBadge status={s.status} />
+                        {s.autoAllocated && <ScoreBreakdownCard score={s.allocationScore} compact />}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
                         <span className="nums">{time(s.checkInAt)}</span>
@@ -119,9 +121,7 @@ function SessionDetail({ session: s, payment: pay, feedback: fb, onPaid }) {
         <Info label="Session ID" value={`#${s.id}`} />
         <Info label="License plate" value={s.licensePlate} />
         <Info label="Vehicle type" value={s.vehicleTypeName ?? "-"} />
-        <Info label="Building" value={s.buildingName ?? "-"} />
-        <Info label="Floor" value={s.floorName ?? "-"} />
-        <Info label="Slot" value={s.slotCode ?? s.slotId ?? "-"} />
+        <Info label="Slot" value={s.buildingName ? `${s.buildingName} › ${s.floorName} › ${s.slotCode}` : s.slotCode ?? s.slotId ?? "-"} />
         <Info label="Allocation" value={s.autoAllocated ? "Auto" : "Manual"} />
         <Info label="Checked in" value={time(s.checkInAt)} />
         <Info label="Checked out" value={s.checkOutAt ? time(s.checkOutAt) : "Still parked"} />

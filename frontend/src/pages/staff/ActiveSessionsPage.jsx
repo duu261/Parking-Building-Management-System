@@ -88,7 +88,7 @@ export default function ActiveSessionsPage() {
                   <span>{types[s.vehicleTypeId] ?? `Type ${s.vehicleTypeId}`}</span>
                   <span className="text-line">|</span>
                   <span>
-                    slot <span className="nums text-text">{s.slotId}</span>
+                    {s.buildingName ? `${s.buildingName} › ${s.floorName} › ` : "slot "}<span className="nums text-text">{s.slotCode ?? s.slotId}</span>
                   </span>
                   <span className="text-line">|</span>
                   <span className="nums">{formatTime(s.checkInAt)}</span>

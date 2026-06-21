@@ -1,5 +1,6 @@
 package com.parkmaster.session;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parkmaster.common.ApiException;
 import com.parkmaster.common.PeakHours;
 import com.parkmaster.parking.ParkingSlot;
@@ -73,8 +74,29 @@ public class ParkingSessionService {
 
         boolean autoAllocated = req.slotId() == null;
         ParkingSlot slot;
+        String allocationScoreJson = null;
         if (autoAllocated) {
-            slot = allocation.allocate(req.buildingId(), req.vehicleTypeId());
+            var ranked = allocation.rank(req.buildingId(), req.vehicleTypeId());
+            if (ranked.isEmpty()) {
+                throw new ApiException(HttpStatus.CONFLICT, "No available slots in building");
+            }
+            var winner = ranked.get(0);
+            slot = winner.slot();
+            // Build AllocationScore from the winner's breakdown
+            var scoreRecord = new SessionDtos.AllocationScore(
+                round(winner.vehicleTypeMatch()),
+                round(winner.loadBalance()),
+                round(winner.distanceToEntry()),
+                round(winner.peakHour()),
+                round(winner.total()),
+                ranked.size()
+            );
+            try {
+                var mapper = new ObjectMapper();
+                allocationScoreJson = mapper.writeValueAsString(scoreRecord);
+            } catch (Exception e) {
+                // Ignore serialization errors; score remains null
+            }
         } else {
             slot = slots.findById(req.slotId())
                     .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found"));
@@ -87,6 +109,7 @@ public class ParkingSessionService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Vehicle type not found"));
 
         ParkingSession session = new ParkingSession(slot, type, req.licensePlate(), autoAllocated);
+        session.setAllocationScore(allocationScoreJson);
         slot.setStatus(SlotStatus.OCCUPIED);
         return SessionResponse.from(sessions.save(session));
     }
@@ -190,5 +213,9 @@ public class ParkingSessionService {
             throw new ApiException(HttpStatus.NOT_FOUND, "Session not found");
         }
         return QrCodeGenerator.pngFor(session.getTicketCode());
+    }
+
+    private static double round(double v) {
+        return Math.round(v * 10.0) / 10.0;
     }
 }

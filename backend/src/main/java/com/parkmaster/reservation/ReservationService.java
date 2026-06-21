@@ -1,11 +1,13 @@
 package com.parkmaster.reservation;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parkmaster.common.ApiException;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.SlotStatus;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
 import com.parkmaster.reservation.ReservationDtos.ReservationResponse;
+import com.parkmaster.session.SessionDtos;
 import com.parkmaster.session.SlotAllocationService;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
@@ -42,10 +44,26 @@ public class ReservationService {
         VehicleType type = vehicleTypes.findById(vehicleTypeId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Vehicle type not found"));
 
-        ParkingSlot slot = pickAndHoldSlot(buildingId, vehicleTypeId);
+        var ranked = allocation.rank(buildingId, vehicleTypeId);
+        ParkingSlot slot = pickAndHoldSlot(ranked);
+
+        // Build AllocationScore from the winner (first ranked slot)
+        SessionDtos.AllocationScore score = null;
+        if (!ranked.isEmpty()) {
+            var winner = ranked.get(0);
+            score = new SessionDtos.AllocationScore(
+                round(winner.vehicleTypeMatch()),
+                round(winner.loadBalance()),
+                round(winner.distanceToEntry()),
+                round(winner.peakHour()),
+                round(winner.total()),
+                ranked.size()
+            );
+        }
+
         Reservation reservation = new Reservation(user, slot, type, licensePlate,
                 Instant.now().plus(HOLD_DURATION));
-        return ReservationResponse.from(reservations.save(reservation));
+        return ReservationResponse.from(reservations.save(reservation), score);
     }
 
     @Transactional(readOnly = true)
@@ -96,14 +114,21 @@ public class ReservationService {
 
     // ponytail: re-check + retry-once guards the allocate-then-flip race. Upgrade to a
     // row lock (SELECT ... FOR UPDATE) or @Version only if real contention shows up.
-    private ParkingSlot pickAndHoldSlot(Long buildingId, Long vehicleTypeId) {
+    private ParkingSlot pickAndHoldSlot(java.util.List<SlotAllocationService.ScoreBreakdown> ranked) {
         for (int attempt = 0; attempt < ALLOCATE_ATTEMPTS; attempt++) {
-            ParkingSlot slot = allocation.allocate(buildingId, vehicleTypeId);
+            if (ranked.isEmpty()) {
+                continue;
+            }
+            ParkingSlot slot = ranked.get(0).slot();
             if (slot.getStatus() == SlotStatus.AVAILABLE) {
                 slot.setStatus(SlotStatus.RESERVED);
                 return slot;
             }
         }
         throw new ApiException(HttpStatus.CONFLICT, "No available slot could be reserved");
+    }
+
+    private static double round(double v) {
+        return Math.round(v * 10.0) / 10.0;
     }
 }

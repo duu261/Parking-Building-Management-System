@@ -70,6 +70,10 @@ public class ParkingSession {
     @Column(name = "auto_allocated", nullable = false)
     private boolean autoAllocated = false;
 
+    @Column(name = "allocation_score", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private String allocationScore;
+
     public ParkingSession(ParkingSlot slot, VehicleType vehicleType, String licensePlate,
             boolean autoAllocated) {
         this.slot = slot;

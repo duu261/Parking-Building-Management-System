@@ -1,23 +1,20 @@
 import { useEffect, useState, useRef } from "react";
-import { Sparkles, Hand, CheckCircle2, Search, Camera, X } from "lucide-react";
+import { Sparkles, CheckCircle2, Search, Camera, X } from "lucide-react";
 import { Card, Field, Input, Select, Button, Alert, StatusBadge } from "../../components/ui";
 import { staffApi } from "../../lib/endpoints";
+import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
 
-const MODE = { AUTO: "auto", MANUAL: "manual", RESERVATION: "reservation" };
+const MODE = { AUTO: "auto", RESERVATION: "reservation" };
 
 export default function CheckInPage() {
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [buildings, setBuildings] = useState([]);
-  const [floors, setFloors] = useState([]);
-  const [slots, setSlots] = useState([]);
 
   const [mode, setMode] = useState(MODE.AUTO);
   const [reservationId, setReservationId] = useState("");
   const [plate, setPlate] = useState("");
   const [vehicleTypeId, setVehicleTypeId] = useState("");
   const [buildingId, setBuildingId] = useState("");
-  const [floorId, setFloorId] = useState("");
-  const [slotId, setSlotId] = useState("");
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,40 +30,10 @@ export default function CheckInPage() {
       .catch((e) => setError(e.message));
   }, []);
 
-  // Load floors when a building is chosen (manual mode).
-  useEffect(() => {
-    if (!buildingId) return;
-    staffApi.floors(buildingId).then(setFloors).catch((e) => setError(e.message));
-  }, [buildingId]);
-
-  // Load slots when a floor is chosen.
-  useEffect(() => {
-    if (!floorId) return;
-    staffApi.slots(floorId).then(setSlots).catch((e) => setError(e.message));
-  }, [floorId]);
 
   const selectMode = (next) => {
     setMode(next);
-    setFloorId("");
-    setSlotId("");
-    setSlots([]);
   };
-
-  const onBuilding = (e) => {
-    setBuildingId(e.target.value);
-    setFloorId("");
-    setSlotId("");
-    setFloors([]);
-    setSlots([]);
-  };
-
-  const onFloor = (e) => {
-    setFloorId(e.target.value);
-    setSlotId("");
-    setSlots([]);
-  };
-
-  const availableSlots = slots.filter((s) => s.status === "AVAILABLE");
 
   const submit = async (e) => {
     e.preventDefault();
@@ -78,15 +45,12 @@ export default function CheckInPage() {
       if (mode === MODE.RESERVATION) {
         body = { reservationId: Number(reservationId) };
       } else {
-        body = { licensePlate: plate.trim(), vehicleTypeId: Number(vehicleTypeId) };
-        if (mode === MODE.AUTO) body.buildingId = Number(buildingId);
-        else body.slotId = Number(slotId);
+        body = { licensePlate: plate.trim(), vehicleTypeId: Number(vehicleTypeId), buildingId: Number(buildingId) };
       }
 
       const session = await staffApi.checkIn(body);
       setResult(session);
       setPlate("");
-      setSlotId("");
       setReservationId("");
     } catch (err) {
       setError(err.message);
@@ -98,16 +62,13 @@ export default function CheckInPage() {
   return (
     <div className="mx-auto max-w-xl">
       <h1 className="text-xl font-semibold tracking-tight">Check in a vehicle</h1>
-      <p className="mt-1 text-sm text-muted">Auto-allocate, pick manually, or check in a reservation.</p>
+      <p className="mt-1 text-sm text-muted">AI picks the best slot automatically, or check in a reservation.</p>
 
       <Card className="mt-6 p-6">
         <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <ModeButton active={mode === MODE.AUTO} onClick={() => selectMode(MODE.AUTO)} icon={Sparkles}>
               Auto-allocate
-            </ModeButton>
-            <ModeButton active={mode === MODE.MANUAL} onClick={() => selectMode(MODE.MANUAL)} icon={Hand}>
-              Manual pick
             </ModeButton>
             <ModeButton active={mode === MODE.RESERVATION} onClick={() => setMode(MODE.RESERVATION)} icon={CheckCircle2}>
               Reservation
@@ -126,73 +87,44 @@ export default function CheckInPage() {
               />
             </Field>
           ) : (
-          <>
-          <Field label="License plate">
-            <Input
-              className="nums"
-              value={plate}
-              onChange={(e) => setPlate(e.target.value)}
-              placeholder="51F-123.45"
-              maxLength={20}
-              required
-            />
-          </Field>
-
-          <Field label="Vehicle type">
-            <Select value={vehicleTypeId} onChange={(e) => setVehicleTypeId(e.target.value)} required>
-              <option value="" disabled>
-                Select type
-              </option>
-              {vehicleTypes.map((vt) => (
-                <option key={vt.id} value={vt.id}>
-                  {vt.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Building">
-            <Select value={buildingId} onChange={onBuilding} required>
-              <option value="" disabled>
-                Select building
-              </option>
-              {buildings.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          {mode === MODE.MANUAL && (
             <>
-              <Field label="Floor">
-                <Select value={floorId} onChange={onFloor} required disabled={!buildingId}>
+              <Field label="License plate">
+                <Input
+                  className="nums"
+                  value={plate}
+                  onChange={(e) => setPlate(e.target.value)}
+                  placeholder="51F-123.45"
+                  maxLength={20}
+                  required
+                />
+              </Field>
+
+              <Field label="Vehicle type">
+                <Select value={vehicleTypeId} onChange={(e) => setVehicleTypeId(e.target.value)} required>
                   <option value="" disabled>
-                    Select floor
+                    Select type
                   </option>
-                  {floors.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name} (level {f.level})
+                  {vehicleTypes.map((vt) => (
+                    <option key={vt.id} value={vt.id}>
+                      {vt.name}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Available slot">
-                <Select value={slotId} onChange={(e) => setSlotId(e.target.value)} required disabled={!floorId}>
+
+              <Field label="Building">
+                <Select value={buildingId} onChange={(e) => setBuildingId(e.target.value)} required>
                   <option value="" disabled>
-                    {floorId && availableSlots.length === 0 ? "No available slots" : "Select slot"}
+                    Select building
                   </option>
-                  {availableSlots.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.code}
+                  {buildings.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
                     </option>
                   ))}
                 </Select>
               </Field>
             </>
-          )}
-          </>
           )}
 
           <Alert>{error}</Alert>
@@ -213,10 +145,15 @@ export default function CheckInPage() {
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
             <Info label="Plate" value={<span className="nums">{result.licensePlate}</span>} />
-            <Info label="Slot ID" value={<span className="nums">{result.slotId}</span>} />
+            <Info label="Slot" value={result.buildingName ? `${result.buildingName} › ${result.floorName} › ${result.slotCode}` : result.slotCode ?? result.slotId} />
             <Info label="Session" value={<span className="nums">#{result.id}</span>} />
             <Info label="Status" value={<StatusBadge status={result.status} />} />
           </div>
+          {result.allocationScore && (
+            <div className="mt-4">
+              <ScoreBreakdownCard score={result.allocationScore} />
+            </div>
+          )}
         </Card>
       )}
 
@@ -277,7 +214,7 @@ function TicketLookup() {
 
   const stopScanner = async () => {
     if (readerRef.current) {
-      try { await readerRef.current.stop(); } catch {}
+      try { await readerRef.current.stop(); } catch { /* scanner already stopped */ }
       readerRef.current = null;
     }
     setScanning(false);

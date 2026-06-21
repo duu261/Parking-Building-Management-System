@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { QrCode, MapPin, Clock, BarChart3, Car, Building2, DollarSign } from "lucide-react";
 import { Card, Button, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
+import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
 
 function estimateCharge(checkInIso, pricing) {
   if (!pricing) return null;
@@ -79,18 +80,13 @@ const time = (iso) =>
 
 export default function MyParkingPage() {
   const [sessions, setSessions] = useState(null);
-  const [payments, setPayments] = useState([]);
   const [pricingMap, setPricingMap] = useState({});
   const [error, setError] = useState("");
-  const [paying, setPaying] = useState(null);
 
   const load = () => {
     setError("");
-    Promise.all([driverApi.sessions(), driverApi.payments()])
-      .then(([s, p]) => {
-        setSessions(s);
-        setPayments(p);
-      })
+    driverApi.sessions()
+      .then((s) => setSessions(s))
       .catch((e) => setError(e.message));
 
     publicApi.pricing().then((list) => {
@@ -119,22 +115,6 @@ export default function MyParkingPage() {
     const plates = [...new Set(sessions.map((s) => s.licensePlate).filter(Boolean))];
     return { total: sessions.length, totalSpent, avgMin, topBuilding, plates };
   }, [sessions]);
-
-  const pendingBySession = useMemo(
-    () => Object.fromEntries(payments.filter((p) => p.status === "PENDING").map((p) => [p.sessionId, p])),
-    [payments],
-  );
-
-  const pay = async (paymentId) => {
-    setPaying(paymentId);
-    try {
-      const { paymentUrl } = await driverApi.vnpay(paymentId);
-      window.location.href = paymentUrl;
-    } catch (e) {
-      setError(e.message);
-      setPaying(null);
-    }
-  };
 
   if (error && sessions === null) return <Alert>{error}</Alert>;
   if (sessions === null) return <Spinner label="Loading your parking" />;
@@ -182,6 +162,11 @@ export default function MyParkingPage() {
                     </p>
                   )}
                   <LiveCost checkInAt={s.checkInAt} vehicleTypeId={s.vehicleTypeId} pricingMap={pricingMap} />
+                  {s.allocationScore && (
+                    <div className="mt-3 w-full">
+                      <ScoreBreakdownCard score={s.allocationScore} />
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>

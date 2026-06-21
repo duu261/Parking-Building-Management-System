@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { CalendarClock, MapPin, X, QrCode, Building2 } from "lucide-react";
+import { CalendarClock, MapPin, X, QrCode, Building2, Sparkles } from "lucide-react";
 import { Card, Button, Field, Input, Select, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
+import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
 
 const time = (iso) =>
   iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
@@ -75,8 +76,8 @@ export default function ReservationsPage() {
     <div>
       <h1 className="text-xl font-semibold tracking-tight">Reservations</h1>
       <p className="mt-1 text-sm text-muted">
-        Hold a slot ahead of time. A pending hold is yours for 30 minutes: drive in and staff
-        check you in against it. Unused holds expire on their own.
+        Reserve ahead — our AI picks the best available slot for you automatically.
+        A pending hold is yours for 30 minutes.
       </p>
 
       {error && (
@@ -134,10 +135,17 @@ export default function ReservationsPage() {
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
                       <span className="flex items-center gap-1">
-                        <MapPin size={14} /> slot <span className="nums text-text">{r.slotCode}</span>
+                        <MapPin size={14} /> {r.buildingName ? `${r.buildingName} › ${r.floorName} › ` : ""}<span className="nums text-text">{r.slotCode}</span>
                       </span>
                       {r.status === "PENDING" && <span className="nums">held until {time(r.holdUntil)}</span>}
                     </div>
+                    {r.allocationScore ? (
+                      <ScoreBreakdownCard score={r.allocationScore} compact />
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                        <Sparkles size={10} /> AI-assigned
+                      </span>
+                    )}
                     {r.status === "PENDING" && (
                       <div className="mt-1 flex items-center gap-1 text-xs text-muted">
                         <QrCode size={12} /> Show QR to staff for check-in

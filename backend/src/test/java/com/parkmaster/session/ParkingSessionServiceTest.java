@@ -105,11 +105,15 @@ class ParkingSessionServiceTest {
     @Test
     void checkInAutoAllocatesWhenNoSlotId() {
         ParkingSlot slot = slot(SlotStatus.AVAILABLE);
-        when(allocation.allocate(10L, 2L)).thenReturn(slot);
+        var breakdown = new SlotAllocationService.ScoreBreakdown(slot, 40, 22, 20, 5);
+        when(allocation.rank(10L, 2L)).thenReturn(java.util.List.of(breakdown));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
         when(sessions.save(any(ParkingSession.class))).thenAnswer(inv -> inv.getArgument(0));
         var resp = service.checkIn(new CheckInRequest(null, 10L, 2L, "51A-123", null));
         assertThat(resp.autoAllocated()).isTrue();
+        assertThat(resp.allocationScore()).isNotNull();
+        assertThat(resp.allocationScore().total()).isEqualTo(87.0);
+        assertThat(resp.allocationScore().alternativesConsidered()).isEqualTo(1);
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.OCCUPIED);
     }
 
