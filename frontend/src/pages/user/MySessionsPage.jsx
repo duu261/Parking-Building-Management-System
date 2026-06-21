@@ -120,7 +120,8 @@ function SessionDetail({ session: s, payment: pay, feedback: fb, onPaid }) {
         <Info label="License plate" value={s.licensePlate} />
         <Info label="Vehicle type" value={s.vehicleTypeName ?? "-"} />
         <Info label="Building" value={s.buildingName ?? "-"} />
-        <Info label="Slot" value={s.slotId ?? "-"} />
+        <Info label="Floor" value={s.floorName ?? "-"} />
+        <Info label="Slot" value={s.slotCode ?? s.slotId ?? "-"} />
         <Info label="Allocation" value={s.autoAllocated ? "Auto" : "Manual"} />
         <Info label="Checked in" value={time(s.checkInAt)} />
         <Info label="Checked out" value={s.checkOutAt ? time(s.checkOutAt) : "Still parked"} />

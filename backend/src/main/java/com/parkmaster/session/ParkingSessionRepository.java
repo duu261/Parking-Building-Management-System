@@ -10,6 +10,8 @@ public interface ParkingSessionRepository extends JpaRepository<ParkingSession, 
 
     Optional<ParkingSession> findByTicketCode(String ticketCode);
 
+    List<ParkingSession> findByLicensePlateIgnoreCaseAndStatus(String licensePlate, SessionStatus status);
+
     List<ParkingSession> findByUser_EmailOrderByCheckInAtDesc(String email);
 
     boolean existsBySlotIdAndStatus(Long slotId, SessionStatus status);

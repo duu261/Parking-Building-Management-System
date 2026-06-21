@@ -112,8 +112,8 @@ function PassCard({ pass: p }) {
   const payNow = async () => {
     setPaying(true);
     try {
-      const { url } = await driverApi.vnpay(p.paymentId);
-      window.location.href = url;
+      const { paymentUrl } = await driverApi.vnpay(p.paymentId);
+      window.location.href = paymentUrl;
     } catch {
       setPaying(false);
     }

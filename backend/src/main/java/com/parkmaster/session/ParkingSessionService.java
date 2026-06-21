@@ -167,6 +167,12 @@ public class ParkingSessionService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Ticket not found")));
     }
 
+    @Transactional(readOnly = true)
+    public List<SessionResponse> byPlate(String plate) {
+        return sessions.findByLicensePlateIgnoreCaseAndStatus(plate, SessionStatus.ACTIVE)
+                .stream().map(SessionResponse::from).toList();
+    }
+
     /** PNG QR encoding the session's ticket code. Staff prints it for walk-ins. */
     @Transactional(readOnly = true)
     public byte[] ticketQr(Long id) {

@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.parkmaster.common.ApiException;
+import com.parkmaster.parking.Floor;
+import com.parkmaster.parking.ParkingBuilding;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.pricing.VehicleType;
 import java.util.Optional;
@@ -66,8 +68,15 @@ class SessionTicketTest {
     }
 
     private ParkingSlot slotWithId(Long id) {
+        var building = mock(ParkingBuilding.class);
+        when(building.getName()).thenReturn("B1");
+        var floor = mock(Floor.class);
+        when(floor.getName()).thenReturn("F1");
+        when(floor.getBuilding()).thenReturn(building);
         var slot = mock(ParkingSlot.class);
         when(slot.getId()).thenReturn(id);
+        when(slot.getCode()).thenReturn("S" + id);
+        when(slot.getFloor()).thenReturn(floor);
         return slot;
     }
 

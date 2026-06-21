@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -48,6 +49,11 @@ class StaffSessionController {
     @GetMapping("/by-ticket/{ticketCode}")
     SessionResponse byTicket(@PathVariable String ticketCode) {
         return service.byTicket(ticketCode);
+    }
+
+    @GetMapping("/by-plate")
+    List<SessionResponse> byPlate(@RequestParam String plate) {
+        return service.byPlate(plate);
     }
 
     @GetMapping(value = "/{id}/ticket.png", produces = MediaType.IMAGE_PNG_VALUE)

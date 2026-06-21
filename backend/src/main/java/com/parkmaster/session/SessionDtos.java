@@ -19,11 +19,16 @@ public final class SessionDtos {
             @Size(max = 20) String licensePlate,
             Long reservationId) {}
 
-    public record SessionResponse(Long id, Long slotId, Long vehicleTypeId, String licensePlate,
+    public record SessionResponse(Long id, Long slotId, String slotCode, String floorName,
+            String buildingName, Long vehicleTypeId, String licensePlate,
             String ticketCode, Instant checkInAt, Instant checkOutAt, BigDecimal amountCharged,
             SessionStatus status, boolean autoAllocated) {
         static SessionResponse from(ParkingSession s) {
-            return new SessionResponse(s.getId(), s.getSlot().getId(), s.getVehicleType().getId(),
+            var slot = s.getSlot();
+            var floor = slot.getFloor();
+            return new SessionResponse(s.getId(), slot.getId(), slot.getCode(),
+                    floor.getName(), floor.getBuilding().getName(),
+                    s.getVehicleType().getId(),
                     s.getLicensePlate(), s.getTicketCode(), s.getCheckInAt(), s.getCheckOutAt(),
                     s.getAmountCharged(), s.getStatus(), s.isAutoAllocated());
         }

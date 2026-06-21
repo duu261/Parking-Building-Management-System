@@ -25,6 +25,7 @@ export const staffApi = {
     apiRequest(`/staff/payments/${id}/void`, { method: "POST", body: { reason } }),
 
   sessionByTicket: (code) => apiRequest(`/staff/sessions/by-ticket/${encodeURIComponent(code)}`),
+  sessionsByPlate: (plate) => apiRequest(`/staff/sessions/by-plate?plate=${encodeURIComponent(plate)}`),
 
   exceptions: () => apiRequest("/staff/exceptions/open"),
   reportException: (body) => apiRequest("/staff/exceptions", { method: "POST", body }),

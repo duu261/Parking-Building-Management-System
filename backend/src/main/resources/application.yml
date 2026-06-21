@@ -45,7 +45,7 @@ parkmaster:
     # vnp_ReturnUrl we hand to VNPay — must be this backend's public callback.
     return-url: ${VNPAY_RETURN_URL:http://localhost:5000/api/public/payments/vnpay-return}
     # Frontend page the callback redirects the browser to after verifying.
-    result-url: ${VNPAY_RESULT_URL:http://localhost:5173/driver/payments}
+    result-url: ${VNPAY_RESULT_URL:http://localhost:5173/app/payments}
 
 logging:
   level:

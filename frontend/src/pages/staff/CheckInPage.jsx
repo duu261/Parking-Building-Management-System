@@ -228,6 +228,7 @@ export default function CheckInPage() {
 function TicketLookup() {
   const [code, setCode] = useState("");
   const [found, setFound] = useState(null);
+  const [plateResults, setPlateResults] = useState(null);
   const [lookupErr, setLookupErr] = useState("");
   const [searching, setSearching] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -242,6 +243,7 @@ function TicketLookup() {
     setSearching(true);
     setLookupErr("");
     setFound(null);
+    setPlateResults(null);
     setCheckedIn(null);
     try {
       if (text.startsWith("RES:")) {
@@ -249,8 +251,17 @@ function TicketLookup() {
         const session = await staffApi.checkIn({ reservationId: resId });
         setCheckedIn(session);
       } else {
-        const session = await staffApi.sessionByTicket(text);
-        setFound(session);
+        try {
+          const session = await staffApi.sessionByTicket(text);
+          setFound(session);
+        } catch {
+          const results = await staffApi.sessionsByPlate(text);
+          if (results.length > 0) {
+            setPlateResults(results);
+          } else {
+            setLookupErr("No session found for this ticket code or plate");
+          }
+        }
       }
     } catch (err) {
       setLookupErr(err.message);
@@ -304,7 +315,7 @@ function TicketLookup() {
         <Input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="Enter ticket code..."
+          placeholder="Ticket code or plate number..."
           className="flex-1"
         />
         <Button type="submit" variant="secondary" loading={searching}>
@@ -328,12 +339,35 @@ function TicketLookup() {
             <Info label="Session" value={<span className="nums">#{found.id}</span>} />
             <Info label="Plate" value={<span className="nums">{found.licensePlate}</span>} />
             <Info label="Status" value={<StatusBadge status={found.status} />} />
-            <Info label="Checked in" value={new Date(found.checkedInAt).toLocaleString()} />
+            <Info label="Slot" value={found.buildingName ? `${found.buildingName} › ${found.floorName} › ${found.slotCode}` : found.slotCode ?? found.slotId} />
+            <Info label="Checked in" value={new Date(found.checkInAt).toLocaleString()} />
           </div>
-          {found.status === "CHECKED_IN" && (
+          {found.status === "ACTIVE" && (
             <CheckOutAction sessionId={found.id} onDone={() => lookup(code)} />
           )}
         </>
+      )}
+      {plateResults && (
+        <div className="mt-3">
+          <p className="text-sm font-medium text-muted">
+            {plateResults.length} active session{plateResults.length > 1 ? "s" : ""} for this plate
+          </p>
+          <div className="mt-2 space-y-2">
+            {plateResults.map((s) => (
+              <div key={s.id} className="rounded-[var(--radius)] border border-line bg-elevated/50 p-3">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <Info label="Session" value={<span className="nums">#{s.id}</span>} />
+                  <Info label="Plate" value={<span className="nums">{s.licensePlate}</span>} />
+                  <Info label="Slot" value={s.buildingName ? `${s.buildingName} › ${s.floorName} › ${s.slotCode}` : s.slotCode ?? s.slotId} />
+                  <Info label="Checked in" value={new Date(s.checkInAt).toLocaleString()} />
+                </div>
+                {s.status === "ACTIVE" && (
+                  <CheckOutAction sessionId={s.id} onDone={() => lookup(code)} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
       {checkedIn && (
         <div className="mt-3">
@@ -341,7 +375,7 @@ function TicketLookup() {
           <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
             <Info label="Session" value={<span className="nums">#{checkedIn.id}</span>} />
             <Info label="Plate" value={<span className="nums">{checkedIn.licensePlate}</span>} />
-            <Info label="Slot" value={<span className="nums">{checkedIn.slotId}</span>} />
+            <Info label="Slot" value={<span className="nums">{checkedIn.buildingName ? `${checkedIn.buildingName} › ${checkedIn.floorName} › ${checkedIn.slotCode}` : checkedIn.slotCode ?? checkedIn.slotId}</span>} />
           </div>
         </div>
       )}

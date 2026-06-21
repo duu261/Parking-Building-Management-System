@@ -172,22 +172,16 @@ export default function MyParkingPage() {
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
                     <span className="flex items-center gap-1">
-                      <MapPin size={14} /> slot <span className="nums text-text">{s.slotId}</span>
+                      <Building2 size={14} /> {s.buildingName} &rsaquo; {s.floorName} &rsaquo; <span className="nums text-text">{s.slotCode}</span>
                     </span>
                     <span className="nums">in {time(s.checkInAt)}</span>
                   </div>
-                  <LiveCost checkInAt={s.checkInAt} vehicleTypeId={s.vehicleTypeId} pricingMap={pricingMap} />
-                  {pendingBySession[s.id] && (
-                    <div className="mt-4 flex items-center justify-between gap-3 rounded-[var(--radius)] border border-line bg-elevated px-4 py-3">
-                      <div className="text-sm">
-                        Amount due{" "}
-                        <span className="nums font-semibold">{money(pendingBySession[s.id].amount)}</span>
-                      </div>
-                      <Button onClick={() => pay(pendingBySession[s.id].id)} loading={paying === pendingBySession[s.id].id}>
-                        Pay online
-                      </Button>
-                    </div>
+                  {s.ticketCode && (
+                    <p className="mt-1 text-xs text-muted">
+                      Ticket: <span className="nums select-all font-medium text-text">{s.ticketCode}</span>
+                    </p>
                   )}
+                  <LiveCost checkInAt={s.checkInAt} vehicleTypeId={s.vehicleTypeId} pricingMap={pricingMap} />
                 </div>
               </div>
             </Card>
