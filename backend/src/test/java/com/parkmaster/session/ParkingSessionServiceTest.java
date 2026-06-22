@@ -3,10 +3,12 @@ package com.parkmaster.session;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.parkmaster.common.ApiException;
+import com.parkmaster.payment.Payment;
 import com.parkmaster.parking.Floor;
 import com.parkmaster.parking.ParkingBuilding;
 import com.parkmaster.parking.ParkingSlot;
@@ -47,6 +49,9 @@ class ParkingSessionServiceTest {
         payments = Mockito.mock(PaymentService.class);
         reservationService = Mockito.mock(com.parkmaster.reservation.ReservationService.class);
         monthlyPasses = Mockito.mock(com.parkmaster.pass.MonthlyPassService.class);
+        Payment stubPayment = Mockito.mock(Payment.class);
+        Mockito.when(stubPayment.getId()).thenReturn(99L);
+        Mockito.when(payments.createForSession(Mockito.any(), Mockito.any())).thenReturn(stubPayment);
         service = new ParkingSessionService(sessions, slots, vehicleTypes, policies, allocation,
                 payments, reservationService, monthlyPasses);
     }
@@ -74,6 +79,16 @@ class ParkingSessionServiceTest {
         assertThat(resp.status()).isEqualTo(SessionStatus.COMPLETED);
         assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
         verify(payments).createForSession(session, session.getAmountCharged());
+    }
+
+    @Test
+    void checkInRejectsDuplicateActivePlate() {
+        when(sessions.findByLicensePlateIgnoreCaseAndStatusIn(eq("51A-123"), any()))
+                .thenReturn(java.util.List.of(new ParkingSession(slot(SlotStatus.OCCUPIED),
+                        new VehicleType("Car", null), "51A-123", false)));
+        assertThatThrownBy(() -> service.checkIn(new CheckInRequest(1L, null, 2L, "51A-123", null)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("already has an active session");
     }
 
     @Test

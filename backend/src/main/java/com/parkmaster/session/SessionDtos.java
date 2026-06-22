@@ -41,8 +41,12 @@ public final class SessionDtos {
             String buildingName, Long vehicleTypeId, String vehicleTypeName, String licensePlate,
             String ticketCode, Instant checkInAt, Instant checkOutAt, BigDecimal amountCharged,
             SessionStatus status, boolean autoAllocated, AllocationScore allocationScore,
-            Long userId, String userFullName, String userEmail) {
+            Long userId, String userFullName, String userEmail, Long paymentId) {
         static SessionResponse from(ParkingSession s) {
+            return from(s, null);
+        }
+
+        static SessionResponse from(ParkingSession s, Long paymentId) {
             var slot = s.getSlot();
             var floor = slot.getFloor();
             var user = s.getUser();
@@ -54,7 +58,8 @@ public final class SessionDtos {
                     s.getAmountCharged(), s.getStatus(), s.isAutoAllocated(), score,
                     user != null ? user.getId() : null,
                     user != null ? user.getFullName() : null,
-                    user != null ? user.getEmail() : null);
+                    user != null ? user.getEmail() : null,
+                    paymentId);
         }
     }
 }

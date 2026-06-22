@@ -9,6 +9,7 @@ import com.parkmaster.common.ApiException;
 import com.parkmaster.parking.Floor;
 import com.parkmaster.parking.ParkingBuilding;
 import com.parkmaster.parking.ParkingSlot;
+import com.parkmaster.payment.PaymentService;
 import com.parkmaster.pricing.VehicleType;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -49,8 +50,10 @@ class SessionTicketTest {
         when(session.getTicketCode()).thenReturn("scan-me");
         when(session.getStatus()).thenReturn(SessionStatus.ACTIVE);
         when(sessions.findByTicketCode("scan-me")).thenReturn(Optional.of(session));
+        var payments = mock(PaymentService.class);
+        when(payments.paymentIdForSession(7L)).thenReturn(Optional.empty());
 
-        var service = new ParkingSessionService(sessions, null, null, null, null, null, null, null);
+        var service = new ParkingSessionService(sessions, null, null, null, null, payments, null, null);
 
         var res = service.byTicket("scan-me");
 

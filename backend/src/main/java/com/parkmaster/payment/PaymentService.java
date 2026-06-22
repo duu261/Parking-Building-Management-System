@@ -87,6 +87,11 @@ public class PaymentService {
         return PaymentResponse.from(payment);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<Long> paymentIdForSession(Long sessionId) {
+        return payments.findBySessionId(sessionId).map(Payment::getId);
+    }
+
     /** Resolve the acting staff member; null email (e.g. system) leaves it unset. */
     private User staff(String email) {
         if (email == null) {

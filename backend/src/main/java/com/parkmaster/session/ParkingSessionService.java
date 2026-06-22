@@ -6,6 +6,7 @@ import com.parkmaster.common.PeakHours;
 import com.parkmaster.parking.ParkingSlot;
 import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.payment.Payment;
 import com.parkmaster.payment.PaymentService;
 import com.parkmaster.pricing.PricingPolicy;
 import com.parkmaster.pricing.PricingPolicyRepository;
@@ -53,6 +54,7 @@ public class ParkingSessionService {
         if (req.reservationId() != null) {
             com.parkmaster.reservation.Reservation reservation =
                     reservationService.consumeForCheckIn(req.reservationId());
+            rejectIfAlreadyParked(reservation.getLicensePlate());
             ParkingSlot reservedSlot = reservation.getSlot();
             ParkingSession session = new ParkingSession(reservedSlot, reservation.getVehicleType(),
                     reservation.getLicensePlate(), true);
@@ -72,6 +74,8 @@ public class ParkingSessionService {
             throw new ApiException(HttpStatus.BAD_REQUEST,
                     "Either slotId or buildingId must be provided");
         }
+
+        rejectIfAlreadyParked(req.licensePlate());
 
         boolean autoAllocated = req.slotId() == null;
         ParkingSlot slot;
@@ -143,17 +147,14 @@ public class ParkingSessionService {
                     policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier);
         }
         session.setAmountCharged(amount);
-        payments.createForSession(session, amount);
+        Payment payment = payments.createForSession(session, amount);
         if (amount.signum() == 0) {
-            // Free exit: nothing to settle, so complete and release the slot now.
             session.setStatus(SessionStatus.COMPLETED);
             session.getSlot().setStatus(SlotStatus.AVAILABLE);
         } else {
-            // Slot stays OCCUPIED until the payment is settled (or voided); the
-            // payment side completes the session and frees the slot then.
             session.setStatus(SessionStatus.AWAITING_PAYMENT);
         }
-        return SessionResponse.from(session);
+        return SessionResponse.from(session, payment.getId());
     }
 
     @Transactional(readOnly = true)
@@ -188,14 +189,20 @@ public class ParkingSessionService {
     /** Staff scans a ticket QR; resolve the code to its session for check-out. */
     @Transactional(readOnly = true)
     public SessionResponse byTicket(String ticketCode) {
-        return SessionResponse.from(sessions.findByTicketCode(ticketCode)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Ticket not found")));
+        ParkingSession s = sessions.findByTicketCode(ticketCode)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Ticket not found"));
+        Long paymentId = payments.paymentIdForSession(s.getId()).orElse(null);
+        return SessionResponse.from(s, paymentId);
     }
 
     @Transactional(readOnly = true)
     public List<SessionResponse> byPlate(String plate) {
-        return sessions.findByLicensePlateIgnoreCaseAndStatus(plate, SessionStatus.ACTIVE)
-                .stream().map(SessionResponse::from).toList();
+        return sessions.findByLicensePlateIgnoreCaseAndStatusIn(plate,
+                List.of(SessionStatus.ACTIVE, SessionStatus.AWAITING_PAYMENT))
+                .stream().map(s -> {
+                    Long pid = payments.paymentIdForSession(s.getId()).orElse(null);
+                    return SessionResponse.from(s, pid);
+                }).toList();
     }
 
     /** PNG QR encoding the session's ticket code. Staff prints it for walk-ins. */
@@ -215,6 +222,16 @@ public class ParkingSessionService {
             throw new ApiException(HttpStatus.NOT_FOUND, "Session not found");
         }
         return QrCodeGenerator.pngFor(session.getTicketCode());
+    }
+
+    private void rejectIfAlreadyParked(String plate) {
+        if (plate == null || plate.isBlank()) return;
+        boolean exists = !sessions.findByLicensePlateIgnoreCaseAndStatusIn(
+                plate, List.of(SessionStatus.ACTIVE, SessionStatus.AWAITING_PAYMENT)).isEmpty();
+        if (exists) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "Vehicle " + plate + " already has an active session");
+        }
     }
 
     private static double round(double v) {

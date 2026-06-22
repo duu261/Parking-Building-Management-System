@@ -28,7 +28,7 @@ import { useTheme } from "../hooks/useTheme";
 // Nav per role. STAFF runs the floor; MANAGER/ADMIN administer.
 const NAV = {
   STAFF: [
-    { to: "/app/check-in", label: "Check-in", icon: LogIn },
+    { to: "/app/check-in", label: "Gate", icon: LogIn },
     { to: "/app/active", label: "Active sessions", icon: ListChecks },
     { to: "/app/payments", label: "Payments", icon: Banknote },
     { to: "/app/exceptions", label: "Exceptions", icon: TriangleAlert },
