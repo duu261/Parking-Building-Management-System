@@ -115,9 +115,9 @@ function PassQr({ id }) {
     return () => objectUrl && URL.revokeObjectURL(objectUrl);
   }, [id]);
 
-  if (failed) return <div className="flex h-28 w-28 items-center justify-center rounded bg-elevated text-[11px] text-muted">QR unavailable</div>;
-  if (!url) return <div className="h-28 w-28 animate-pulse rounded bg-elevated" />;
-  return <img src={url} alt={`Pass QR ${id}`} className="block h-28 w-28" />;
+  if (failed) return <div className="flex h-40 w-40 items-center justify-center rounded bg-elevated text-[11px] text-muted">QR unavailable</div>;
+  if (!url) return <div className="h-40 w-40 animate-pulse rounded bg-elevated" />;
+  return <img src={url} alt={`Pass QR ${id}`} className="block h-40 w-40" />;
 }
 
 function PassCard({ pass: p }) {

@@ -4,8 +4,10 @@ import com.parkmaster.common.ApiException;
 import com.parkmaster.pass.PassDtos.IssueRequest;
 import com.parkmaster.pass.PassDtos.PassResponse;
 import com.parkmaster.payment.Payment;
+import java.time.Instant;
 import com.parkmaster.payment.PaymentMethod;
 import com.parkmaster.payment.PaymentRepository;
+import com.parkmaster.payment.PaymentStatus;
 import com.parkmaster.pricing.PricingPolicy;
 import com.parkmaster.pricing.PricingPolicyRepository;
 import com.parkmaster.pricing.VehicleType;
@@ -15,6 +17,7 @@ import com.parkmaster.user.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +43,15 @@ public class MonthlyPassService {
 
     @Transactional
     public PassResponse issue(IssueRequest req) {
+        return issue(req, false);
+    }
+
+    @Transactional
+    public PassResponse issueByManager(IssueRequest req) {
+        return issue(req, true);
+    }
+
+    private PassResponse issue(IssueRequest req, boolean cashPayment) {
         if (req.validUntil().isBefore(req.validFrom())) {
             throw new ApiException(HttpStatus.BAD_REQUEST,
                     "validUntil must be on or after validFrom");
@@ -49,9 +61,6 @@ public class MonthlyPassService {
         VehicleType type = vehicleTypes.findById(req.vehicleTypeId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Vehicle type not found"));
 
-        // ponytail: check-then-save races if two managers issue the same plate+type
-        // concurrently; manual admin action, near-zero contention. Add a btree_gist
-        // exclusion constraint on (license_plate, vehicle_type_id, daterange) if it matters.
         List<MonthlyPass> existing = passes
                 .findByLicensePlateIgnoreCaseAndVehicleType_IdAndStatusIn(
                         req.licensePlate(), req.vehicleTypeId(),
@@ -64,7 +73,6 @@ public class MonthlyPassService {
                     "An active pass already covers this period for this vehicle");
         }
 
-        // Look up pass price
         PricingPolicy pricing = pricingPolicies.findByVehicleTypeId(req.vehicleTypeId())
                 .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST,
                         "No pricing policy for this vehicle type"));
@@ -78,10 +86,19 @@ public class MonthlyPassService {
                 req.validFrom(), req.validUntil());
 
         Payment payment = new Payment(passPrice);
-        payment.setMethod(PaymentMethod.ONLINE);
+        if (cashPayment) {
+            payment.setMethod(PaymentMethod.CASH);
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(Instant.now());
+        } else {
+            payment.setMethod(PaymentMethod.ONLINE);
+        }
         paymentRepo.save(payment);
 
         pass.setPayment(payment);
+        if (cashPayment) {
+            pass.setStatus(PassStatus.ACTIVE);
+        }
         return PassResponse.from(passes.save(pass));
     }
 
@@ -113,6 +130,37 @@ public class MonthlyPassService {
         return passes
                 .existsByLicensePlateIgnoreCaseAndVehicleType_IdAndStatusAndValidFromLessThanEqualAndValidUntilGreaterThanEqual(
                         licensePlate, vehicleTypeId, PassStatus.ACTIVE, onDate, onDate);
+    }
+
+    @Transactional
+    public PassResponse activateById(Long id) {
+        MonthlyPass pass = passes.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Pass not found"));
+        if (pass.getStatus() != PassStatus.PENDING) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Only PENDING passes can be activated");
+        }
+        pass.setStatus(PassStatus.ACTIVE);
+        Payment payment = pass.getPayment();
+        if (payment != null && payment.getStatus() != PaymentStatus.PAID) {
+            payment.setMethod(PaymentMethod.CASH);
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setPaidAt(Instant.now());
+        }
+        return PassResponse.from(passes.save(pass));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> findUserByPlate(String licensePlate) {
+        return passes.findFirstByLicensePlateIgnoreCaseAndStatusOrderByCreatedAtDesc(
+                licensePlate, PassStatus.ACTIVE).map(MonthlyPass::getUser);
+    }
+
+    @Transactional(readOnly = true)
+    public PassResponse findActiveByPlate(String plate) {
+        return passes.findFirstByLicensePlateIgnoreCaseAndStatusOrderByCreatedAtDesc(
+                plate, PassStatus.ACTIVE)
+                .map(PassResponse::from)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No active pass for this plate"));
     }
 
     @Transactional

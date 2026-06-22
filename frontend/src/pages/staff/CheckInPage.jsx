@@ -16,6 +16,8 @@ export default function CheckInPage() {
   const [vehicleTypeId, setVehicleTypeId] = useState("");
   const [buildingId, setBuildingId] = useState("");
 
+  const [passInfo, setPassInfo] = useState(null);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -26,7 +28,6 @@ export default function CheckInPage() {
   const [slots, setSlots] = useState([]);
   const [slotId, setSlotId] = useState("");
 
-  // Initial lookups.
   useEffect(() => {
     Promise.all([staffApi.vehicleTypes(), staffApi.buildings()])
       .then(([vt, b]) => {
@@ -35,6 +36,16 @@ export default function CheckInPage() {
       })
       .catch((e) => setError(e.message));
   }, []);
+
+  useEffect(() => {
+    if (plate.trim().length < 3) { setPassInfo(null); return; }
+    const t = setTimeout(() => {
+      staffApi.passLookup(plate.trim())
+        .then((p) => { setPassInfo(p); setVehicleTypeId(String(p.vehicleTypeId)); })
+        .catch(() => setPassInfo(null));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [plate]);
 
 
   const selectMode = (next) => {
@@ -144,6 +155,11 @@ export default function CheckInPage() {
                   maxLength={20}
                   required
                 />
+                {passInfo && (
+                  <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-available">
+                    <CheckCircle2 size={13} /> Monthly pass — {passInfo.vehicleTypeName} — {passInfo.userFullName}
+                  </p>
+                )}
               </Field>
 
               <Field label="Vehicle type">
@@ -386,6 +402,7 @@ function TicketLookup() {
             <Info label="Plate" value={<span className="nums">{found.licensePlate}</span>} />
             <Info label="Status" value={<StatusBadge status={found.status} />} />
             <Info label="Slot" value={found.buildingName ? `${found.buildingName} › ${found.floorName} › ${found.slotCode}` : found.slotCode ?? found.slotId} />
+            <Info label="Owner" value={found.userFullName || "Walk-in"} />
             <Info label="Checked in" value={new Date(found.checkInAt).toLocaleString()} />
           </div>
           {found.status === "ACTIVE" && (
@@ -405,6 +422,7 @@ function TicketLookup() {
                   <Info label="Session" value={<span className="nums">#{s.id}</span>} />
                   <Info label="Plate" value={<span className="nums">{s.licensePlate}</span>} />
                   <Info label="Slot" value={s.buildingName ? `${s.buildingName} › ${s.floorName} › ${s.slotCode}` : s.slotCode ?? s.slotId} />
+                  <Info label="Owner" value={s.userFullName || "Walk-in"} />
                   <Info label="Checked in" value={new Date(s.checkInAt).toLocaleString()} />
                 </div>
                 {s.status === "ACTIVE" && (

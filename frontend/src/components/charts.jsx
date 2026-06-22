@@ -34,26 +34,32 @@ export function HorizontalBars({ data, format = identity }) {
 }
 
 // Vertical bars. data: [{ label, value }]. Good for hourly, by-type, duration.
+// ponytail: overflow-x-auto + minWidth when >12 bars so 24-hour charts scroll on small phones
 export function Bars({ data, format = identity, height = 160 }) {
   if (isEmpty(data)) {
     return <EmptyState icon={BarChart3} title="No data" hint="Nothing recorded in this window." />;
   }
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
-    <div className="flex items-end gap-1.5" style={{ height }}>
-      {data.map((d, i) => (
-        <div key={i} className="group relative flex flex-1 flex-col items-center justify-end gap-1.5">
-          <span className="nums text-[10px] text-muted">
-            {format(d.value)}
-          </span>
-          <div
-            className="w-full rounded-t-[3px] bg-accent transition group-hover:opacity-80"
-            style={{ height: `${Math.max((d.value / max) * 100, 4)}%`, minHeight: d.value ? 4 : 0 }}
-            title={`${d.label}: ${format(d.value)}`}
-          />
-          <span className="nums text-[10px] text-muted">{d.label}</span>
-        </div>
-      ))}
+    <div className="-mx-1 overflow-x-auto px-1 pb-1">
+      <div
+        className="flex items-end gap-1.5"
+        style={{ height, minWidth: data.length > 12 ? data.length * 28 : undefined }}
+      >
+        {data.map((d, i) => (
+          <div key={i} className="group relative flex flex-1 flex-col items-center justify-end gap-1.5">
+            <span className="nums text-[10px] text-muted">
+              {format(d.value)}
+            </span>
+            <div
+              className="w-full rounded-t-[3px] bg-accent transition group-hover:opacity-80"
+              style={{ height: `${Math.max((d.value / max) * 100, 4)}%`, minHeight: d.value ? 4 : 0 }}
+              title={`${d.label}: ${format(d.value)}`}
+            />
+            <span className="nums text-[10px] text-muted">{d.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

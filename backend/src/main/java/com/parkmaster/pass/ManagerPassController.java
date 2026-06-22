@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,7 +27,7 @@ class ManagerPassController {
 
     @PostMapping
     ResponseEntity<PassResponse> issue(@Valid @RequestBody IssueRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(passes.issue(req));
+        return ResponseEntity.status(HttpStatus.CREATED).body(passes.issueByManager(req));
     }
 
     @GetMapping
@@ -42,5 +43,10 @@ class ManagerPassController {
     @DeleteMapping("/{id}")
     PassResponse revoke(@PathVariable Long id) {
         return passes.revoke(id);
+    }
+
+    @PatchMapping("/{id}/activate")
+    PassResponse activate(@PathVariable Long id) {
+        return passes.activateById(id);
     }
 }

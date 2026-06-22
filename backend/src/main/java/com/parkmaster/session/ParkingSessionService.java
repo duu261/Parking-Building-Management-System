@@ -55,8 +55,9 @@ public class ParkingSessionService {
                     reservationService.consumeForCheckIn(req.reservationId());
             ParkingSlot reservedSlot = reservation.getSlot();
             ParkingSession session = new ParkingSession(reservedSlot, reservation.getVehicleType(),
-                    reservation.getLicensePlate(), false);
+                    reservation.getLicensePlate(), true);
             session.setUser(reservation.getUser());
+            session.setAllocationScore(reservation.getAllocationScore());
             reservedSlot.setStatus(SlotStatus.OCCUPIED);
             return SessionResponse.from(sessions.save(session));
         }
@@ -110,6 +111,7 @@ public class ParkingSessionService {
 
         ParkingSession session = new ParkingSession(slot, type, req.licensePlate(), autoAllocated);
         session.setAllocationScore(allocationScoreJson);
+        monthlyPasses.findUserByPlate(req.licensePlate()).ifPresent(session::setUser);
         slot.setStatus(SlotStatus.OCCUPIED);
         return SessionResponse.from(sessions.save(session));
     }

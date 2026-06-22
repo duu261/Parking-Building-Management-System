@@ -49,6 +49,16 @@ export default function MonthlyPassesPage() {
     }
   };
 
+  const activate = async (id) => {
+    setError("");
+    try {
+      await managerApi.activatePass(id);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const countByStatus = (status) =>
     passes?.filter((p) => p.status === status).length || 0;
 
@@ -136,7 +146,7 @@ export default function MonthlyPassesPage() {
       ) : (
         <div className="mt-4 grid gap-3">
           {filtered.map((p) => (
-            <PassCard key={p.id} pass={p} onRevoke={() => revoke(p.id)} />
+            <PassCard key={p.id} pass={p} onRevoke={() => revoke(p.id)} onActivate={() => activate(p.id)} />
           ))}
         </div>
       )}
@@ -150,7 +160,6 @@ function IssueForm({ vehicleTypes, onIssued, onError }) {
     vehicleTypeId: "",
     licensePlate: "",
     validFrom: new Date().toISOString().slice(0, 10),
-    validUntil: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -161,12 +170,15 @@ function IssueForm({ vehicleTypes, onIssued, onError }) {
     setSaving(true);
     onError("");
     try {
+      const from = new Date(form.validFrom);
+      const until = new Date(from);
+      until.setMonth(until.getMonth() + 1);
       await managerApi.issuePass({
         email: form.email.trim(),
         vehicleTypeId: Number(form.vehicleTypeId),
         licensePlate: form.licensePlate.trim(),
         validFrom: form.validFrom,
-        validUntil: form.validUntil,
+        validUntil: until.toISOString().slice(0, 10),
       });
       onIssued();
     } catch (err) {
@@ -201,17 +213,8 @@ function IssueForm({ vehicleTypes, onIssued, onError }) {
             placeholder="51F-123.45"
           />
         </Field>
-        <Field label="Valid from">
+        <Field label="Start date">
           <Input type="date" required value={form.validFrom} onChange={set("validFrom")} />
-        </Field>
-        <Field label="Valid until">
-          <Input
-            type="date"
-            required
-            min={form.validFrom}
-            value={form.validUntil}
-            onChange={set("validUntil")}
-          />
         </Field>
         <div className="flex items-end">
           <Button type="submit" loading={saving} className="w-full sm:w-auto">
@@ -223,7 +226,7 @@ function IssueForm({ vehicleTypes, onIssued, onError }) {
   );
 }
 
-function PassCard({ pass, onRevoke }) {
+function PassCard({ pass, onRevoke, onActivate }) {
   const startDate = new Date(pass.validFrom);
   const endDate = new Date(pass.validUntil);
   const today = new Date();
@@ -258,16 +261,23 @@ function PassCard({ pass, onRevoke }) {
             <p className="text-xs text-muted">{pass.userEmail}</p>
           )}
         </div>
-        {pass.status !== "REVOKED" && (
-          <Button
-            variant="ghost"
-            onClick={onRevoke}
-            size="sm"
-            className="shrink-0 text-occupied"
-          >
-            Revoke
-          </Button>
-        )}
+        <div className="flex shrink-0 gap-1 whitespace-nowrap">
+          {pass.status === "PENDING" && (
+            <Button variant="secondary" onClick={onActivate} size="sm">
+              Activate
+            </Button>
+          )}
+          {pass.status !== "REVOKED" && (
+            <Button
+              variant="secondary"
+              onClick={onRevoke}
+              size="sm"
+              className="border-occupied/30 text-occupied hover:bg-occupied/10"
+            >
+              Revoke
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="border-t border-line pt-3">
@@ -297,7 +307,7 @@ function PassCard({ pass, onRevoke }) {
           {pass.status === "PENDING" && (
             <div>
               <p className="text-xs font-semibold uppercase text-muted">Status</p>
-              <p className="mt-1 font-medium text-reserved">Awaiting payment</p>
+              <p className="mt-1 font-medium text-reserved">Awaiting online payment</p>
             </div>
           )}
         </div>

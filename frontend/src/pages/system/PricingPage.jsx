@@ -161,11 +161,11 @@ function TypeCard({ type, policy, onRemove, onSaved, onError }) {
       </div>
 
       <form onSubmit={save} className="mt-4 grid gap-3 sm:grid-cols-5">
-        <Field label="Rate / hour">
-          <Input type="number" min="0" step="1" required value={form.ratePerHour} onChange={set("ratePerHour")} />
+        <Field label="Rate / hour (₫)">
+          <Input type="number" min="0" step="1000" required value={form.ratePerHour} onChange={set("ratePerHour")} />
         </Field>
-        <Field label="Daily cap">
-          <Input type="number" min="0" step="1" value={form.dailyCap} onChange={set("dailyCap")} placeholder="None" />
+        <Field label="Daily cap (₫)">
+          <Input type="number" min="0" step="1000" value={form.dailyCap} onChange={set("dailyCap")} placeholder="None" />
         </Field>
         <Field label="Grace (min)">
           <Input type="number" min="0" value={form.graceMinutes} onChange={set("graceMinutes")} />
@@ -173,8 +173,8 @@ function TypeCard({ type, policy, onRemove, onSaved, onError }) {
         <Field label="Peak x">
           <Input type="number" min="1" step="0.1" required value={form.peakMultiplier} onChange={set("peakMultiplier")} />
         </Field>
-        <Field label="Monthly pass">
-          <Input type="number" min="0" step="1000" value={form.monthlyPassPrice} onChange={set("monthlyPassPrice")} placeholder="None" />
+        <Field label="Monthly pass (₫)">
+          <Input type="number" min="0" step="10000" value={form.monthlyPassPrice} onChange={set("monthlyPassPrice")} placeholder="None" />
         </Field>
         <div className="sm:col-span-5">
           <Button type="submit" variant="secondary" loading={saving}>

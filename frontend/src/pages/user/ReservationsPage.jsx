@@ -127,7 +127,12 @@ export default function ReservationsPage() {
             {list.slice(0, visibleCount).map((r) => (
               <Card key={r.id} className="p-4">
                 <div className="flex items-center gap-4">
-                  {r.status === "PENDING" && <ReservationQr id={r.id} />}
+                  {r.status === "PENDING" && (
+                    <div className="flex shrink-0 flex-col items-center gap-1">
+                      <ReservationQr id={r.id} />
+                      <span className="nums text-xs font-medium text-muted">ID: {r.id}</span>
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2.5">
                       <span className="nums font-semibold">{r.licensePlate}</span>
@@ -217,8 +222,8 @@ function ReservationQr({ id }) {
     driverApi.reservationQr(id).then((u) => { objectUrl = u; setUrl(u); }).catch(() => {});
     return () => objectUrl && URL.revokeObjectURL(objectUrl);
   }, [id]);
-  if (!url) return <div className="w-20 aspect-square animate-pulse rounded bg-elevated shrink-0" />;
+  if (!url) return <div className="h-40 w-40 animate-pulse rounded bg-elevated shrink-0" />;
   return (
-    <img src={url} alt="Reservation QR" className="block w-20 aspect-square shrink-0" />
+    <img src={url} alt="Reservation QR" className="block h-40 w-40 shrink-0" />
   );
 }

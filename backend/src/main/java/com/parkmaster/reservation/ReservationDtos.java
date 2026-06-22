@@ -20,7 +20,7 @@ public final class ReservationDtos {
             Instant holdUntil, Instant createdAt, SessionDtos.AllocationScore allocationScore) {
 
         static ReservationResponse from(Reservation r) {
-            return from(r, null);
+            return from(r, SessionDtos.AllocationScore.parse(r.getAllocationScore()));
         }
 
         static ReservationResponse from(Reservation r, SessionDtos.AllocationScore score) {

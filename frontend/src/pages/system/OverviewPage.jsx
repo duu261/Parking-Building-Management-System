@@ -80,10 +80,10 @@ export default function OverviewPage() {
           </div>
           <div className="divide-y divide-line text-sm">
             {data.active.slice(0, 8).map((s) => (
-              <div key={s.id} className="flex items-center gap-4 py-2">
-                <span className="nums font-medium">{s.licensePlate}</span>
-                <span className="text-muted">{s.vehicleTypeName}</span>
-                <span className="ml-auto text-xs text-muted">
+              <div key={s.id} className="flex min-w-0 items-center gap-3 py-2">
+                <span className="nums shrink-0 font-medium">{s.licensePlate}</span>
+                <span className="hidden truncate text-muted sm:inline">{s.vehicleTypeName}</span>
+                <span className="ml-auto shrink-0 text-xs text-muted">
                   {new Date(s.checkInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
                 <StatusBadge status={s.status} />

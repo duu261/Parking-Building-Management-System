@@ -56,6 +56,10 @@ public class Reservation {
     @Column(nullable = false)
     private ReservationStatus status = ReservationStatus.PENDING;
 
+    @Column(name = "allocation_score", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private String allocationScore;
+
     public Reservation(User user, ParkingSlot slot, VehicleType vehicleType, String licensePlate,
             Instant holdUntil) {
         this.user = user;

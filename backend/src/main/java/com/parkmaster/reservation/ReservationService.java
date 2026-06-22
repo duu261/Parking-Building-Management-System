@@ -63,6 +63,12 @@ public class ReservationService {
 
         Reservation reservation = new Reservation(user, slot, type, licensePlate,
                 Instant.now().plus(HOLD_DURATION));
+        if (score != null) {
+            try {
+                reservation.setAllocationScore(
+                        new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(score));
+            } catch (Exception ignored) {}
+        }
         return ReservationResponse.from(reservations.save(reservation), score);
     }
 

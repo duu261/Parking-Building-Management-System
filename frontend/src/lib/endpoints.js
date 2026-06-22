@@ -11,6 +11,7 @@ export const authApi = {
 
 export const staffApi = {
   vehicleTypes: () => apiRequest("/staff/vehicle-types"),
+  passLookup: (plate) => apiRequest(`/staff/pass-lookup?plate=${encodeURIComponent(plate)}`),
   buildings: () => apiRequest("/staff/buildings"),
   floors: (buildingId) => apiRequest(`/staff/buildings/${buildingId}/floors`),
   slots: (floorId) => apiRequest(`/staff/floors/${floorId}/slots`),
@@ -78,6 +79,7 @@ export const managerApi = {
   pass: (id) => apiRequest(`/manager/passes/${id}`),
   issuePass: (body) => apiRequest("/manager/passes", { method: "POST", body }),
   revokePass: (id) => apiRequest(`/manager/passes/${id}`, { method: "DELETE" }),
+  activatePass: (id) => apiRequest(`/manager/passes/${id}/activate`, { method: "PATCH" }),
   allocationAnalytics: (buildingId) =>
     apiRequest(`/manager/buildings/${buildingId}/analytics/allocation`),
 };

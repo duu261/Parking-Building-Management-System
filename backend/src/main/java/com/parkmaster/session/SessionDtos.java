@@ -10,7 +10,21 @@ public final class SessionDtos {
     private SessionDtos() {}
 
     public record AllocationScore(double vehicleTypeMatch, double loadBalance,
-            double distanceToEntry, double peakHour, double total, int alternativesConsidered) {}
+            double distanceToEntry, double peakHour, double total, int alternativesConsidered) {
+        public static AllocationScore parse(String json) {
+            if (json == null) return null;
+            try {
+                var node = new ObjectMapper().readTree(json);
+                return new AllocationScore(
+                        node.get("vehicleTypeMatch").asDouble(),
+                        node.get("loadBalance").asDouble(),
+                        node.get("distanceToEntry").asDouble(),
+                        node.get("peakHour").asDouble(),
+                        node.get("total").asDouble(),
+                        node.get("alternativesConsidered").asInt());
+            } catch (Exception e) { return null; }
+        }
+    }
 
     /**
      * slotId: manual pick. buildingId: auto-allocate. reservationId: consume a hold.
@@ -24,34 +38,23 @@ public final class SessionDtos {
             Long reservationId) {}
 
     public record SessionResponse(Long id, Long slotId, String slotCode, String floorName,
-            String buildingName, Long vehicleTypeId, String licensePlate,
+            String buildingName, Long vehicleTypeId, String vehicleTypeName, String licensePlate,
             String ticketCode, Instant checkInAt, Instant checkOutAt, BigDecimal amountCharged,
-            SessionStatus status, boolean autoAllocated, AllocationScore allocationScore) {
+            SessionStatus status, boolean autoAllocated, AllocationScore allocationScore,
+            Long userId, String userFullName, String userEmail) {
         static SessionResponse from(ParkingSession s) {
             var slot = s.getSlot();
             var floor = slot.getFloor();
-            AllocationScore score = null;
-            if (s.getAllocationScore() != null) {
-                try {
-                    var mapper = new ObjectMapper();
-                    var node = mapper.readTree(s.getAllocationScore());
-                    score = new AllocationScore(
-                        node.get("vehicleTypeMatch").asDouble(),
-                        node.get("loadBalance").asDouble(),
-                        node.get("distanceToEntry").asDouble(),
-                        node.get("peakHour").asDouble(),
-                        node.get("total").asDouble(),
-                        node.get("alternativesConsidered").asInt()
-                    );
-                } catch (Exception e) {
-                    // Ignore parse errors; score remains null
-                }
-            }
+            var user = s.getUser();
+            AllocationScore score = AllocationScore.parse(s.getAllocationScore());
             return new SessionResponse(s.getId(), slot.getId(), slot.getCode(),
                     floor.getName(), floor.getBuilding().getName(),
-                    s.getVehicleType().getId(),
+                    s.getVehicleType().getId(), s.getVehicleType().getName(),
                     s.getLicensePlate(), s.getTicketCode(), s.getCheckInAt(), s.getCheckOutAt(),
-                    s.getAmountCharged(), s.getStatus(), s.isAutoAllocated(), score);
+                    s.getAmountCharged(), s.getStatus(), s.isAutoAllocated(), score,
+                    user != null ? user.getId() : null,
+                    user != null ? user.getFullName() : null,
+                    user != null ? user.getEmail() : null);
         }
     }
 }
