@@ -7,8 +7,14 @@
 | [srs.md](srs.md) | Software Requirements Specification — functional/non-functional requirements, tech stack, acceptance criteria |
 | [use-cases.md](use-cases.md) | 17 use cases covering all 5 actors with preconditions, flows, and exceptions |
 | [user-flows.md](user-flows.md) | Step-by-step UI flows per role with API endpoints |
-| [erd.md](erd.md) | Entity-Relationship Diagram — 11 entities, 9 enums, field types and constraints |
+| [erd.md](erd.md) | Entity-Relationship Diagram — 12 entities, 9 enums, field types and constraints |
 | [test-plan.md](test-plan.md) | Test strategy, 14 unit test files inventory, manual test scenarios |
+
+## Demo
+
+| Document | Description |
+|---|---|
+| [demo-accounts.md](demo-accounts.md) | Test accounts, seeded data overview, parking infrastructure |
 
 ## Developer Reference
 
@@ -31,3 +37,7 @@ Slide-ready summaries in [features/](features/) for presentation to instructors.
 | [payment.md](features/payment.md) | Two-phase payment settlement |
 | [reservation.md](features/reservation.md) | Slot reservation with auto-allocation |
 | [vehicle-type-pricing.md](features/vehicle-type-pricing.md) | Vehicle types and pricing policies |
+| [vnpay-payment.md](features/vnpay-payment.md) | VNPay online payment integration |
+| [ai-assistant.md](features/ai-assistant.md) | AI chat assistant (local FAQ + Gemini) |
+| [exception-report.md](features/exception-report.md) | Exception reports (lost ticket, wrong plate, etc.) |
+| [feedback.md](features/feedback.md) | Driver session feedback and ratings |

@@ -1,43 +1,50 @@
 # Vehicle Types & Pricing
 
-Manager-owned reference data: the catalog of vehicle classes the building accepts,
-and the tariff charged per class. Feeds slot segmentation (RQ1) and session billing.
+Each vehicle type (Car, Motorbike, Bicycle) has exactly one pricing policy. The
+policy controls hourly rate, grace period, daily cap, peak-hour surcharge, monthly
+pass pricing, and soft-disable.
 
 ## Model
 
-| Entity | Fields | Notes |
-|---|---|---|
-| `VehicleType` | `name` (unique), `description` | e.g. Car, Motorbike, Truck |
-| `PricingPolicy` | `ratePerHour`, `dailyCap?`, `graceMinutes` | one policy per vehicle type (unique FK) |
+| Entity | Field | Type | Notes |
+|--------|-------|------|-------|
+| VehicleType | `name` | VARCHAR (unique) | e.g. Car, Motorbike, Bicycle |
+| VehicleType | `description` | VARCHAR | Human-readable label |
+| PricingPolicy | `ratePerHour` | NUMERIC | Base hourly rate (VND) |
+| PricingPolicy | `dailyCap` | NUMERIC? | Max charge per 24h (optional) |
+| PricingPolicy | `graceMinutes` | INT | Free exit window (default 0) |
+| PricingPolicy | `peakMultiplier` | NUMERIC | Surcharge factor during 7–9 AM, 5–7 PM (default 1.0) |
+| PricingPolicy | `monthlyPassPrice` | NUMERIC? | Price for a monthly pass (optional) |
+| PricingPolicy | `isActive` | BOOLEAN | Soft-disable: false hides from new check-ins |
 
-`dailyCap` null = uncapped. `graceMinutes` = free minutes before billing starts.
-Charge math lives with `ParkingSession` (built later); this domain only stores the tariff.
+One-to-one: each vehicle type has exactly one pricing policy (unique FK, cascade delete).
+
+## Peak-Hour Pricing
+
+When `peakMultiplier > 1.0`, check-ins during peak hours (7–9 AM, 5–7 PM) are
+charged at `ratePerHour × peakMultiplier`. The same peak-hour window definition
+is shared with the AI slot allocation `peakHour` scoring factor — one config
+drives both surcharge and scoring.
 
 ## API (`/api/manager`, MANAGER role)
 
 | Method | Path | Action |
-|---|---|---|
-| POST | `/vehicle-types` | create type |
-| GET | `/vehicle-types` | list (by name) |
-| GET | `/vehicle-types/{id}` | get one |
-| PUT | `/vehicle-types/{id}` | update |
-| DELETE | `/vehicle-types/{id}` | delete (cascades policy) |
-| PUT | `/vehicle-types/{id}/pricing` | upsert the policy |
-| GET | `/vehicle-types/{id}/pricing` | get the policy |
-| DELETE | `/vehicle-types/{id}/pricing` | remove the policy |
-| GET | `/pricing` | list all policies |
+|--------|------|--------|
+| POST | `/vehicle-types` | Create type |
+| GET | `/vehicle-types` | List (by name) |
+| GET | `/vehicle-types/{id}` | Get one |
+| PUT | `/vehicle-types/{id}` | Update |
+| DELETE | `/vehicle-types/{id}` | Delete (cascades policy) |
+| PUT | `/vehicle-types/{id}/pricing` | Upsert the policy |
+| GET | `/vehicle-types/{id}/pricing` | Get the policy |
+| DELETE | `/vehicle-types/{id}/pricing` | Remove the policy |
+| GET | `/pricing` | List all policies |
 
 `PUT .../pricing` is an upsert — creates the policy if absent, replaces it otherwise.
 Duplicate type names (case-insensitive) → 409. Missing type/policy → 404.
 
-## Research link
+## Research Link
 
-- **RQ1** — vehicle types are the segmentation key for floor/zone allocation; this
-  catalog is what slots get matched against.
-- Pricing differentiation per type lets reports compare revenue/utilization across
-  classes once sessions exist.
-
-## Schema — `V3__vehicle_type_pricing.sql`
-
-`vehicle_type`, `pricing_policy` (FK `ON DELETE CASCADE`, unique on `vehicle_type_id`).
-Money as `NUMERIC(10,2)`.
+Floor/zone segmentation by vehicle type (RQ1) relies on the vehicle type model:
+floors are optionally assigned a vehicle type, and the AI allocator's
+`vehicleTypeMatch` criterion (40 pts) scores slots on type-matched floors higher.

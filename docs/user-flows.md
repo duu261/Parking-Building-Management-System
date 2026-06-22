@@ -59,7 +59,22 @@ Step-by-step flows per role. Use as hand-testing script and presentation referen
 2. See past sessions: plate, slot, duration, charge, status
 3. Each session shows auto-allocated vs manual pick
 
-### DF-6: Pay for session
+### DF-6: Purchase monthly pass
+1. Open Passes page
+2. Click "Buy pass" → select vehicle type, enter plate, date range
+3. Submit → `POST /api/driver/passes`
+4. Auto-redirect to VNPay sandbox gateway
+5. Complete payment → return to app → pass status ACTIVE
+6. If abandoned, "Pay now" button on PENDING pass card for retry
+
+### DF-7: Leave feedback
+1. Open Session History page
+2. Find completed session → click "Rate"
+3. Select 1–5 stars, optionally write comment
+4. Submit → `POST /api/driver/feedback`
+5. Feedback shown on session card
+
+### DF-8: Pay for session
 1. Open My Parking or see payment notification
 2. View pending payment: amount, session details
 3. Select payment method (ONLINE)
@@ -80,14 +95,12 @@ Step-by-step flows per role. Use as hand-testing script and presentation referen
 7. System scores all available slots, picks highest score
 8. Success card: plate, slot ID, session number, "Auto-allocated" badge
 
-### SF-2: Check in — manual pick
+### SF-2: Check in — with reservation
 1. Open Check In page
-2. Enter plate + select vehicle type
-3. Choose "Manual pick" mode
-4. Select building → floors load → select floor → available slots load
-5. Select specific slot
-6. Submit → `POST /api/staff/sessions/check-in` (with slotId)
-7. Success card: plate, slot, session, "Manual" badge
+2. Enter reservation ID or scan reservation QR
+3. Submit → `POST /api/staff/sessions/check-in` (with reservationId)
+4. Reservation → FULFILLED, slot RESERVED → OCCUPIED, session created
+5. Success card: plate, slot, session, "Reserved" badge
 
 ### SF-3: Check out
 1. Open Active Sessions page

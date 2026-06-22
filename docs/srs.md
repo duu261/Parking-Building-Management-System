@@ -167,11 +167,12 @@ ParkMaster is a standalone web application with:
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-7.1 | Staff can view pending payments list | Must |
-| FR-7.2 | Staff can settle payment with method: CASH, CARD, or ONLINE | Must |
+| FR-7.2 | Staff can settle payment with method: CASH or ONLINE | Must |
 | FR-7.3 | Staff can void payment with reason | Must |
 | FR-7.4 | Driver can view own pending payments | Must |
-| FR-7.5 | Driver can pay online (simulated) | Must |
-| FR-7.6 | Payment status transitions: PENDING → SETTLED or PENDING → VOIDED | Must |
+| FR-7.5 | Driver can pay online via VNPay (sandbox integration) | Must |
+| FR-7.6 | Payment status transitions: PENDING → PAID or PENDING → VOIDED | Must |
+| FR-7.7 | Payment supports penalty surcharge from exception reports | Should |
 
 ### 3.8 Exception Handling (F8)
 
@@ -223,6 +224,32 @@ ParkMaster is a standalone web application with:
 | FR-12.3 | Landing page shows live slot map preview | Should |
 | FR-12.4 | Landing page shows AI allocation score breakdown (research demo) | Must |
 | FR-12.5 | Allocation preview shows per-criterion scores: vehicle type match, load balance, distance, peak hour | Must |
+
+### 3.13 VNPay Online Payment (F13)
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-13.1 | Driver can pay parking charges via VNPay sandbox gateway | Must |
+| FR-13.2 | VNPay integration uses HMAC-SHA512 signature verification | Must |
+| FR-13.3 | IPN callback handles idempotent settlement | Must |
+| FR-13.4 | Gateway reference and transaction number stored for audit | Should |
+
+### 3.14 Driver Feedback (F14)
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-14.1 | Driver can rate a completed session (1–5 stars) with optional comment | Should |
+| FR-14.2 | One feedback per session (unique constraint) | Must |
+| FR-14.3 | Manager can view all feedback | Should |
+
+### 3.15 AI Chat Assistant (F15)
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-15.1 | Public chat assistant answers parking questions without auth | Should |
+| FR-15.2 | Hybrid design: local FAQ always works, Gemini LLM when API key configured | Should |
+| FR-15.3 | Assistant grounded in live availability and pricing data | Should |
+| FR-15.4 | Rate limiting per IP to protect quota | Must |
 
 ---
 

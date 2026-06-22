@@ -4,25 +4,38 @@ The priority feature for grading. Instead of staff hand-picking a slot, the syst
 scores every available slot and auto-assigns the best one. Directly answers the
 research questions (RQ2–RQ4).
 
-## Scoring model (`SlotAllocationService`)
+## Scoring Flow
 
-Each available slot gets a weighted score; the highest wins.
-
+```mermaid
+flowchart TD
+    A[Request: buildingId + vehicleTypeId] --> B[Query all AVAILABLE slots in building]
+    B --> C{Any slots available?}
+    C -- No --> D[Return 409: no slots]
+    C -- Yes --> E[Score each slot on 4 criteria]
+    E --> F[vehicleTypeMatch — 40 pts]
+    E --> G[loadBalance — 30 pts]
+    E --> H[distanceToEntry — 20 pts]
+    E --> I[peakHour — 10 pts]
+    F & G & H & I --> J[Sum → total score per slot]
+    J --> K[Sort descending, pick highest]
+    K --> L[Flip slot status → OCCUPIED/RESERVED]
+    L --> M[Return slot + score breakdown as JSON]
 ```
-score = vehicleTypeMatch(40) + loadBalance(30) + distanceToEntry(20) + peakHour(10)
-```
 
-| Criterion | Weight | Logic |
-|---|---|---|
-| Vehicle type match | 40 | Floor reserved for this type → full 40; mixed floor → 20 (neutral); wrong type → 0 |
-| Load balance | 30 | `availableRatio * 30` — favors emptier floors, spreads load |
-| Distance to entry | 20 | `20 / floor.level` — lower floors score higher (closer to entry) |
-| Peak hour | 10 | During peak only: `availableRatio * 10` — extra push toward emptier floors |
+## Scoring Model (`SlotAllocationService`)
 
-Greedy max — one pass over available slots, picks the single best. No global
-optimization across multiple incoming vehicles (not needed at demo scale).
+| Criterion | Weight | What it measures |
+|-----------|--------|------------------|
+| `vehicleTypeMatch` | **40** | Floor assigned to the requested vehicle type → full score; unassigned floor → 50%; wrong-type floor → 0 |
+| `loadBalance` | **30** | Slots with emptier floors score higher: `(1 − floorOccupancy%) × 30` |
+| `distanceToEntry` | **20** | Lower floor number = closer to entry = higher score |
+| `peakHour` | **10** | During peak hours (7–9 AM, 5–7 PM) the algorithm favours emptier floors more aggressively |
 
-## Where it runs
+Total: **100 points** max per slot. The slot with the highest score wins. Ties
+broken by lower slot ID (deterministic). The full score breakdown is stored as a
+JSONB `allocation_score` field on the session/reservation for auditability.
+
+## Where it Runs
 
 - **Check-in** (`/api/staff/sessions/check-in`) — staff omit `slotId` → auto-allocate.
 - **Reservation** (`/api/driver/reservations`) — driver pre-book picks + holds the best slot.
@@ -33,23 +46,29 @@ window is guarded by a re-check + retry-once, not a row lock — upgrade to
 
 ## Analytics
 
-`GET /api/manager/buildings/{id}/analytics/allocation` returns fill-rate per floor —
-the evidence base for the research questions. `parking_session`'s indexed
-`check_in_at` / `status` keep time-to-park and session-duration metrics queryable.
+Fill-rate and session-duration metrics are exposed at:
 
-## Research link
+```
+GET /api/manager/buildings/{id}/analytics/allocation
+```
 
-- **RQ1** — floor-by-vehicle-type segmentation feeds the vehicleTypeMatch term; its
-  weight (40) makes type-correct floors dominate the choice.
-- **RQ2** — auto allocation vs free choice: compare time-to-park and session metrics
-  against the manual-pick baseline captured in `parking_session`.
-- **RQ3** — which criteria matter most: the four weights are the tunable knobs to
-  test; raise/zero each and re-measure utilization.
-- **RQ4** — peak-hour utilization: the peak-hour term redistributes load toward
-  emptier floors exactly when the building is busiest.
+Response includes: total slots, occupied count, fill rate (%), average session
+duration, allocation method split (auto vs manual), and per-floor breakdown.
 
-## Why weighted scoring (not ML)
+## Research Links
 
-Transparent, tunable, explainable to instructors. Each weight maps to one research
-question, so the algorithm itself is the experiment. A black-box model would answer
-none of RQ3 — you couldn't say which criterion drove a decision.
+| RQ | Question | How allocation answers it |
+|----|----------|--------------------------|
+| **RQ2** | Does auto allocation reduce time-to-park vs free choice? | Compare auto-allocated session durations to manual ones. |
+| **RQ3** | Which criteria matter most? | The weights (40/30/20/10) are tunable; analytics show which criterion correlates with faster turnover. |
+| **RQ4** | Can the algorithm improve peak-hour utilization? | The `peakHour` factor redistributes load during rush hours; fill-rate analytics before/after measure impact. |
+
+## Why Weighted Scoring (Not ML)
+
+- **Explainable**: every score can be broken down and shown to the teacher —
+  no black-box model to justify.
+- **Deterministic**: same input → same output, which is essential for testing.
+- **Tunable**: weights are constants, easy to adjust for experiments.
+- **No training data needed**: the system works from day one with zero historical sessions.
+- For a capstone project, this is the right trade-off between sophistication and
+  demonstrability. ML is the natural next step when real usage data exists.

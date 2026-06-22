@@ -138,7 +138,8 @@ Database: PostgreSQL. Schema managed by Flyway migrations.
 | Reservation | `reservation` | id | Belongs to: user, slot, vehicle_type |
 | Payment | `payment` | id | Belongs to: session (1:1 unique FK) |
 | ExceptionReport | `exception_report` | id | Belongs to: session (optional), reported_by (user) |
-| MonthlyPass | `monthly_pass` | id | Belongs to: user, vehicle_type |
+| MonthlyPass | `monthly_pass` | id | Belongs to: user, vehicle_type. Has one: payment |
+| Feedback | `feedback` | id | Belongs to: session (1:1 unique FK), user |
 
 ---
 
@@ -160,6 +161,9 @@ parking_session 1 ──── 1 payment             (one payment per session)
 parking_session 1 ──── * exception_report    (session may have exceptions)
 users           1 ──── * monthly_pass         (driver holds passes)
 vehicle_type    1 ──── * monthly_pass         (pass for vehicle type)
+monthly_pass    * ──── 1 payment              (pass purchase payment, optional)
+parking_session 1 ──── 0..1 feedback           (driver rates completed session)
+users           1 ──── * feedback             (driver leaves feedback)
 ```
 
 ---
@@ -172,8 +176,8 @@ vehicle_type    1 ──── * monthly_pass         (pass for vehicle type)
 | SlotStatus | AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE, LOCKED | parking_slot.status |
 | SessionStatus | ACTIVE, AWAITING_PAYMENT, COMPLETED | parking_session.status |
 | ReservationStatus | PENDING, FULFILLED, CANCELLED, EXPIRED | reservation.status |
-| PaymentStatus | PENDING, SETTLED, VOIDED | payment.status |
-| PaymentMethod | CASH, CARD, ONLINE | payment.method |
+| PaymentStatus | PENDING, PAID, VOIDED | payment.status |
+| PaymentMethod | CASH, ONLINE, VNPAY | payment.method |
 | ExceptionType | LOST_TICKET, WRONG_PLATE, OVERTIME, WRONG_ZONE | exception_report.type |
 | ExceptionStatus | OPEN, RESOLVED | exception_report.status |
-| PassStatus | ACTIVE, EXPIRED | monthly_pass.status |
+| PassStatus | PENDING, ACTIVE, EXPIRED | monthly_pass.status |

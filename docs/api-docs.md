@@ -24,6 +24,7 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 | GET | `/public/buildings/{id}/availability` | — | `{ buildingId, name, available }` | Available slot count |
 | GET | `/public/pricing` | — | `[{ vehicleTypeId, vehicleTypeName, ratePerHour, dailyCap, graceMinutes, peakMultiplier }]` | All pricing policies |
 | GET | `/public/buildings/{id}/allocation-preview` | `vehicleTypeId`, `limit` (default 6) | `[{ slotId, slotCode, floorId, floorName, level, vehicleTypeMatch, loadBalance, distanceToEntry, peakHour, total }]` | AI allocation score breakdown |
+| POST | `/public/assistant/chat` | `{ message, history? }` | `{ reply, source }` | AI chat assistant (source: "ai" or "local") |
 
 ---
 
@@ -51,6 +52,21 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 | GET | `/driver/reservations` | — | `[ReservationResponse]` | List own reservations |
 | POST | `/driver/reservations` | `{ buildingId, vehicleTypeId, licensePlate }` | `ReservationResponse` | Reserve slot (AI picks) |
 | POST | `/driver/reservations/{id}/cancel` | — | `204 No Content` | Cancel pending reservation |
+
+### Passes
+
+| Method | Path | Body | Response | Description |
+|---|---|---|---|---|
+| GET | `/driver/passes` | — | `[PassResponse]` | Own passes |
+| POST | `/driver/passes` | `{ vehicleTypeId, licensePlate, validFrom, validUntil }` | `PassResponse` | Register pass (creates PENDING payment) |
+| GET | `/driver/passes/{id}/qr.png` | — | PNG | QR code image for pass |
+
+### Feedback
+
+| Method | Path | Body | Response | Description |
+|---|---|---|---|---|
+| POST | `/driver/feedback` | `{ sessionId, rating, comment? }` | `FeedbackResponse` | Rate completed session (1–5 stars) |
+| GET | `/driver/feedback` | — | `[FeedbackResponse]` | Own feedback history |
 
 ---
 
@@ -166,6 +182,12 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 | GET | `/manager/passes/{id}` | — | `PassResponse` | Get pass |
 | DELETE | `/manager/passes/{id}` | — | `PassResponse` | Revoke pass (status -> EXPIRED) |
 
+### Feedback
+
+| Method | Path | Body | Response | Description |
+|---|---|---|---|---|
+| GET | `/manager/feedback` | — | `[FeedbackResponse]` | All feedback (newest first) |
+
 ---
 
 ## Admin (`/api/admin`) — ADMIN role only
@@ -279,11 +301,11 @@ Errors: RFC 7807 problem details (`{ type, title, status, detail }`).
 | SlotStatus | `AVAILABLE`, `OCCUPIED`, `RESERVED`, `MAINTENANCE`, `LOCKED` |
 | SessionStatus | `ACTIVE`, `AWAITING_PAYMENT`, `COMPLETED` |
 | ReservationStatus | `PENDING`, `FULFILLED`, `CANCELLED`, `EXPIRED` |
-| PaymentStatus | `PENDING`, `SETTLED`, `VOIDED` |
-| PaymentMethod | `CASH`, `CARD`, `ONLINE` |
+| PaymentStatus | `PENDING`, `PAID`, `VOIDED` |
+| PaymentMethod | `CASH`, `ONLINE`, `VNPAY` |
 | ExceptionType | `LOST_TICKET`, `WRONG_PLATE`, `OVERTIME`, `WRONG_ZONE` |
 | ExceptionStatus | `OPEN`, `RESOLVED` |
-| PassStatus | `ACTIVE`, `EXPIRED` |
+| PassStatus | `PENDING`, `ACTIVE`, `EXPIRED` |
 
 ---
 

@@ -14,7 +14,7 @@ No integration tests (real DB) or E2E automation in scope — SWP391 capstone sc
 
 ---
 
-## 2. Existing Unit Tests (14 files)
+## 2. Existing Unit Tests (15 files, 101 test cases)
 
 | Test class | What it covers | Domain |
 |---|---|---|
@@ -24,10 +24,11 @@ No integration tests (real DB) or E2E automation in scope — SWP391 capstone sc
 | `PricingServiceTest` | Vehicle type CRUD, pricing policy set/update/delete | Pricing |
 | `ChargeCalculatorTest` | Hourly charge, grace period, daily cap, edge cases | Billing |
 | `SlotAllocationServiceTest` | AI scoring: type match, load balance, distance, peak | AI allocation |
-| `ParkingSessionServiceTest` | Check-in (auto + manual), check-out, session lookup | Sessions |
+| `ParkingSessionServiceTest` | Check-in (auto-allocate), check-out, session lookup | Sessions |
 | `SessionTicketTest` | Ticket code generation, QR PNG output | Ticket |
 | `ReservationServiceTest` | Reserve, cancel, hold expiry, slot status flip | Reservations |
 | `PaymentServiceTest` | Settle, void, pending list, status transitions | Payments |
+| `VnPayServiceTest` | VNPay URL generation, HMAC signature, IPN callback | VNPay |
 | `ExceptionReportServiceTest` | Create, resolve, open list filter | Exceptions |
 | `ReportServiceTest` | Revenue daily, by type, check-ins by hour, duration | Reports |
 | `PeakHoursTest` | Peak-hour detection logic | Common |

@@ -1,30 +1,75 @@
 # Reservation (Pre-Book a Slot)
 
+Drivers pre-book a parking slot by vehicle type. The AI allocator picks the
+best available slot, marks it RESERVED, and holds it for 30 minutes. Staff
+convert the reservation into an active session at the gate.
+
 ## What it does
-- A driver pre-books a parking slot in a building for their vehicle type.
-- The AI allocator picks the best available slot and holds it as RESERVED.
-- The hold lasts 30 minutes; if the driver does not check in, it auto-releases.
-- Staff convert a reservation into an active session at the gate (one check-in
-  flow, given the reservation id).
-- A driver can list and cancel their own reservations.
+
+- Driver selects building + vehicle type + license plate → system auto-allocates
+  the best slot using the same AI scoring as check-in.
+- The slot is held as RESERVED for 30 minutes; if the driver does not arrive,
+  it auto-releases (status → EXPIRED, slot → AVAILABLE).
+- Staff convert a reservation into an active session at the gate by passing
+  the reservation ID during check-in.
+- Drivers can list and cancel their own pending reservations.
+
+## Reservation Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: driver books
+    PENDING --> FULFILLED: staff checks in with reservation ID
+    PENDING --> CANCELLED: driver cancels
+    PENDING --> EXPIRED: 30-min hold timeout
+    FULFILLED --> [*]
+    CANCELLED --> [*]
+    EXPIRED --> [*]
+```
 
 ## Flow
-1. **Reserve** (driver) - allocator scores available slots, best one flips
-   AVAILABLE -> RESERVED, reservation saved PENDING with a 30-minute holdUntil.
-2. **Check-in** (staff) - reservation consumed: PENDING -> FULFILLED, slot
-   RESERVED -> OCCUPIED, an active session is created on that slot.
-3. **Cancel** (driver) - PENDING -> CANCELLED, slot released to AVAILABLE.
-4. **Expire** (system) - a minute-interval sweep finds PENDING holds past
-   holdUntil, sets EXPIRED and releases the slot.
+
+1. **Driver** → `POST /api/driver/reservations` with `{ buildingId, vehicleTypeId, licensePlate }`
+2. **Backend** → AI allocator scores all AVAILABLE slots → picks best → flips slot to RESERVED
+3. **Backend** → returns reservation with slot code, floor, hold expiry
+4. **Driver arrives** → staff scans/enters reservation ID at check-in
+5. **Staff** → `POST /api/staff/sessions/check-in` with `{ reservationId }` → converts
+   to active session, reservation status → FULFILLED
+6. **If no-show** → scheduler or lazy check expires old reservations
+
+## Allocation Score
+
+The reservation stores the full scoring breakdown as a JSONB `allocation_score`
+field, making it auditable. The scoring weights are identical to check-in
+allocation — see [AI Slot Allocation](ai-slot-allocation.md).
 
 ## API
-- `POST /api/driver/reservations` - body `{ buildingId, vehicleTypeId, licensePlate }`
-- `GET  /api/driver/reservations` - the caller's reservations
-- `POST /api/driver/reservations/{id}/cancel`
-- Staff check-in (`POST /api/staff/sessions/check-in`) now accepts an optional
-  `reservationId` to consume a hold.
 
-## Research link (RQ2)
-Reservation drives slot selection through the same scoring allocator used at
-check-in, so a pre-booked arrival skips the search-and-park step entirely - the
-strongest form of "auto allocation reduces time-to-park".
+| Endpoint | Role | Purpose |
+|----------|------|---------|
+| `POST /api/driver/reservations` | Driver | Create reservation |
+| `GET /api/driver/reservations` | Driver | List own reservations |
+| `DELETE /api/driver/reservations/{id}` | Driver | Cancel pending reservation |
+| `GET /api/manager/reservations` | Manager | List all reservations |
+
+## Data Model
+
+```
+reservation
+├── id               PK
+├── user_id          FK → users
+├── slot_id          FK → parking_slot
+├── vehicle_type_id  FK → vehicle_type
+├── license_plate    VARCHAR
+├── hold_until       TIMESTAMPTZ
+├── status           ENUM (PENDING | FULFILLED | CANCELLED | EXPIRED)
+├── allocation_score JSONB (scoring breakdown)
+└── created_at       TIMESTAMPTZ
+```
+
+## Research Link (RQ2)
+
+Reservations test whether AI auto-allocation reduces time-to-park compared to
+free choice: the driver does not pick a slot — the algorithm does. Comparing
+reservation fulfillment rates and arrival times against walk-in check-ins
+measures the allocation's real-world benefit.

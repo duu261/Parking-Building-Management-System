@@ -83,8 +83,7 @@ Formal use case descriptions derived from user flows. SWP391 format.
 | Trigger | Vehicle arrives at gate |
 | Main flow | 1. Staff enters license plate |
 | | 2. Staff selects vehicle type |
-| | 3. Staff selects "Auto-allocate" mode |
-| | 4. Staff selects building |
+| | 3. Staff selects building |
 | | 5. System runs AI allocation: scores all available slots |
 | | 6. System picks highest-scoring slot |
 | | 7. Slot status → OCCUPIED, session created (ACTIVE) |
@@ -96,22 +95,22 @@ Formal use case descriptions derived from user flows. SWP391 format.
 
 ---
 
-## UC-05: Check In Vehicle (Manual Pick)
+## UC-05: Driver Self-Purchase Monthly Pass
 
 | Field | Value |
 |---|---|
-| Actor | Staff |
-| Precondition | Staff is logged in |
-| Trigger | Vehicle arrives, staff wants specific slot |
-| Main flow | 1. Staff enters license plate + vehicle type |
-| | 2. Staff selects "Manual pick" mode |
-| | 3. Staff selects building → floors load |
-| | 4. Staff selects floor → available slots load |
-| | 5. Staff picks specific slot |
-| | 6. Slot status → OCCUPIED, session created |
-| | 7. Ticket code generated |
-| Postcondition | Session active, chosen slot occupied |
-| Exception | E1: Selected slot no longer available → error |
+| Actor | Driver |
+| Precondition | Driver logged in, pricing policy with monthly pass price exists |
+| Trigger | Driver wants a monthly parking pass |
+| Main flow | 1. Driver opens Passes page |
+| | 2. Driver selects vehicle type, enters license plate, date range |
+| | 3. System validates no overlapping pass for same plate + type |
+| | 4. System creates pass (PENDING) and payment (PENDING) |
+| | 5. Driver redirected to VNPay gateway |
+| | 6. After successful payment, pass status → ACTIVE |
+| Postcondition | Active pass; vehicle exits free during validity period |
+| Alt flow | A1: Driver abandons VNPay → pass stays PENDING, "Pay now" button appears |
+| Exception | E1: Overlapping dates for same plate + vehicle type → error |
 
 ---
 

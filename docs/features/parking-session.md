@@ -1,55 +1,70 @@
 # Parking Session (Check-in / Check-out)
 
-The core operational flow: staff park a vehicle into a chosen slot, then close the
-session on exit and collect the computed charge. Slot allocation is manual here;
-AI auto-allocation is a separate feature on top of this.
-
-## Model
-
-| Entity | Fields | Notes |
-|---|---|---|
-| `ParkingSession` | `slot`, `vehicleType`, `licensePlate`, `checkInAt`, `checkOutAt?`, `amountCharged?`, `status` | doubles as the ticket for now |
-
-`status`: `ACTIVE` → `AWAITING_PAYMENT` → `COMPLETED`. Session moves to `AWAITING_PAYMENT` at check-out while charge is settled; slot stays `OCCUPIED` during this phase. Session completes after payment is settled.
+The core operational flow. Staff check in a vehicle — the AI allocator auto-assigns
+the best slot (manual mode removed). On exit, the charge is computed and a payment
+created. Each session gets a unique QR ticket for scan-to-checkout.
 
 ## Flow
 
-1. **Check-in** — slot must be `AVAILABLE`; session created, slot → `OCCUPIED`.
-2. **Check-out** — charge computed from the vehicle type's `PricingPolicy`, session → `AWAITING_PAYMENT`, slot stays `OCCUPIED`.
-3. **Payment settled** — slot → `AVAILABLE`, session → `COMPLETED`.
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE: staff check-in (AI allocates slot)
+    ACTIVE --> AWAITING_PAYMENT: staff check-out (charge computed)
+    AWAITING_PAYMENT --> COMPLETED: payment settled (CASH/ONLINE/VNPay)
+    COMPLETED --> [*]
+```
+
+1. **Check-in** — staff submits `{ buildingId, vehicleTypeId, licensePlate }`.
+   The AI allocator scores all AVAILABLE slots and picks the best one.
+   Slot → OCCUPIED, session created with a UUID `ticketCode` (QR-printable).
+   Duplicate check-in guard: same plate already ACTIVE → 409.
+2. **Check-out** — charge computed from the vehicle type's `PricingPolicy`
+   (rate × hours, grace period, daily cap, peak multiplier).
+   Session → AWAITING_PAYMENT, Payment record created as PENDING.
+   Monthly-pass holders: charge = 0, auto-PAID.
+3. **Payment settled** — staff settles (CASH/ONLINE) or driver pays via VNPay.
+   Slot → AVAILABLE, session → COMPLETED.
 
 Conflicts: non-available slot → 409; closing a closed session → 409; no pricing
 policy for the type at checkout → 409.
 
-## Charge math (`ChargeCalculator`)
+## Model
 
-Pure, isolated, unit-tested separately from persistence.
+| Field | Type | Notes |
+|-------|------|-------|
+| `user` | FK → users | Driver who owns the session (nullable for walk-ins) |
+| `slot` | FK → parking_slot | Assigned slot |
+| `vehicleType` | FK → vehicle_type | Vehicle type for pricing |
+| `licensePlate` | VARCHAR | Plate number entered at check-in |
+| `ticketCode` | UUID (unique) | QR ticket code, auto-generated |
+| `checkInAt` | TIMESTAMPTZ | Immutable, set on creation |
+| `checkOutAt` | TIMESTAMPTZ | Set on check-out |
+| `amountCharged` | NUMERIC | Computed charge (0 for pass holders) |
+| `status` | ENUM | ACTIVE → AWAITING_PAYMENT → COMPLETED |
+| `autoAllocated` | BOOLEAN | True when AI picked the slot |
+| `allocationScore` | JSONB | Full scoring breakdown for audit |
 
-```
-billable = totalMinutes - graceMinutes
-charge   = ceil(billable / 60) * ratePerHour        (0 if within grace)
-cap      = ceil(totalMinutes / 1440) * dailyCap      (per started day, if set)
-final    = min(charge, cap)
-```
+## Charge Math (`ChargeCalculator`)
 
-Billed per *started* hour; cap scales per *started* day.
+- `rate_per_hour × ceiling(hours)` — rounded up per started hour
+- First N minutes free (`grace_minutes` from PricingPolicy)
+- Daily cap: max charge per 24h stay (optional)
+- Peak-hour multiplier: surcharge when check-in falls in 7–9 AM or 5–7 PM
 
 ## API (`/api/staff/sessions`, STAFF role)
 
-| Method | Path | Action |
-|---|---|---|
-| POST | `/check-in` | `{slotId, vehicleTypeId, licensePlate}` → session |
-| POST | `/{id}/check-out` | close + charge |
-| GET | `/active` | active sessions (by check-in time) |
-| GET | `/{id}` | one session |
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/check-in` | AI-allocated check-in |
+| POST | `/{id}/check-out` | Compute charge, create payment |
+| GET | `/active` | List active sessions |
+| GET | `/{id}` | Session detail |
+| GET | `/by-ticket/{ticketCode}` | Lookup by QR ticket code |
+| GET | `/by-plate?plate=` | Lookup by license plate |
+| GET | `/{id}/ticket.png` | QR code image for the ticket |
 
-## Research link
+## Research Link
 
-- **RQ2** — `checkInAt`/`checkOutAt` give the time-to-park and session-duration
-  baseline that AI allocation will be measured against.
-- **RQ4** — indexed `status` + `check_in_at` keep fill-rate / peak-hour metrics queryable.
-
-## Schema — `V4__parking_session.sql`
-
-`parking_session` with FKs to `parking_slot` and `vehicle_type`; indexes on
-`slot_id`, `status`, `check_in_at`. Money as `NUMERIC(10,2)`.
+Session duration and allocation-method split (auto vs manual) feed into
+RQ2 (time-to-park comparison) and RQ4 (peak-hour utilization). The
+`autoAllocated` flag and `allocationScore` JSONB make every session auditable.

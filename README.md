@@ -25,7 +25,9 @@ AI slot-allocation algorithm.
 - Reservations — pre-book a slot, auto-allocated and held, staff convert at the gate
 - AI slot allocation — scores slots by load balance, vehicle-type match, distance, and peak hour
 - Exception reports — lost ticket, wrong plate, overtime, wrong zone
-- Monthly passes — manager-issued free parking for a date range
+- Monthly passes — driver self-purchase via VNPay, free exit while active
+- VNPay online payment — sandbox-integrated (API v2.1.0, HMAC-signed, IPN callback)
+- Driver feedback — 1–5 star rating per completed session
 - AI chat assistant — public hybrid assistant (local FAQ always on, Google Gemini when keyed)
 
 See `docs/features/` for per-feature notes.

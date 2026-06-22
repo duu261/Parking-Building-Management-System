@@ -1,7 +1,12 @@
 package com.parkmaster.dev;
 
+import com.parkmaster.exceptionreport.ExceptionReport;
+import com.parkmaster.exceptionreport.ExceptionReportRepository;
+import com.parkmaster.exceptionreport.ExceptionStatus;
+import com.parkmaster.exceptionreport.ExceptionType;
+import com.parkmaster.feedback.Feedback;
+import com.parkmaster.feedback.FeedbackRepository;
 import com.parkmaster.parking.ParkingDtos.BuildingRequest;
-import com.parkmaster.parking.ParkingDtos.BuildingResponse;
 import com.parkmaster.parking.ParkingDtos.FloorRequest;
 import com.parkmaster.parking.ParkingDtos.FloorResponse;
 import com.parkmaster.parking.ParkingDtos.SlotRequest;
@@ -11,6 +16,7 @@ import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
 import com.parkmaster.pass.MonthlyPass;
 import com.parkmaster.pass.MonthlyPassRepository;
+import com.parkmaster.pass.PassStatus;
 import com.parkmaster.payment.Payment;
 import com.parkmaster.payment.PaymentMethod;
 import com.parkmaster.payment.PaymentRepository;
@@ -23,6 +29,7 @@ import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
 import com.parkmaster.reservation.Reservation;
 import com.parkmaster.reservation.ReservationRepository;
+import com.parkmaster.reservation.ReservationStatus;
 import com.parkmaster.session.ParkingSession;
 import com.parkmaster.session.ParkingSessionRepository;
 import com.parkmaster.session.SessionStatus;
@@ -36,6 +43,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import org.slf4j.Logger;
@@ -45,15 +53,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Hand-test fixtures. Runs only under the "dev" profile and only when the users
- * table is empty, so it never seeds a real deployment. Reuses the domain
- * services for setup (passwords hash correctly, same validation as the API),
- * and writes backdated sessions/payments directly so the manager charts have
- * history on first load.
- *
- * Enable: SPRING_PROFILES_ACTIVE=dev mvnd spring-boot:run
- */
 @Component
 @Profile("dev")
 class DevDataSeeder implements CommandLineRunner {
@@ -61,8 +60,36 @@ class DevDataSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DevDataSeeder.class);
     private static final String PASSWORD = "password123";
     private static final int HISTORY_DAYS = 30;
-    // Weighted to morning + evening rush so the check-ins-by-hour chart shows real peaks.
     private static final int[] PEAK_HOURS = {7, 8, 8, 9, 9, 12, 14, 17, 18, 18, 19, 20};
+
+    private static final String[] DRIVER_NAMES = {
+        "Nguyen Van Minh", "Tran Thi Lan", "Le Hoang Nam", "Pham Duc Anh",
+        "Vo Thi Mai", "Hoang Quoc Bao", "Dang Thi Huong"
+    };
+    private static final String[] DRIVER_EMAILS = {
+        "minh.nguyen@gmail.com", "lan.tran@gmail.com", "nam.le@gmail.com",
+        "anh.pham@gmail.com", "mai.vo@gmail.com", "bao.hoang@gmail.com",
+        "huong.dang@gmail.com"
+    };
+    private static final String[] DRIVER_PLATES = {
+        "51F-123.45", "59C-678.90", "51G-111.22", "30A-333.44",
+        "51H-555.66", "43B-777.88", "92C-999.00"
+    };
+
+    private static final String[] FEEDBACK_COMMENTS = {
+        "Very convenient parking system. The auto-allocation saved me a lot of time!",
+        "Staff was helpful when I had trouble with the check-out process.",
+        "Good location but could use better lighting on Level 2.",
+        "The online payment is super fast. Love the QR code feature!",
+        "Waited too long for the gate to open. Needs improvement.",
+        "Clean and well-organized parking building. Will come back!",
+        "Price is reasonable for the area. Monthly pass is a great deal.",
+        "The app is easy to use. Found my slot quickly with auto-allocation.",
+        "Had an issue with wrong plate detection but staff resolved it fast.",
+        "Great experience overall. The reservation feature is very useful.",
+        "Parking space was a bit tight for my SUV.",
+        "Excellent service! The EV charging bay is a nice touch.",
+    };
 
     private final UserRepository users;
     private final AdminUserService adminUsers;
@@ -74,11 +101,14 @@ class DevDataSeeder implements CommandLineRunner {
     private final PaymentRepository payments;
     private final ReservationRepository reservations;
     private final MonthlyPassRepository passes;
+    private final ExceptionReportRepository exceptions;
+    private final FeedbackRepository feedbacks;
 
     DevDataSeeder(UserRepository users, AdminUserService adminUsers, ParkingService parking,
             PricingService pricing, VehicleTypeRepository vehicleTypes, ParkingSlotRepository slots,
             ParkingSessionRepository sessions, PaymentRepository payments,
-            ReservationRepository reservations, MonthlyPassRepository passes) {
+            ReservationRepository reservations, MonthlyPassRepository passes,
+            ExceptionReportRepository exceptions, FeedbackRepository feedbacks) {
         this.users = users;
         this.adminUsers = adminUsers;
         this.parking = parking;
@@ -89,6 +119,8 @@ class DevDataSeeder implements CommandLineRunner {
         this.payments = payments;
         this.reservations = reservations;
         this.passes = passes;
+        this.exceptions = exceptions;
+        this.feedbacks = feedbacks;
     }
 
     @Override
@@ -101,13 +133,24 @@ class DevDataSeeder implements CommandLineRunner {
         log.info("Seeding dev data (profile=dev)...");
 
         User driver = seedUsers();
+        List<User> extraDrivers = seedExtraDrivers();
         VehicleTypeResponse[] vt = seedVehicleTypes();
         seedBuilding(vt);
         seedBuilding2(vt);
-        seedHistory(vt, driver);
+
+        List<User> allDrivers = new ArrayList<>();
+        allDrivers.add(driver);
+        allDrivers.addAll(extraDrivers);
+
+        List<ParkingSession> completedSessions = seedHistory(vt, allDrivers);
         seedLiveDriverSession(vt, driver);
+        seedLiveSessions(vt, extraDrivers);
         seedReservation(vt, driver);
+        seedExtraReservations(vt, extraDrivers);
         seedMonthlyPass(vt, driver);
+        seedExtraPasses(vt, extraDrivers);
+        seedExceptionReports(completedSessions, allDrivers);
+        seedFeedback(completedSessions, allDrivers);
 
         log.info("Dev seed complete. Logins (password '{}'): admin@parkmaster.dev, "
                 + "manager@parkmaster.dev, staff@parkmaster.dev, driver@parkmaster.dev", PASSWORD);
@@ -121,12 +164,21 @@ class DevDataSeeder implements CommandLineRunner {
         return users.findByEmail("driver@parkmaster.dev").orElseThrow();
     }
 
+    private List<User> seedExtraDrivers() {
+        List<User> drivers = new ArrayList<>();
+        for (int i = 0; i < DRIVER_NAMES.length; i++) {
+            adminUsers.create(new CreateUserRequest(DRIVER_EMAILS[i], PASSWORD, DRIVER_NAMES[i], Role.USER));
+            drivers.add(users.findByEmail(DRIVER_EMAILS[i]).orElseThrow());
+        }
+        log.info("Seeded {} extra driver accounts.", drivers.size());
+        return drivers;
+    }
+
     private VehicleTypeResponse[] seedVehicleTypes() {
         var car = pricing.createVehicleType(new VehicleTypeRequest("Car", "Standard 4-wheel vehicle"));
         var bike = pricing.createVehicleType(new VehicleTypeRequest("Motorbike", "2-wheel vehicle"));
         var ev = pricing.createVehicleType(new VehicleTypeRequest("EV", "Electric vehicle, charging bay"));
 
-        // ratePerHour (VND), dailyCap (VND), graceMinutes, peakMultiplier, monthlyPassPrice
         pricing.setPolicy(car.id(), new PricingPolicyRequest(
                 new BigDecimal("10000"), new BigDecimal("80000"), 15, new BigDecimal("1.5"),
                 new BigDecimal("200000")));
@@ -158,15 +210,27 @@ class DevDataSeeder implements CommandLineRunner {
         fillSlots(mixed, "R", 10);
     }
 
+    private void seedBuilding2(VehicleTypeResponse[] vt) {
+        var b2 = parking.createBuilding(new BuildingRequest("Campus Parking", "FPT University, Thu Duc"));
+
+        var f1 = parking.createFloor(b2.id(), new FloorRequest(1, "Ground - Car"));
+        parking.setFloorVehicleType(f1.id(), vt[0].id());
+        fillSlots(f1, "G", 15);
+
+        var f2 = parking.createFloor(b2.id(), new FloorRequest(2, "Basement - Motorbike"));
+        parking.setFloorVehicleType(f2.id(), vt[1].id());
+        fillSlots(f2, "D", 25);
+
+        log.info("Campus Parking seeded: 2 floors, 40 slots");
+    }
+
     private void fillSlots(FloorResponse floor, String prefix, int count) {
         for (int i = 1; i <= count; i++) {
             parking.createSlot(floor.id(), new SlotRequest(String.format("%s-%02d", prefix, i)));
         }
     }
 
-    // Backdated COMPLETED sessions, each with a PAID payment, so revenue / duration /
-    // peak-hour / allocation charts populate immediately. Deterministic (fixed seed).
-    private void seedHistory(VehicleTypeResponse[] vt, User driver) {
+    private List<ParkingSession> seedHistory(VehicleTypeResponse[] vt, List<User> allDrivers) {
         VehicleType[] types = {
             vehicleTypes.findById(vt[0].id()).orElseThrow(),
             vehicleTypes.findById(vt[1].id()).orElseThrow(),
@@ -175,26 +239,26 @@ class DevDataSeeder implements CommandLineRunner {
         BigDecimal[] rates = {new BigDecimal("10000"), new BigDecimal("5000"), new BigDecimal("15000")};
         List<ParkingSlot> allSlots = slots.findAll();
         Random rnd = new Random(42);
-        int total = 0;
+        List<ParkingSession> completed = new ArrayList<>();
+        PaymentMethod[] methods = {PaymentMethod.CASH, PaymentMethod.ONLINE, PaymentMethod.VNPAY};
 
         for (int d = HISTORY_DAYS; d >= 1; d--) {
             LocalDate day = LocalDate.now(ZoneOffset.UTC).minusDays(d);
-            int perDay = 4 + rnd.nextInt(6); // 4-9 sessions/day
+            int perDay = 6 + rnd.nextInt(10);
             for (int i = 0; i < perDay; i++) {
                 int t = rnd.nextInt(types.length);
                 ParkingSlot slot = allSlots.get(rnd.nextInt(allSlots.size()));
                 int hour = PEAK_HOURS[rnd.nextInt(PEAK_HOURS.length)];
                 Instant checkIn = day.atTime(hour, rnd.nextInt(60)).toInstant(ZoneOffset.UTC);
-                long parkedMin = 30 + rnd.nextInt(300); // 0.5 - 5.5 h
+                long parkedMin = 30 + rnd.nextInt(300);
                 Instant checkOut = checkIn.plus(Duration.ofMinutes(parkedMin));
                 BigDecimal amount = charge(rates[t], parkedMin);
                 boolean auto = rnd.nextBoolean();
-                boolean owned = rnd.nextInt(4) == 0; // ~25% belong to the demo driver
+
+                User owner = allDrivers.get(rnd.nextInt(allDrivers.size()));
 
                 ParkingSession s = new ParkingSession(slot, types[t], plate(rnd), auto);
-                if (owned) {
-                    s.setUser(driver);
-                }
+                s.setUser(owner);
                 s.setCheckInAt(checkIn);
                 s.setCheckOutAt(checkOut);
                 s.setAmountCharged(amount);
@@ -202,19 +266,45 @@ class DevDataSeeder implements CommandLineRunner {
                 sessions.save(s);
 
                 Payment p = new Payment(s, amount);
-                p.setMethod(owned ? PaymentMethod.ONLINE : PaymentMethod.CASH);
+                p.setMethod(methods[rnd.nextInt(methods.length)]);
                 p.setStatus(PaymentStatus.PAID);
                 p.setCreatedAt(checkOut);
                 p.setPaidAt(checkOut);
                 payments.save(p);
-                total++;
+                completed.add(s);
             }
         }
-        log.info("Seeded {} historical paid sessions over {} days.", total, HISTORY_DAYS);
+
+        // A few VOIDED payments in history (refunds / staff corrections)
+        for (int i = 0; i < 4; i++) {
+            ParkingSession src = completed.get(rnd.nextInt(completed.size()));
+            int t = rnd.nextInt(types.length);
+            ParkingSlot slot = allSlots.get(rnd.nextInt(allSlots.size()));
+            Instant checkIn = Instant.now().minus(Duration.ofDays(3 + i)).minus(Duration.ofHours(2));
+            Instant checkOut = checkIn.plus(Duration.ofHours(1));
+            BigDecimal amount = charge(rates[t], 60);
+
+            ParkingSession vs = new ParkingSession(slot, types[t], plate(rnd), true);
+            vs.setUser(allDrivers.get(rnd.nextInt(allDrivers.size())));
+            vs.setCheckInAt(checkIn);
+            vs.setCheckOutAt(checkOut);
+            vs.setAmountCharged(amount);
+            vs.setStatus(SessionStatus.COMPLETED);
+            sessions.save(vs);
+
+            Payment vp = new Payment(vs, amount);
+            vp.setMethod(PaymentMethod.CASH);
+            vp.setStatus(PaymentStatus.VOIDED);
+            vp.setCreatedAt(checkOut);
+            vp.setVoidedAt(checkOut.plus(Duration.ofMinutes(10)));
+            vp.setVoidReason(i % 2 == 0 ? "Duplicate charge corrected" : "Customer complaint — staff override");
+            payments.save(vp);
+        }
+
+        log.info("Seeded {} historical sessions ({} days) + 4 voided payments.", completed.size(), HISTORY_DAYS);
+        return completed;
     }
 
-    // One live session owned by the driver + a PENDING payment, so the driver
-    // My Parking view shows the QR ticket and an enabled "Pay online" button.
     private void seedLiveDriverSession(VehicleTypeResponse[] vt, User driver) {
         VehicleType car = vehicleTypes.findById(vt[0].id()).orElseThrow();
         ParkingSlot slot = slots.findAll().stream()
@@ -232,33 +322,39 @@ class DevDataSeeder implements CommandLineRunner {
 
         Payment p = new Payment(s, charge(new BigDecimal("10000"), 45));
         p.setMethod(PaymentMethod.ONLINE);
-        // status defaults to PENDING; no paidAt yet.
         payments.save(p);
-        log.info("Seeded one live driver session (plate 51F-00777) with a pending payment.");
+        log.info("Seeded live driver session (plate 51F-00777) with pending payment.");
     }
 
-    private static BigDecimal charge(BigDecimal ratePerHour, long parkedMin) {
-        long billedHours = Math.max(1, (long) Math.ceil(parkedMin / 60.0));
-        return ratePerHour.multiply(BigDecimal.valueOf(billedHours));
-    }
+    private void seedLiveSessions(VehicleTypeResponse[] vt, List<User> extraDrivers) {
+        VehicleType[] types = {
+            vehicleTypes.findById(vt[0].id()).orElseThrow(),
+            vehicleTypes.findById(vt[1].id()).orElseThrow(),
+        };
+        List<ParkingSlot> available = slots.findAll().stream()
+                .filter(s -> s.getStatus() == SlotStatus.AVAILABLE)
+                .toList();
 
-    private static String plate(Random rnd) {
-        char letter = (char) ('A' + rnd.nextInt(26));
-        return String.format("51%c-%05d", letter, rnd.nextInt(100000));
-    }
+        int count = Math.min(3, Math.min(available.size(), extraDrivers.size()));
+        for (int i = 0; i < count; i++) {
+            ParkingSlot slot = available.get(i);
+            VehicleType type = types[i % types.length];
+            User drv = extraDrivers.get(i);
+            Instant checkIn = Instant.now().minus(Duration.ofMinutes(20 + i * 30));
 
-    private void seedBuilding2(VehicleTypeResponse[] vt) {
-        var b2 = parking.createBuilding(new BuildingRequest("Campus Parking", "FPT University, Thu Duc"));
+            ParkingSession s = new ParkingSession(slot, type, DRIVER_PLATES[i], true);
+            s.setUser(drv);
+            s.setCheckInAt(checkIn);
+            sessions.save(s);
 
-        var f1 = parking.createFloor(b2.id(), new FloorRequest(1, "Ground - Car"));
-        parking.setFloorVehicleType(f1.id(), vt[0].id());
-        fillSlots(f1, "G", 15);
+            slot.setStatus(SlotStatus.OCCUPIED);
+            slots.save(slot);
 
-        var f2 = parking.createFloor(b2.id(), new FloorRequest(2, "Basement - Motorbike"));
-        parking.setFloorVehicleType(f2.id(), vt[1].id());
-        fillSlots(f2, "D", 25);
-
-        log.info("Campus Parking seeded: 2 floors, 40 slots");
+            Payment p = new Payment(s, charge(new BigDecimal("10000"), 20 + i * 30));
+            p.setMethod(i == 0 ? PaymentMethod.VNPAY : PaymentMethod.CASH);
+            payments.save(p);
+        }
+        log.info("Seeded {} extra live sessions.", count);
     }
 
     private void seedReservation(VehicleTypeResponse[] vt, User driver) {
@@ -276,6 +372,50 @@ class DevDataSeeder implements CommandLineRunner {
         log.info("Reservation seeded for driver (slot {})", slot.getCode());
     }
 
+    private void seedExtraReservations(VehicleTypeResponse[] vt, List<User> extraDrivers) {
+        VehicleType carType = vehicleTypes.findById(vt[0].id()).orElseThrow();
+        VehicleType bikeType = vehicleTypes.findById(vt[1].id()).orElseThrow();
+        List<ParkingSlot> available = slots.findAll().stream()
+                .filter(s -> s.getStatus() == SlotStatus.AVAILABLE)
+                .toList();
+
+        // FULFILLED reservation (arrived, checked in yesterday)
+        if (available.size() > 0 && extraDrivers.size() > 0) {
+            Reservation r1 = new Reservation(extraDrivers.get(0), available.get(0), carType,
+                    DRIVER_PLATES[0], Instant.now().minus(Duration.ofDays(1)));
+            r1.setStatus(ReservationStatus.FULFILLED);
+            reservations.save(r1);
+        }
+
+        // CANCELLED reservation
+        if (available.size() > 1 && extraDrivers.size() > 1) {
+            Reservation r2 = new Reservation(extraDrivers.get(1), available.get(1), bikeType,
+                    DRIVER_PLATES[1], Instant.now().minus(Duration.ofHours(5)));
+            r2.setStatus(ReservationStatus.CANCELLED);
+            reservations.save(r2);
+        }
+
+        // EXPIRED reservation (hold time passed, never showed up)
+        if (available.size() > 2 && extraDrivers.size() > 2) {
+            Reservation r3 = new Reservation(extraDrivers.get(2), available.get(2), carType,
+                    DRIVER_PLATES[2], Instant.now().minus(Duration.ofHours(2)));
+            r3.setStatus(ReservationStatus.EXPIRED);
+            reservations.save(r3);
+        }
+
+        // Another PENDING reservation (upcoming)
+        if (available.size() > 3 && extraDrivers.size() > 3) {
+            ParkingSlot slot = available.get(3);
+            slot.setStatus(SlotStatus.RESERVED);
+            slots.save(slot);
+            Reservation r4 = new Reservation(extraDrivers.get(3), slot, bikeType,
+                    DRIVER_PLATES[3], Instant.now().plus(Duration.ofHours(1)));
+            reservations.save(r4);
+        }
+
+        log.info("Seeded extra reservations (FULFILLED, CANCELLED, EXPIRED, PENDING).");
+    }
+
     private void seedMonthlyPass(VehicleTypeResponse[] vt, User driver) {
         VehicleType motoType = vehicleTypes.findById(vt[1].id()).orElseThrow();
 
@@ -287,9 +427,138 @@ class DevDataSeeder implements CommandLineRunner {
 
         MonthlyPass pass = new MonthlyPass(driver, motoType, "59C-123.45",
                 LocalDate.now().minusDays(5), LocalDate.now().plusDays(25));
-        pass.setStatus(com.parkmaster.pass.PassStatus.ACTIVE);
+        pass.setStatus(PassStatus.ACTIVE);
         pass.setPayment(payment);
         passes.save(pass);
         log.info("Monthly pass seeded for driver (plate {})", pass.getLicensePlate());
+    }
+
+    private void seedExtraPasses(VehicleTypeResponse[] vt, List<User> extraDrivers) {
+        VehicleType carType = vehicleTypes.findById(vt[0].id()).orElseThrow();
+        VehicleType bikeType = vehicleTypes.findById(vt[1].id()).orElseThrow();
+
+        // EXPIRED pass (last month)
+        if (extraDrivers.size() > 0) {
+            Payment p1 = new Payment(new BigDecimal("200000"));
+            p1.setMethod(PaymentMethod.VNPAY);
+            p1.setStatus(PaymentStatus.PAID);
+            p1.setPaidAt(Instant.now().minus(Duration.ofDays(40)));
+            payments.save(p1);
+
+            MonthlyPass exp = new MonthlyPass(extraDrivers.get(0), carType, DRIVER_PLATES[0],
+                    LocalDate.now().minusDays(35), LocalDate.now().minusDays(5));
+            exp.setStatus(PassStatus.EXPIRED);
+            exp.setPayment(p1);
+            passes.save(exp);
+        }
+
+        // ACTIVE pass (car)
+        if (extraDrivers.size() > 1) {
+            Payment p2 = new Payment(new BigDecimal("200000"));
+            p2.setMethod(PaymentMethod.CASH);
+            p2.setStatus(PaymentStatus.PAID);
+            p2.setPaidAt(Instant.now().minus(Duration.ofDays(10)));
+            payments.save(p2);
+
+            MonthlyPass active = new MonthlyPass(extraDrivers.get(1), carType, DRIVER_PLATES[1],
+                    LocalDate.now().minusDays(10), LocalDate.now().plusDays(20));
+            active.setStatus(PassStatus.ACTIVE);
+            active.setPayment(p2);
+            passes.save(active);
+        }
+
+        // PENDING pass (just purchased, awaiting activation)
+        if (extraDrivers.size() > 2) {
+            Payment p3 = new Payment(new BigDecimal("100000"));
+            p3.setMethod(PaymentMethod.ONLINE);
+            p3.setStatus(PaymentStatus.PENDING);
+            payments.save(p3);
+
+            MonthlyPass pending = new MonthlyPass(extraDrivers.get(2), bikeType, DRIVER_PLATES[2],
+                    LocalDate.now(), LocalDate.now().plusDays(30));
+            pending.setStatus(PassStatus.PENDING);
+            pending.setPayment(p3);
+            passes.save(pending);
+        }
+
+        log.info("Seeded extra passes (EXPIRED, ACTIVE, PENDING).");
+    }
+
+    private void seedExceptionReports(List<ParkingSession> completedSessions, List<User> allDrivers) {
+        User staff = users.findByEmail("staff@parkmaster.dev").orElseThrow();
+        Random rnd = new Random(99);
+
+        // LOST_TICKET — RESOLVED
+        ExceptionReport e1 = new ExceptionReport(staff, ExceptionType.LOST_TICKET,
+                "Driver lost paper ticket. Verified entry via CCTV at 08:15. Plate: 51F-123.45.",
+                completedSessions.get(0));
+        e1.setStatus(ExceptionStatus.RESOLVED);
+        e1.setResolutionNote("Confirmed via CCTV. Charged standard rate + lost ticket penalty.");
+        e1.setResolvedAt(Instant.now().minus(Duration.ofDays(3)));
+        exceptions.save(e1);
+
+        // WRONG_PLATE — RESOLVED
+        ExceptionReport e2 = new ExceptionReport(staff, ExceptionType.WRONG_PLATE,
+                "Plate mismatch at exit: entry 51G-111.22, exit scan reads 51G-111.23. Likely OCR error.",
+                completedSessions.get(1));
+        e2.setStatus(ExceptionStatus.RESOLVED);
+        e2.setResolutionNote("Manual override. OCR misread '2' as '3'. Visual match confirmed.");
+        e2.setResolvedAt(Instant.now().minus(Duration.ofDays(2)));
+        exceptions.save(e2);
+
+        // OVERTIME — OPEN
+        ExceptionReport e3 = new ExceptionReport(staff, ExceptionType.OVERTIME,
+                "Vehicle parked 26 hours (overnight). Driver claims forgot to pick up. Plate: 30A-333.44.",
+                completedSessions.get(rnd.nextInt(completedSessions.size())));
+        exceptions.save(e3);
+
+        // WRONG_ZONE — OPEN
+        ExceptionReport e4 = new ExceptionReport(staff, ExceptionType.WRONG_ZONE,
+                "Motorbike found in Car-only Level 1 slot A-05. Driver parked in wrong zone.",
+                completedSessions.get(rnd.nextInt(completedSessions.size())));
+        exceptions.save(e4);
+
+        // LOST_TICKET — OPEN
+        ExceptionReport e5 = new ExceptionReport(staff, ExceptionType.LOST_TICKET,
+                "Driver cannot find QR ticket. Vehicle still in slot B-12. Plate: 51H-555.66.",
+                completedSessions.get(rnd.nextInt(completedSessions.size())));
+        exceptions.save(e5);
+
+        // OVERTIME — RESOLVED
+        ExceptionReport e6 = new ExceptionReport(staff, ExceptionType.OVERTIME,
+                "Vehicle overstayed by 8 hours. Driver paid penalty at booth.",
+                completedSessions.get(rnd.nextInt(completedSessions.size())));
+        e6.setStatus(ExceptionStatus.RESOLVED);
+        e6.setResolutionNote("Penalty of 50,000 VND collected. Session closed.");
+        e6.setResolvedAt(Instant.now().minus(Duration.ofDays(1)));
+        exceptions.save(e6);
+
+        log.info("Seeded 6 exception reports (3 OPEN, 3 RESOLVED).");
+    }
+
+    private void seedFeedback(List<ParkingSession> completedSessions, List<User> allDrivers) {
+        Random rnd = new Random(77);
+        short[] ratings = {5, 4, 3, 5, 2, 5, 4, 5, 3, 4, 4, 5};
+        int count = Math.min(FEEDBACK_COMMENTS.length, completedSessions.size());
+
+        for (int i = 0; i < count; i++) {
+            ParkingSession session = completedSessions.get(i * (completedSessions.size() / count));
+            User reviewer = session.getUser() != null
+                    ? session.getUser()
+                    : allDrivers.get(rnd.nextInt(allDrivers.size()));
+            Feedback fb = new Feedback(session, reviewer, ratings[i], FEEDBACK_COMMENTS[i]);
+            feedbacks.save(fb);
+        }
+        log.info("Seeded {} feedback entries.", count);
+    }
+
+    private static BigDecimal charge(BigDecimal ratePerHour, long parkedMin) {
+        long billedHours = Math.max(1, (long) Math.ceil(parkedMin / 60.0));
+        return ratePerHour.multiply(BigDecimal.valueOf(billedHours));
+    }
+
+    private static String plate(Random rnd) {
+        char letter = (char) ('A' + rnd.nextInt(26));
+        return String.format("51%c-%05d", letter, rnd.nextInt(100000));
     }
 }

@@ -143,18 +143,24 @@ backend/src/main/java/com/parkmaster/
 │                      ExceptionReportService, StaffExceptionController, ExceptionDtos
 ├── report/            ReportService, ManagerReportController, ReportDtos
 ├── pass/              MonthlyPass, PassStatus, MonthlyPassService
-│                      ManagerPassController, PassDtos
+│                      ManagerPassController, DriverPassController, PassDtos
+├── feedback/          Feedback, FeedbackService
+│                      DriverFeedbackController, ManagerFeedbackController
+├── assistant/         AssistantController, AssistantService, GeminiClient, AssistantDtos
+├── dev/               DevDataSeeder (@Profile("dev") — seeds demo data)
 └── publicapi/         PublicController
 
 frontend/src/
-├── components/        AppLayout, DriverLayout, ui.jsx, charts.jsx, AllocationShowcase
+├── components/        AppLayout, DriverLayout, AiAssistant, ui.jsx, charts.jsx
 ├── lib/               api.js (fetch wrapper), endpoints.js (per-role API), status.js
 ├── pages/
-│   ├── auth/          LoginPage, SignUpPage, AuthShell
-│   ├── public/        LandingPage
-│   ├── system/        OverviewPage, AnalyticsPage, BuildingsPage, PricingPage, UsersPage
+│   ├── auth/          LoginPage, SignUpPage, AuthShell, ForgotPasswordPage, ResetPasswordPage
+│   ├── public/        LandingPage, PricingPage
+│   ├── system/        OverviewPage, AnalyticsPage, BuildingsPage, PricingPage,
+│   │                  UsersPage, MonthlyPassesPage
 │   ├── staff/         CheckInPage, ActiveSessionsPage, PaymentsPage, ExceptionsPage
-│   └── user/          MyParkingPage, MySessionsPage, ReservationsPage
+│   └── user/          MyParkingPage, MySessionsPage, ReservationsPage,
+│                      PassesPage, AccountPage
 └── routes/            ProtectedRoute
 ```
 
