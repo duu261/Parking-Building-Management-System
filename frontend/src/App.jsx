@@ -18,6 +18,8 @@ import BuildingsPage from "./pages/system/BuildingsPage";
 import PricingPage from "./pages/system/PricingPage";
 import UsersPage from "./pages/system/UsersPage";
 import MonthlyPassesPage from "./pages/system/MonthlyPassesPage";
+import FeedbackPage from "./pages/system/FeedbackPage";
+import ManagerExceptionsPage from "./pages/system/ExceptionsPage";
 import MyParkingPage from "./pages/user/MyParkingPage";
 import MySessionsPage from "./pages/user/MySessionsPage";
 import ReservationsPage from "./pages/user/ReservationsPage";
@@ -32,11 +34,15 @@ function AppHome() {
   return <OverviewPage />;
 }
 
+function Home() {
+  return isAuthed() ? <Navigate to="/app" replace /> : <LandingPage />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={isAuthed() ? <Navigate to="/app" replace /> : <LandingPage />} />
+        <Route path="/" element={<Home />} />
         <Route path="/pricing" element={<PublicPricingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
@@ -49,7 +55,7 @@ export default function App() {
             {/* Staff */}
             <Route path="check-in" element={<CheckInPage />} />
             <Route path="active" element={<ActiveSessionsPage />} />
-            <Route path="exceptions" element={<ExceptionsPage />} />
+            <Route path="staff-exceptions" element={<ExceptionsPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             {/* Manager / Admin */}
             <Route path="buildings" element={<BuildingsPage />} />
@@ -57,6 +63,8 @@ export default function App() {
             <Route path="users" element={<UsersPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="passes" element={<MonthlyPassesPage />} />
+            <Route path="feedback" element={<FeedbackPage />} />
+            <Route path="exceptions" element={<ManagerExceptionsPage />} />
             {/* Driver */}
             <Route path="reservations" element={<ReservationsPage />} />
             <Route path="sessions" element={<MySessionsPage />} />

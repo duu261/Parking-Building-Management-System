@@ -23,6 +23,7 @@ export default function MonthlyPassesPage() {
   const [filter, setFilter] = useState("ALL");
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
 
   const load = () => {
     setError("");
@@ -36,8 +37,18 @@ export default function MonthlyPassesPage() {
 
   useEffect(load, []);
 
-  const filtered =
-    passes && filter !== "ALL" ? passes.filter((p) => p.status === filter) : passes;
+  const q = search.toLowerCase().trim();
+  const filtered = passes
+    ? passes
+        .filter((p) => (filter !== "ALL" ? p.status === filter : true))
+        .filter(
+          (p) =>
+            !q ||
+            [p.licensePlate, p.userFullName, p.vehicleTypeName]
+              .map((v) => (v ?? "").toLowerCase())
+              .some((v) => v.includes(q))
+        )
+    : null;
 
   const revoke = async (id) => {
     setError("");
@@ -83,20 +94,7 @@ export default function MonthlyPassesPage() {
         </Button>
       </div>
 
-      {/* Stats Row */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-lg border border-line bg-surface p-4"
-          >
-            <p className="text-xs font-medium text-muted">{stat.label}</p>
-            <p className="mt-2 text-2xl font-bold text-text">
-              {stat.count}
-            </p>
-          </div>
-        ))}
-      </div>
+      {/* Filter tabs with counts */}
 
       {error && (
         <div className="mt-4">
@@ -115,21 +113,33 @@ export default function MonthlyPassesPage() {
         />
       )}
 
-      <div className="mt-6 flex gap-1.5">
-        {STATUS_FILTER.map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-              filter === s
-                ? "border-text bg-text text-bg"
-                : "border-line text-muted hover:border-text/30 hover:text-text"
-            }`}
-          >
-            {s === "ALL" ? `All${passes ? ` (${passes.length})` : ""}` : s.charAt(0) + s.slice(1).toLowerCase()}
-          </button>
-        ))}
+      <div className="mt-6 flex flex-wrap gap-2">
+        {STATUS_FILTER.map((s) => {
+          const count = s === "ALL" ? (passes?.length ?? 0) : (passes ?? []).filter((p) => p.status === s).length;
+          return (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                filter === s
+                  ? "bg-accent text-accent-fg"
+                  : "bg-elevated text-muted hover:text-text"
+              }`}
+            >
+              {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()} ({count})
+            </button>
+          );
+        })}
       </div>
+
+      {filtered !== null && filtered.length > 0 && (
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by license plate, driver name, or vehicle type..."
+          className="mt-4"
+        />
+      )}
 
       {filtered === null ? (
         <div className="mt-4">
@@ -244,71 +254,34 @@ function PassCard({ pass, onRevoke, onActivate }) {
 
   return (
     <Card
-      className={`flex flex-col gap-4 p-4 transition ${
+      className={`p-4 transition ${
         statusStyles[pass.status] || statusStyles.EXPIRED
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-2">
-            <span className="text-lg font-bold tracking-tight">
-              {pass.licensePlate}
-            </span>
+          <div className="flex items-center gap-2.5">
+            <span className="nums text-[15px] font-semibold">{pass.licensePlate}</span>
             <StatusBadge status={pass.status} />
+            <span className="text-sm text-muted">{pass.userFullName}</span>
           </div>
-          <p className="mt-1 font-medium text-text">{pass.userFullName}</p>
-          {pass.userEmail && (
-            <p className="text-xs text-muted">{pass.userEmail}</p>
-          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+            <span>{pass.vehicleTypeName}</span>
+            <span className="nums">{pass.validFrom} → {pass.validUntil}</span>
+            <span className="nums font-medium">{pass.price != null ? fmtVnd(pass.price) : "—"}</span>
+            {pass.status === "ACTIVE" && <span className="font-medium text-available">{daysRemaining}d left</span>}
+            {pass.status === "PENDING" && <span className="font-medium text-reserved">Awaiting payment</span>}
+          </div>
         </div>
-        <div className="flex shrink-0 gap-1 whitespace-nowrap">
+        <div className="flex shrink-0 gap-1.5">
           {pass.status === "PENDING" && (
-            <Button variant="secondary" onClick={onActivate} size="sm">
-              Activate
-            </Button>
+            <Button variant="secondary" onClick={onActivate} size="sm">Activate</Button>
           )}
-          {pass.status !== "REVOKED" && (
-            <Button
-              variant="secondary"
-              onClick={onRevoke}
-              size="sm"
-              className="border-occupied/30 text-occupied hover:bg-occupied/10"
-            >
-              Revoke
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="border-t border-line pt-3">
-        <div className="grid gap-3 text-sm sm:grid-cols-4">
-          <div>
-            <p className="text-xs font-semibold uppercase text-muted">Vehicle Type</p>
-            <p className="mt-1 text-text">{pass.vehicleTypeName}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-muted">Valid Period</p>
-            <p className="mt-1 text-text">
-              {pass.validFrom} → {pass.validUntil}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-muted">Price</p>
-            <p className="mt-1 font-medium text-text">
-              {pass.price != null ? fmtVnd(pass.price) : "—"}
-            </p>
-          </div>
           {pass.status === "ACTIVE" && (
-            <div>
-              <p className="text-xs font-semibold uppercase text-muted">Days Left</p>
-              <p className="mt-1 font-medium text-available">{daysRemaining} days</p>
-            </div>
-          )}
-          {pass.status === "PENDING" && (
-            <div>
-              <p className="text-xs font-semibold uppercase text-muted">Status</p>
-              <p className="mt-1 font-medium text-reserved">Awaiting online payment</p>
-            </div>
+            <Button
+              variant="secondary" onClick={onRevoke} size="sm"
+              className="border-occupied/30 text-occupied hover:bg-occupied/10"
+            >Revoke</Button>
           )}
         </div>
       </div>

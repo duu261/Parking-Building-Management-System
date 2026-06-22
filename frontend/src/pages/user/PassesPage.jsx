@@ -28,7 +28,7 @@ export default function PassesPage() {
     Promise.all([driverApi.passes(), publicApi.pricing()])
       .then(([p, pricing]) => {
         setPasses(p);
-        setVehicleTypes(pricing.map((v) => ({ id: v.vehicleTypeId, name: v.vehicleTypeName })));
+        setVehicleTypes(pricing.map((v) => ({ id: v.vehicleTypeId, name: v.vehicleTypeName, monthlyPassPrice: v.monthlyPassPrice })));
       })
       .catch((e) => setError(e.message));
   };
@@ -125,6 +125,18 @@ function PassCard({ pass: p }) {
   const isPending = p.status === "PENDING";
   const [paying, setPaying] = useState(false);
   const [err, setErr] = useState("");
+  const [showQr, setShowQr] = useState(false);
+
+  const daysLeft = isActive
+    ? Math.max(0, Math.ceil((new Date(p.validUntil) - Date.now()) / 86400000))
+    : 0;
+
+  const borderStyle = {
+    ACTIVE: "border-l-4 border-l-available",
+    PENDING: "border-l-4 border-l-reserved",
+    EXPIRED: "border-l-4 border-l-line",
+    REVOKED: "border-l-4 border-l-occupied",
+  }[p.status] || "";
 
   const payNow = async () => {
     setPaying(true);
@@ -139,35 +151,46 @@ function PassCard({ pass: p }) {
   };
 
   return (
-    <Card className="p-4">
+    <Card className={`p-4 ${borderStyle}`}>
       {err && <p className="mb-2 text-sm text-occupied">{err}</p>}
-      <div className="flex items-center gap-3">
-        {isActive ? (
-          <div className="flex shrink-0 flex-col items-center">
-            <PassQr id={p.id} />
-            <span className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
-              <QrCode size={11} /> Pass verification
-            </span>
-          </div>
-        ) : (
-          <IdCard size={18} className="shrink-0 text-muted" />
-        )}
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="nums font-semibold">{p.licensePlate}</span>
+          <div className="flex items-center gap-2.5">
+            <span className="nums text-[15px] font-semibold">{p.licensePlate}</span>
             <StatusBadge status={p.status} />
+            {isActive && (
+              <span className="rounded-full bg-available/15 px-2 py-0.5 text-[11px] font-medium text-available">
+                FREE CHECKOUT
+              </span>
+            )}
           </div>
-          <div className="mt-0.5 text-sm text-muted">
-            {p.vehicleTypeName} &middot; {p.validFrom} &mdash; {p.validUntil}
-            {fmtVnd(p.price) && <> &middot; {fmtVnd(p.price)}</>}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+            <span>{p.vehicleTypeName}</span>
+            <span className="nums">{p.validFrom} → {p.validUntil}</span>
+            {fmtVnd(p.price) && <span className="nums font-medium">{fmtVnd(p.price)}</span>}
+            {isActive && <span className="font-medium text-available">{daysLeft}d left</span>}
+            {isPending && <span className="font-medium text-reserved">Awaiting payment</span>}
           </div>
         </div>
-        {isPending && p.paymentId && (
-          <Button variant="secondary" onClick={payNow} loading={paying} className="shrink-0">
-            Pay now
-          </Button>
-        )}
+        <div className="flex shrink-0 gap-1.5">
+          {isActive && (
+            <Button variant="secondary" size="sm" onClick={() => setShowQr(!showQr)}>
+              <QrCode size={14} /> {showQr ? "Hide" : "QR"}
+            </Button>
+          )}
+          {isPending && p.paymentId && (
+            <Button variant="secondary" size="sm" onClick={payNow} loading={paying}>
+              Pay now
+            </Button>
+          )}
+        </div>
       </div>
+      {showQr && (
+        <div className="mt-3 flex items-center gap-3 border-t border-line pt-3">
+          <PassQr id={p.id} />
+          <span className="text-xs text-muted">Show this QR to staff for pass verification</span>
+        </div>
+      )}
     </Card>
   );
 }
@@ -190,6 +213,8 @@ function RegisterPassForm({ vehicleTypes, onDone }) {
   const [err, setErr] = useState("");
 
   const validUntil = form.validFrom ? addMonth(form.validFrom) : "";
+  const selectedType = vehicleTypes.find((t) => String(t.id) === String(form.vehicleTypeId));
+  const passPrice = selectedType?.monthlyPassPrice;
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -245,6 +270,13 @@ function RegisterPassForm({ vehicleTypes, onDone }) {
         <Field label="End date (auto: +1 month)">
           <Input type="date" value={validUntil} disabled className="bg-elevated text-muted" />
         </Field>
+        {passPrice != null && (
+          <div className="sm:col-span-2 flex items-center gap-2 rounded-lg bg-elevated px-3 py-2">
+            <span className="text-sm text-muted">Price:</span>
+            <span className="nums text-sm font-semibold">{Number(passPrice).toLocaleString("vi-VN")} ₫</span>
+            <span className="text-xs text-muted">· paid via VNPay</span>
+          </div>
+        )}
         {err && <p className="sm:col-span-2 text-sm text-occupied">{err}</p>}
         <div className="sm:col-span-2 flex gap-2">
           <Button type="submit" loading={submitting} disabled={!canSubmit}>Register</Button>

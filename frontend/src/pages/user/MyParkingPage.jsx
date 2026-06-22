@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
-import { QrCode, MapPin, Clock, BarChart3, Car, Building2, DollarSign } from "lucide-react";
+import { QrCode, MapPin, Clock, BarChart3, Car, Building2, DollarSign, IdCard } from "lucide-react";
 import { Card, Button, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi, publicApi } from "../../lib/endpoints";
 import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
+import SlotMap from "../../components/SlotMap";
 
 function estimateCharge(checkInIso, pricing) {
   if (!pricing) return null;
@@ -81,6 +82,7 @@ const time = (iso) =>
 export default function MyParkingPage() {
   const [sessions, setSessions] = useState(null);
   const [pricingMap, setPricingMap] = useState({});
+  const [passes, setPasses] = useState([]);
   const [error, setError] = useState("");
 
   const load = () => {
@@ -92,9 +94,21 @@ export default function MyParkingPage() {
     publicApi.pricing().then((list) => {
       setPricingMap(Object.fromEntries(list.map((p) => [p.vehicleTypeId, p])));
     }).catch(() => {});
+
+    driverApi.passes().then(setPasses).catch(() => {});
   };
 
   useEffect(load, []);
+
+  const activePasses = useMemo(
+    () => passes.filter((p) => p.status === "ACTIVE"),
+    [passes],
+  );
+
+  const hasCoveringPass = (session) =>
+    activePasses.some(
+      (p) => p.licensePlate === session.licensePlate && p.vehicleTypeId === session.vehicleTypeId,
+    );
 
   const active = useMemo(
     () => (sessions ?? []).filter((s) => s.status === "ACTIVE"),
@@ -135,43 +149,33 @@ export default function MyParkingPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 space-y-3">
           {active.map((s) => (
-            <Card key={s.id} className="p-5">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="flex shrink-0 flex-col items-center">
-                  <TicketQr id={s.id} />
-                  <span className="mt-2 flex items-center gap-1 text-[11px] text-muted">
-                    <QrCode size={12} /> Scan to check out
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <span className="nums text-lg font-semibold">{s.licensePlate}</span>
-                    <StatusBadge status={s.status} />
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-                    <span className="flex items-center gap-1">
-                      <Building2 size={14} /> {s.buildingName} &rsaquo; {s.floorName} &rsaquo; <span className="nums text-text">{s.slotCode}</span>
-                    </span>
-                    <span className="nums">in {time(s.checkInAt)}</span>
-                  </div>
-                  {s.ticketCode && (
-                    <p className="mt-1 text-xs text-muted">
-                      Ticket: <span className="nums select-all font-medium text-text">{s.ticketCode}</span>
-                    </p>
-                  )}
-                  <LiveCost checkInAt={s.checkInAt} vehicleTypeId={s.vehicleTypeId} pricingMap={pricingMap} />
-                  {s.allocationScore && (
-                    <div className="mt-3 w-full">
-                      <ScoreBreakdownCard score={s.allocationScore} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
+            <ActiveSessionCard key={s.id} session={s} hasCoveringPass={hasCoveringPass(s)} pricingMap={pricingMap} />
           ))}
         </div>
+      )}
+
+      {activePasses.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
+            <IdCard size={16} className="text-available" /> Active monthly passes
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {activePasses.map((p) => (
+              <Card key={p.id} className="flex items-center gap-3 border-available/30 bg-available/5 p-4">
+                <IdCard size={20} className="text-available shrink-0" />
+                <div className="min-w-0">
+                  <div className="nums text-sm font-semibold">{p.licensePlate}</div>
+                  <div className="text-xs text-muted">{p.vehicleTypeName} · until {p.validUntil}</div>
+                </div>
+                <span className="ml-auto rounded-full bg-available/20 px-2 py-0.5 text-[11px] font-medium text-available">
+                  FREE CHECKOUT
+                </span>
+              </Card>
+            ))}
+          </div>
+        </section>
       )}
 
       {insights && (
@@ -190,15 +194,15 @@ export default function MyParkingPage() {
               <h3 className="mb-2 text-xs font-medium text-muted">
                 Your vehicles <span className="text-muted/60">({insights.plates.length})</span>
               </h3>
-              <div className="flex flex-wrap gap-2">
-                {insights.plates.slice(0, 6).map((p) => (
-                  <span key={p} className="nums inline-flex items-center gap-1.5 rounded-[var(--radius)] border border-line bg-surface px-3 py-1.5 text-sm font-medium">
-                    <Car size={14} className="text-muted" /> {p}
+              <div className="flex flex-wrap gap-1.5">
+                {insights.plates.slice(0, 4).map((p) => (
+                  <span key={p} className="nums inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-xs font-medium">
+                    <Car size={12} className="text-muted" /> {p}
                   </span>
                 ))}
-                {insights.plates.length > 6 && (
-                  <span className="inline-flex items-center rounded-[var(--radius)] border border-line bg-elevated px-3 py-1.5 text-sm text-muted">
-                    +{insights.plates.length - 6} more
+                {insights.plates.length > 4 && (
+                  <span className="inline-flex items-center rounded-md border border-line bg-elevated px-2 py-1 text-xs text-muted">
+                    +{insights.plates.length - 4} more
                   </span>
                 )}
               </div>
@@ -206,7 +210,62 @@ export default function MyParkingPage() {
           )}
         </section>
       )}
+
+      <section className="mt-8">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <Building2 size={16} className="text-muted" /> Floor &amp; slot availability
+        </h2>
+        <SlotMap />
+      </section>
     </div>
+  );
+}
+
+function ActiveSessionCard({ session: s, hasCoveringPass: covered, pricingMap }) {
+  const [showQr, setShowQr] = useState(false);
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5">
+            <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
+            <StatusBadge status={s.status} />
+            {s.autoAllocated && <ScoreBreakdownCard score={s.allocationScore} compact />}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <span className="flex items-center gap-1">
+              <Building2 size={13} /> {s.buildingName} › {s.floorName} › <span className="nums text-text">{s.slotCode}</span>
+            </span>
+            <span className="nums">in {time(s.checkInAt)}</span>
+          </div>
+        </div>
+        <Button variant="secondary" size="sm" onClick={() => setShowQr(!showQr)}>
+          <QrCode size={14} /> {showQr ? "Hide" : "Ticket"}
+        </Button>
+      </div>
+      {covered ? (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-available/30 bg-available/10 px-3 py-2">
+          <IdCard size={15} className="text-available" />
+          <span className="text-sm font-medium text-available">Monthly pass active · Free checkout</span>
+        </div>
+      ) : (
+        <LiveCost checkInAt={s.checkInAt} vehicleTypeId={s.vehicleTypeId} pricingMap={pricingMap} />
+      )}
+      {showQr && (
+        <div className="mt-3 flex items-center gap-4 border-t border-line pt-3">
+          <TicketQr id={s.id} />
+          <div className="text-xs text-muted">
+            <p>Show this QR to staff at exit</p>
+            {s.ticketCode && <p className="mt-1 nums select-all text-text">{s.ticketCode}</p>}
+          </div>
+        </div>
+      )}
+      {!showQr && s.allocationScore && (
+        <div className="mt-3">
+          <ScoreBreakdownCard score={s.allocationScore} />
+        </div>
+      )}
+    </Card>
   );
 }
 

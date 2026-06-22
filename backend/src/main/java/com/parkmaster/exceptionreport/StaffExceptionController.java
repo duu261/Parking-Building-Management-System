@@ -2,7 +2,6 @@ package com.parkmaster.exceptionreport;
 
 import com.parkmaster.exceptionreport.ExceptionDtos.CreateExceptionRequest;
 import com.parkmaster.exceptionreport.ExceptionDtos.ExceptionResponse;
-import com.parkmaster.exceptionreport.ExceptionDtos.ResolveExceptionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -41,10 +40,5 @@ class StaffExceptionController {
     @GetMapping("/{id}")
     ExceptionResponse get(@PathVariable Long id) {
         return service.get(id);
-    }
-
-    @PostMapping("/{id}/resolve")
-    ExceptionResponse resolve(@PathVariable Long id, @Valid @RequestBody ResolveExceptionRequest req) {
-        return service.resolve(id, req.resolutionNote());
     }
 }

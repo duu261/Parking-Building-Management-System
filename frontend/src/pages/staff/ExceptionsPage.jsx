@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { TriangleAlert, Check } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { Card, Button, Field, Input, Select, Textarea, Spinner, EmptyState, Alert } from "../../components/ui";
 import { staffApi } from "../../lib/endpoints";
 
 const TYPES = ["LOST_TICKET", "WRONG_PLATE", "OVERTIME", "WRONG_ZONE"];
-const label = (t) => t.replace("_", " ").toLowerCase();
+const label = (t) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const TYPE_COLOR = {
+  LOST_TICKET: { border: "border-l-amber-500", text: "text-amber-500" },
+  WRONG_PLATE: { border: "border-l-rose-500", text: "text-rose-500" },
+  OVERTIME: { border: "border-l-violet-500", text: "text-violet-500" },
+  WRONG_ZONE: { border: "border-l-sky-500", text: "text-sky-500" },
+};
 const time = (iso) =>
   iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
 
@@ -50,7 +56,8 @@ export default function ExceptionsPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-xl font-semibold tracking-tight">Exceptions</h1>
-      <p className="mt-1 text-sm text-muted">Log floor incidents and resolve open reports.</p>
+      <p className="mt-1 text-sm text-muted">Log floor incidents. Manager reviews and resolves.</p>
+
 
       {error && (
         <div className="mt-4">
@@ -90,7 +97,7 @@ export default function ExceptionsPage() {
       ) : (
         <div className="mt-6 space-y-3">
           {list.map((x) => (
-            <ExceptionCard key={x.id} report={x} onResolved={load} onError={setError} />
+            <ExceptionCard key={x.id} report={x} />
           ))}
         </div>
       )}
@@ -98,40 +105,19 @@ export default function ExceptionsPage() {
   );
 }
 
-function ExceptionCard({ report, onResolved, onError }) {
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const resolve = async () => {
-    onError("");
-    setBusy(true);
-    try {
-      await staffApi.resolveException(report.id, note.trim());
-      onResolved();
-    } catch (e) {
-      onError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
+function ExceptionCard({ report }) {
+  const c = TYPE_COLOR[report.type] ?? TYPE_COLOR.LOST_TICKET;
   return (
-    <Card className="p-4">
+    <Card className={`p-4 border-l-4 ${c.border}`}>
       <div className="flex items-center gap-2.5">
-        <TriangleAlert size={15} className="text-maintenance" />
-        <span className="text-sm font-semibold uppercase tracking-wide">{label(report.type)}</span>
-        {report.sessionId && <span className="nums text-xs text-muted">session {report.sessionId}</span>}
+        <TriangleAlert size={15} className={c.text} />
+        <span className={`text-sm font-semibold uppercase tracking-wide ${c.text}`}>{label(report.type)}</span>
+        {report.sessionId && <span className="nums text-xs text-muted">#{report.sessionId}</span>}
         <span className="nums ml-auto text-xs text-muted">{time(report.createdAt)}</span>
       </div>
       <p className="mt-2 text-sm text-text">{report.description}</p>
       <p className="mt-1 text-xs text-muted">reported by {report.reportedBy}</p>
-
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Resolution note" maxLength={1000} className="flex-1" />
-        <Button variant="secondary" onClick={resolve} loading={busy} disabled={!note.trim()}>
-          <Check size={16} /> Resolve
-        </Button>
-      </div>
+      <p className="mt-1 text-xs text-muted italic">Pending manager review</p>
     </Card>
   );
 }

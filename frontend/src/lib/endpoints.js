@@ -82,6 +82,14 @@ export const managerApi = {
   activatePass: (id) => apiRequest(`/manager/passes/${id}/activate`, { method: "PATCH" }),
   allocationAnalytics: (buildingId) =>
     apiRequest(`/manager/buildings/${buildingId}/analytics/allocation`),
+  feedback: () => apiRequest("/manager/feedback"),
+  exceptions: () => apiRequest("/manager/exceptions"),
+  openExceptions: () => apiRequest("/manager/exceptions/open"),
+  resolveException: (id, note) =>
+    apiRequest(`/manager/exceptions/${id}/resolve`, {
+      method: "POST",
+      body: { resolutionNote: note },
+    }),
 };
 
 // ADMIN: user management and role assignment.
@@ -133,6 +141,8 @@ export const publicApi = {
       `/public/buildings/${id}/allocation-preview?vehicleTypeId=${vehicleTypeId}&limit=${limit}`,
       { auth: false },
     ),
+  publicFloors: (buildingId) => apiRequest(`/public/buildings/${buildingId}/floors`, { auth: false }),
+  publicSlots: (floorId) => apiRequest(`/public/floors/${floorId}/slots`, { auth: false }),
   // AI assistant: hybrid (Gemini when configured, local FAQ fallback). No auth.
   assistantChat: (message, history = []) =>
     apiRequest("/public/assistant/chat", { method: "POST", body: { message, history }, auth: false }),

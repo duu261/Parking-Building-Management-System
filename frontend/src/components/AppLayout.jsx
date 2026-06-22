@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   UserCircle,
+  MessageSquare,
 } from "lucide-react";
 import { getUser, clearSession } from "../lib/session";
 import { useInactivityLogout } from "../hooks/useInactivityLogout";
@@ -31,7 +32,7 @@ const NAV = {
     { to: "/app/check-in", label: "Gate", icon: LogIn },
     { to: "/app/active", label: "Active sessions", icon: ListChecks },
     { to: "/app/payments", label: "Payments", icon: Banknote },
-    { to: "/app/exceptions", label: "Exceptions", icon: TriangleAlert },
+    { to: "/app/staff-exceptions", label: "Exceptions", icon: TriangleAlert },
   ],
   MANAGER: [
     { to: "/app", label: "Overview", icon: BarChart3, end: true },
@@ -39,6 +40,8 @@ const NAV = {
     { to: "/app/pricing", label: "Pricing", icon: Tags },
     { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
     { to: "/app/passes", label: "Passes", icon: IdCard },
+    { to: "/app/feedback", label: "Feedback", icon: MessageSquare },
+    { to: "/app/exceptions", label: "Exceptions", icon: TriangleAlert },
   ],
   ADMIN: [
     { to: "/app", label: "Overview", icon: BarChart3, end: true },

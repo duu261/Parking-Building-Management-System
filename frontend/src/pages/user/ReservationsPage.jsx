@@ -23,10 +23,11 @@ export default function ReservationsPage() {
   const load = () => {
     setError("");
     Promise.all([driverApi.reservations(), publicApi.buildings(), publicApi.pricing()])
-      .then(([r, b, p]) => {
+      .then(async ([r, b, p]) => {
         setList(r);
-        setBuildings(b);
         setTypes(p);
+        const avails = await Promise.all(b.map((x) => publicApi.availability(x.id).catch(() => ({}))));
+        setBuildings(b.map((x, i) => ({ ...x, ...avails[i] })));
       })
       .catch((e) => setError(e.message));
   };
@@ -125,45 +126,7 @@ export default function ReservationsPage() {
         <>
           <div className="mt-6 space-y-3">
             {list.slice(0, visibleCount).map((r) => (
-              <Card key={r.id} className="p-4">
-                <div className="flex items-center gap-4">
-                  {r.status === "PENDING" && (
-                    <div className="flex shrink-0 flex-col items-center gap-1">
-                      <ReservationQr id={r.id} />
-                      <span className="nums text-xs font-medium text-muted">ID: {r.id}</span>
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2.5">
-                      <span className="nums font-semibold">{r.licensePlate}</span>
-                      <StatusBadge status={r.status} />
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={14} /> {r.buildingName ? `${r.buildingName} › ${r.floorName} › ` : ""}<span className="nums text-text">{r.slotCode}</span>
-                      </span>
-                      {r.status === "PENDING" && <span className="nums">held until {time(r.holdUntil)}</span>}
-                    </div>
-                    {r.allocationScore ? (
-                      <ScoreBreakdownCard score={r.allocationScore} compact />
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-muted">
-                        <Sparkles size={10} /> AI-assigned
-                      </span>
-                    )}
-                    {r.status === "PENDING" && (
-                      <div className="mt-1 flex items-center gap-1 text-xs text-muted">
-                        <QrCode size={12} /> Show QR to staff for check-in
-                      </div>
-                    )}
-                  </div>
-                  {r.status === "PENDING" && (
-                    <Button variant="secondary" onClick={() => cancel(r.id)} loading={cancelling === r.id}>
-                      <X size={16} /> Cancel
-                    </Button>
-                  )}
-                </div>
-              </Card>
+              <ReservationCard key={r.id} reservation={r} onCancel={() => cancel(r.id)} cancelling={cancelling === r.id} />
             ))}
           </div>
           {visibleCount < list.length && (
@@ -177,6 +140,56 @@ export default function ReservationsPage() {
         </>
       )}
     </div>
+  );
+}
+
+function ReservationCard({ reservation: r, onCancel, cancelling }) {
+  const [showQr, setShowQr] = useState(false);
+  const isPending = r.status === "PENDING";
+  const borderStyle = isPending ? "border-l-4 border-l-reserved" : r.status === "EXPIRED" ? "border-l-4 border-l-line" : "";
+
+  return (
+    <Card className={`p-4 ${borderStyle}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5">
+            <span className="nums text-[15px] font-semibold">{r.licensePlate}</span>
+            <StatusBadge status={r.status} />
+            {r.allocationScore ? (
+              <ScoreBreakdownCard score={r.allocationScore} compact />
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                <Sparkles size={10} /> AI-assigned
+              </span>
+            )}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <span className="flex items-center gap-1">
+              <MapPin size={13} /> {r.buildingName ? `${r.buildingName} › ${r.floorName} › ` : ""}<span className="nums text-text">{r.slotCode}</span>
+            </span>
+            {isPending && <span className="nums">held until {time(r.holdUntil)}</span>}
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-1.5">
+          {isPending && (
+            <Button variant="secondary" size="sm" onClick={() => setShowQr(!showQr)}>
+              <QrCode size={14} /> {showQr ? "Hide" : "QR"}
+            </Button>
+          )}
+          {isPending && (
+            <Button variant="secondary" size="sm" onClick={onCancel} loading={cancelling}>
+              <X size={14} /> Cancel
+            </Button>
+          )}
+        </div>
+      </div>
+      {showQr && (
+        <div className="mt-3 flex items-center gap-3 border-t border-line pt-3">
+          <ReservationQr id={r.id} />
+          <span className="text-xs text-muted">Show this QR to staff for check-in</span>
+        </div>
+      )}
+    </Card>
   );
 }
 

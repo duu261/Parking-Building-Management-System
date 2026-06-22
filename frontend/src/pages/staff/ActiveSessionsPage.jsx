@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Car, RefreshCw } from "lucide-react";
-import { Card, Button, Skeleton, EmptyState, Alert, StatusBadge } from "../../components/ui";
+import { Car, RefreshCw, Building2 } from "lucide-react";
+import { Card, Button, Skeleton, EmptyState, Alert, StatusBadge, Input } from "../../components/ui";
 import { staffApi } from "../../lib/endpoints";
+import SlotMap from "../../components/SlotMap";
 
 function formatTime(iso) {
   if (!iso) return "-";
@@ -18,6 +19,7 @@ export default function ActiveSessionsPage() {
   const [types, setTypes] = useState({});
   const [error, setError] = useState("");
   const [checkingOut, setCheckingOut] = useState(null);
+  const [search, setSearch] = useState("");
 
   const load = () => {
     setError("");
@@ -44,6 +46,17 @@ export default function ActiveSessionsPage() {
     }
   };
 
+  const q = search.toLowerCase().trim();
+  const filtered = sessions
+    ? sessions.filter(
+        (s) =>
+          !q ||
+          [s.licensePlate, s.buildingName, s.floorName, s.slotCode]
+            .map((v) => (v ?? "").toLowerCase())
+            .some((v) => v.includes(q))
+      )
+    : null;
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between gap-4">
@@ -67,20 +80,30 @@ export default function ActiveSessionsPage() {
         </div>
       )}
 
+      {sessions !== null && sessions.length > 0 && (
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by license plate, building, floor, or slot..."
+          className="mt-4"
+        />
+      )}
+
       {sessions === null ? (
         <div className="mt-6">
           <Skeleton rows={4} />
         </div>
-      ) : sessions.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="mt-6">
-          <EmptyState icon={Car} title="No active sessions" hint="Checked-in vehicles will appear here." />
+          <EmptyState icon={Car} title={sessions.length === 0 ? "No active sessions" : "No matches"} hint={sessions.length === 0 ? "Checked-in vehicles will appear here." : "Try a different search."} />
         </div>
       ) : (
         <Card className="mt-6 divide-y divide-line">
-          {sessions.map((s) => (
+          {filtered.map((s) => (
             <div key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
+                  <span className="nums text-xs text-muted">#{s.id}</span>
                   <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
                   <StatusBadge status={s.status} />
                 </div>
@@ -101,6 +124,13 @@ export default function ActiveSessionsPage() {
           ))}
         </Card>
       )}
+
+      <section className="mt-8">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <Building2 size={16} className="text-muted" /> Slot map
+        </h2>
+        <SlotMap />
+      </section>
     </div>
   );
 }

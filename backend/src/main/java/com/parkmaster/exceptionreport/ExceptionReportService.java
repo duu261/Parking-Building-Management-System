@@ -41,6 +41,12 @@ public class ExceptionReportService {
     }
 
     @Transactional(readOnly = true)
+    public List<ExceptionResponse> listAll() {
+        return reports.findAllByOrderByCreatedAtDesc().stream()
+                .map(ExceptionResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<ExceptionResponse> listOpen() {
         return reports.findByStatusOrderByCreatedAt(ExceptionStatus.OPEN).stream()
                 .map(ExceptionResponse::from).toList();

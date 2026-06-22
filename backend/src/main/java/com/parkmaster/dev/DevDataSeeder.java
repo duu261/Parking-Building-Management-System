@@ -91,6 +91,12 @@ class DevDataSeeder implements CommandLineRunner {
         "Excellent service! The EV charging bay is a nice touch.",
     };
 
+    private static final String[] ALLOC_SCORES = {
+        "{\"vehicleTypeMatch\":40,\"loadBalance\":22,\"distanceToEntry\":18,\"peakHour\":8}",
+        "{\"vehicleTypeMatch\":20,\"loadBalance\":28,\"distanceToEntry\":14,\"peakHour\":10}",
+        "{\"vehicleTypeMatch\":40,\"loadBalance\":18,\"distanceToEntry\":20,\"peakHour\":6}",
+    };
+
     private final UserRepository users;
     private final AdminUserService adminUsers;
     private final ParkingService parking;
@@ -320,10 +326,7 @@ class DevDataSeeder implements CommandLineRunner {
         slot.setStatus(SlotStatus.OCCUPIED);
         slots.save(slot);
 
-        Payment p = new Payment(s, charge(new BigDecimal("10000"), 45));
-        p.setMethod(PaymentMethod.ONLINE);
-        payments.save(p);
-        log.info("Seeded live driver session (plate 51F-00777) with pending payment.");
+        log.info("Seeded live driver session (plate 51F-00777), 45 min ago.");
     }
 
     private void seedLiveSessions(VehicleTypeResponse[] vt, List<User> extraDrivers) {
@@ -345,14 +348,11 @@ class DevDataSeeder implements CommandLineRunner {
             ParkingSession s = new ParkingSession(slot, type, DRIVER_PLATES[i], true);
             s.setUser(drv);
             s.setCheckInAt(checkIn);
+            s.setAllocationScore(ALLOC_SCORES[i % ALLOC_SCORES.length]);
             sessions.save(s);
 
             slot.setStatus(SlotStatus.OCCUPIED);
             slots.save(slot);
-
-            Payment p = new Payment(s, charge(new BigDecimal("10000"), 20 + i * 30));
-            p.setMethod(i == 0 ? PaymentMethod.VNPAY : PaymentMethod.CASH);
-            payments.save(p);
         }
         log.info("Seeded {} extra live sessions.", count);
     }
@@ -431,6 +431,20 @@ class DevDataSeeder implements CommandLineRunner {
         pass.setPayment(payment);
         passes.save(pass);
         log.info("Monthly pass seeded for driver (plate {})", pass.getLicensePlate());
+
+        VehicleType carType = vehicleTypes.findById(vt[0].id()).orElseThrow();
+        Payment carPayment = new Payment(new BigDecimal("200000"));
+        carPayment.setMethod(PaymentMethod.CASH);
+        carPayment.setStatus(PaymentStatus.PAID);
+        carPayment.setPaidAt(Instant.now().minus(Duration.ofDays(2)));
+        payments.save(carPayment);
+
+        MonthlyPass carPass = new MonthlyPass(driver, carType, "51F-00777",
+                LocalDate.now().minusDays(2), LocalDate.now().plusDays(28));
+        carPass.setStatus(PassStatus.ACTIVE);
+        carPass.setPayment(carPayment);
+        passes.save(carPass);
+        log.info("Monthly pass seeded for driver (plate {})", carPass.getLicensePlate());
     }
 
     private void seedExtraPasses(VehicleTypeResponse[] vt, List<User> extraDrivers) {
@@ -514,7 +528,7 @@ class DevDataSeeder implements CommandLineRunner {
 
         // WRONG_ZONE — OPEN
         ExceptionReport e4 = new ExceptionReport(staff, ExceptionType.WRONG_ZONE,
-                "Motorbike found in Car-only Level 1 slot A-05. Driver parked in wrong zone.",
+                "Motorbike parked in slot A-05 on Level 1 (preferred for Cars). AI suggested Level 2 but driver chose manually.",
                 completedSessions.get(rnd.nextInt(completedSessions.size())));
         exceptions.save(e4);
 

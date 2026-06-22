@@ -52,6 +52,7 @@ class FeedbackService {
         return FeedbackResponse.from(feedbackRepo.save(fb));
     }
 
+    @Transactional(readOnly = true)
     List<FeedbackResponse> myFeedback(String email) {
         User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
@@ -59,6 +60,7 @@ class FeedbackService {
                 .stream().map(FeedbackResponse::from).toList();
     }
 
+    @Transactional(readOnly = true)
     List<FeedbackResponse> all() {
         return feedbackRepo.findAllByOrderByCreatedAtDesc()
                 .stream().map(FeedbackResponse::from).toList();

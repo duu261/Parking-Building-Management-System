@@ -154,6 +154,13 @@ function TypeCard({ type, policy, onRemove, onSaved, onError }) {
         <div>
           <h2 className="font-semibold tracking-tight">{type.name}</h2>
           {type.description && <p className="mt-0.5 text-sm text-muted">{type.description}</p>}
+          <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted nums">
+            <span>{Number(form.ratePerHour || 0).toLocaleString("vi-VN")} ₫/hr</span>
+            {form.dailyCap > 0 && <span>cap {Number(form.dailyCap).toLocaleString("vi-VN")} ₫</span>}
+            <span>{form.graceMinutes}min grace</span>
+            <span>×{form.peakMultiplier} peak</span>
+            {form.monthlyPassPrice > 0 && <span>pass {Number(form.monthlyPassPrice).toLocaleString("vi-VN")} ₫/mo</span>}
+          </div>
         </div>
         <Button variant="ghost" onClick={onRemove} aria-label="Delete type">
           <Trash2 size={16} />

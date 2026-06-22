@@ -2,6 +2,8 @@ package com.parkmaster.publicapi;
 
 import com.parkmaster.parking.ParkingDtos.BuildingAvailability;
 import com.parkmaster.parking.ParkingDtos.BuildingResponse;
+import com.parkmaster.parking.ParkingDtos.FloorResponse;
+import com.parkmaster.parking.ParkingDtos.SlotResponse;
 import com.parkmaster.parking.ParkingService;
 import com.parkmaster.pricing.PricingDtos.PricingPolicyResponse;
 import com.parkmaster.pricing.PricingService;
@@ -47,6 +49,16 @@ class PublicController {
     @GetMapping("/buildings/{id}/availability")
     BuildingAvailability availability(@PathVariable Long id) {
         return parking.getAvailability(id);
+    }
+
+    @GetMapping("/buildings/{id}/floors")
+    List<FloorResponse> floors(@PathVariable Long id) {
+        return parking.listFloors(id);
+    }
+
+    @GetMapping("/floors/{floorId}/slots")
+    List<SlotResponse> slots(@PathVariable Long floorId) {
+        return parking.listSlots(floorId);
     }
 
     @GetMapping("/pricing")

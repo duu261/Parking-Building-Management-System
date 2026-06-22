@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { History, ChevronDown, CreditCard, Star, MessageSquare } from "lucide-react";
-import { Card, Button, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
+import { Card, Button, Input, Spinner, EmptyState, Alert, StatusBadge } from "../../components/ui";
 import { driverApi } from "../../lib/endpoints";
 import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
 
@@ -17,6 +17,7 @@ export default function MySessionsPage() {
   const [expanded, setExpanded] = useState(null);
   const [error, setError] = useState("");
   const [vnpayMsg, setVnpayMsg] = useState("");
+  const [search, setSearch] = useState("");
   const PAGE_SIZE = 10;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -43,6 +44,15 @@ export default function MySessionsPage() {
   if (error) return <Alert>{error}</Alert>;
   if (sessions === null) return <Spinner label="Loading sessions" />;
 
+  const q = search.toLowerCase().trim();
+  const filtered = sessions.filter(
+    (s) =>
+      !q ||
+      [s.licensePlate, s.slotCode]
+        .map((v) => (v ?? "").toLowerCase())
+        .some((v) => v.includes(q))
+  );
+
   return (
     <div>
       <h1 className="text-xl font-semibold tracking-tight">My sessions</h1>
@@ -54,14 +64,27 @@ export default function MySessionsPage() {
         </Alert>
       )}
 
+      {sessions.length > 0 && (
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by license plate or slot..."
+          className="mt-4"
+        />
+      )}
+
       {sessions.length === 0 ? (
         <div className="mt-6">
           <EmptyState icon={History} title="No sessions yet" hint="Your parking history will appear here." />
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState icon={History} title="No matches" hint="Try a different search." />
+        </div>
       ) : (
         <>
           <Card className="mt-6 divide-y divide-line">
-            {sessions.slice(0, visibleCount).map((s) => {
+            {filtered.slice(0, visibleCount).map((s) => {
               const pay = payBySession[s.id];
               const open = expanded === s.id;
               return (
@@ -76,6 +99,7 @@ export default function MySessionsPage() {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2.5">
+                        <span className="nums text-xs text-muted">#{s.id}</span>
                         <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
                         <StatusBadge status={s.status} />
                         {s.autoAllocated && <ScoreBreakdownCard score={s.allocationScore} compact />}
@@ -100,12 +124,12 @@ export default function MySessionsPage() {
               );
             })}
           </Card>
-          {visibleCount < sessions.length && (
+          {visibleCount < filtered.length && (
             <button
               onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
               className="mt-3 w-full rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-muted transition hover:bg-elevated hover:text-primary"
             >
-              Show more ({sessions.length - visibleCount} remaining)
+              Show more ({filtered.length - visibleCount} remaining)
             </button>
           )}
         </>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Building2, Plus, Trash2, ChevronRight, Pencil, Check, X } from "lucide-react";
 import { Card, Button, Field, Input, Select, Skeleton, EmptyState, Alert, StatusBadge } from "../../components/ui";
-import { managerApi } from "../../lib/endpoints";
+import { managerApi, publicApi } from "../../lib/endpoints";
 
 const SLOT_STATUSES = ["AVAILABLE", "OCCUPIED", "RESERVED", "MAINTENANCE", "LOCKED"];
 
@@ -14,12 +14,16 @@ export default function BuildingsPage() {
   const [form, setForm] = useState({ name: "", address: "" });
   const [creating, setCreating] = useState(false);
 
+  const [avail, setAvail] = useState({});
+
   const load = () => {
     setError("");
     Promise.all([managerApi.buildings(), managerApi.vehicleTypes()])
-      .then(([b, vt]) => {
+      .then(async ([b, vt]) => {
         setBuildings(b);
         setTypes(vt);
+        const avails = await Promise.all(b.map((x) => publicApi.availability(x.id).catch(() => ({}))));
+        setAvail(Object.fromEntries(b.map((x, i) => [x.id, avails[i]])));
       })
       .catch((e) => setError(e.message));
   };
@@ -112,7 +116,14 @@ export default function BuildingsPage() {
                 <ChevronRight size={16} className={`text-muted transition ${selected?.id === b.id ? "rotate-90" : ""}`} />
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{b.name}</div>
-                  {b.address && <div className="mt-0.5 text-xs text-muted">{b.address}</div>}
+                  <div className="mt-0.5 flex items-center gap-3 text-xs text-muted">
+                    {b.address && <span>{b.address}</span>}
+                    {avail[b.id] && (
+                      <span className="nums font-medium">
+                        {avail[b.id].availableSlots}/{avail[b.id].totalSlots} slots open
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span
                   role="button"

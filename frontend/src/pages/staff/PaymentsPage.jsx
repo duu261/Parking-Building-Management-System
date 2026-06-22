@@ -10,6 +10,7 @@ const time = (iso) =>
 export default function PaymentsPage() {
   const [list, setList] = useState(null);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = () => {
     setError("");
@@ -20,6 +21,15 @@ export default function PaymentsPage() {
 
   if (error && list === null) return <Alert>{error}</Alert>;
   if (list === null) return <Spinner label="Loading payments" />;
+
+  const q = search.toLowerCase().trim();
+  const filtered = list.filter(
+    (p) =>
+      !q ||
+      [p.licensePlate, p.vehicleType, p.slotCode]
+        .map((v) => (v ?? "").toLowerCase())
+        .some((v) => v.includes(q))
+  );
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -32,13 +42,26 @@ export default function PaymentsPage() {
         </div>
       )}
 
+      {list.length > 0 && (
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by license plate, vehicle type, or slot..."
+          className="mt-4"
+        />
+      )}
+
       {list.length === 0 ? (
         <div className="mt-6">
           <EmptyState icon={Banknote} title="Nothing pending" hint="Unpaid charges awaiting settlement show here." />
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState icon={Banknote} title="No matches" hint="Try a different search." />
+        </div>
       ) : (
         <div className="mt-6 space-y-3">
-          {list.map((p) => (
+          {filtered.map((p) => (
             <PaymentCard key={p.id} payment={p} onDone={load} onError={setError} />
           ))}
         </div>
@@ -80,27 +103,44 @@ function PaymentCard({ payment, onDone, onError }) {
 
   return (
     <Card className="p-4">
-      <div className="flex items-center gap-3">
-        <span className="nums text-lg font-semibold">{money(payment.amount)}</span>
-        <span className="nums text-xs text-muted">session {payment.sessionId}</span>
-        <span className="nums ml-auto text-xs text-muted">{time(payment.createdAt)}</span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="nums text-lg font-semibold">{money(payment.amount)}</span>
+          {payment.licensePlate ? (
+            <span className="nums text-sm font-medium">{payment.licensePlate}</span>
+          ) : (
+            <span className="rounded-md bg-elevated px-1.5 py-0.5 text-[11px] font-medium text-muted">Monthly pass</span>
+          )}
+          {payment.sessionId && <span className="nums text-xs text-muted">#{payment.sessionId}</span>}
+        </div>
+        <span className="nums text-xs text-muted">{time(payment.createdAt)}</span>
       </div>
+      {(payment.vehicleType || payment.slotCode) && (
+        <div className="mt-1.5 flex items-center gap-2 text-xs text-muted">
+          {payment.vehicleType && <span>{payment.vehicleType}</span>}
+          {payment.slotCode && <span>· {payment.buildingName ? `${payment.buildingName} › ` : ""}{payment.slotCode}</span>}
+        </div>
+      )}
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Button onClick={settle} loading={settling}>
-          <Check size={16} /> Settle cash
-        </Button>
-        <Input
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Void reason"
-          maxLength={255}
-          className="flex-1"
-        />
-        <Button variant="secondary" onClick={voidIt} loading={voiding} disabled={!reason.trim()}>
-          <Ban size={16} /> Void
-        </Button>
-      </div>
+      {payment.sessionId ? (
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button onClick={settle} loading={settling}>
+            <Check size={16} /> Settle cash
+          </Button>
+          <Input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Void reason"
+            maxLength={255}
+            className="flex-1"
+          />
+          <Button variant="secondary" onClick={voidIt} loading={voiding} disabled={!reason.trim()}>
+            <Ban size={16} /> Void
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-muted italic">Monthly pass payment · awaiting online settlement</p>
+      )}
     </Card>
   );
 }

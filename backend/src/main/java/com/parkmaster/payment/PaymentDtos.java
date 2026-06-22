@@ -15,13 +15,20 @@ public final class PaymentDtos {
 
     public record PaymentResponse(Long id, Long sessionId, BigDecimal amount,
             BigDecimal penaltyAmount, PaymentMethod method, PaymentStatus status, Instant createdAt,
-            Instant paidAt, Instant voidedAt, String voidReason, String processedByStaff) {
+            Instant paidAt, Instant voidedAt, String voidReason, String processedByStaff,
+            String licensePlate, String vehicleType, String slotCode, String buildingName) {
         static PaymentResponse from(Payment p) {
+            var s = p.getSession();
             return new PaymentResponse(p.getId(),
-                    p.getSession() != null ? p.getSession().getId() : null,
+                    s != null ? s.getId() : null,
                     p.getAmount(), p.getPenaltyAmount(), p.getMethod(), p.getStatus(),
                     p.getCreatedAt(), p.getPaidAt(), p.getVoidedAt(), p.getVoidReason(),
-                    p.getProcessedByStaff() == null ? null : p.getProcessedByStaff().getFullName());
+                    p.getProcessedByStaff() == null ? null : p.getProcessedByStaff().getFullName(),
+                    s != null ? s.getLicensePlate() : null,
+                    s != null && s.getVehicleType() != null ? s.getVehicleType().getName() : null,
+                    s != null && s.getSlot() != null ? s.getSlot().getCode() : null,
+                    s != null && s.getSlot() != null && s.getSlot().getFloor() != null
+                            ? s.getSlot().getFloor().getBuilding().getName() : null);
         }
     }
 

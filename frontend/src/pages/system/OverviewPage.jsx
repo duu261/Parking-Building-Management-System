@@ -3,6 +3,7 @@ import { Banknote, Building2, Car, Gauge, TrendingUp, Clock, IdCard } from "luci
 import { Card, Spinner, Alert, StatusBadge } from "../../components/ui";
 import { AreaLine } from "../../components/charts";
 import { managerApi, staffApi } from "../../lib/endpoints";
+import SlotMap from "../../components/SlotMap";
 
 const money = (n) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(n ?? 0);
@@ -95,6 +96,13 @@ export default function OverviewPage() {
           </div>
         </Card>
       )}
+
+      <section className="mt-6">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <Building2 size={16} className="text-muted" /> Live slot map
+        </h2>
+        <SlotMap />
+      </section>
     </div>
   );
 }
