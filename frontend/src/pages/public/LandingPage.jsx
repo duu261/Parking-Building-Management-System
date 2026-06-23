@@ -25,7 +25,7 @@ const ROLES = [
   {
     icon: MessageCircle,
     role: "AI Assistant",
-    line: "Ask our AI about pricing, availability, or how parking works — instant answers powered by Gemini.",
+    line: "Ask our AI about pricing, availability, or how parking works. Instant answers powered by Gemini.",
   },
 ];
 
@@ -148,59 +148,60 @@ export default function LandingPage() {
 
       <main className="flex-1">
         <section className="relative overflow-hidden border-b border-line bg-surface">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_80%_40%,var(--accent)_0%,transparent_70%)] opacity-[0.04]" />
           <MotionDiv
-            className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 py-20 text-center lg:py-28"
+            className="mx-auto flex w-full max-w-6xl flex-col items-start px-6 py-20 lg:py-24"
             initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           >
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-              <Sparkles size={12} /> AI-Powered Smart Parking
-            </span>
-            <h1 className="mt-5 max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
+            <h1 className="max-w-2xl text-4xl font-bold tracking-tighter leading-[1.08] md:text-5xl lg:text-6xl">
               Your car. Our AI.{" "}
               <span className="text-accent">The perfect spot.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted md:text-lg">
-              No manual picking. No circling floors. ParkMaster scores every open slot
-              on four criteria and assigns the best one in milliseconds — for drivers,
-              staff, and reservations.
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-muted">
+              ParkMaster scores every open slot on four criteria and assigns the best one
+              in milliseconds. No circling, no guessing.
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/signup"
-                className="rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition hover:opacity-90 active:translate-y-px"
+                className="rounded-[var(--radius)] bg-accent px-6 py-3 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-lg active:scale-[0.98] active:translate-y-px"
               >
                 Get started free
               </Link>
               <a
                 href="#ai-demo"
-                className="rounded-[var(--radius)] border border-line bg-surface px-6 py-3 text-sm font-medium transition hover:bg-elevated"
+                className="rounded-[var(--radius)] border border-line bg-surface px-6 py-3 text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-elevated hover:border-text/20"
               >
-                See it live ↓
+                See the algorithm
               </a>
             </div>
           </MotionDiv>
         </section>
 
         <section className="border-b border-line bg-elevated/30">
-          <div className="mx-auto w-full max-w-5xl px-6 py-16 lg:py-20">
-            <h2 className="text-center text-2xl font-semibold tracking-tight md:text-3xl">
+          <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-20">
+            <h2 className="text-2xl font-semibold tracking-tighter md:text-3xl">
               How it works
             </h2>
-            <div className="mt-10 grid gap-8 md:grid-cols-3">
+            <div className="mt-10 space-y-0">
               {[
-                { step: "1", title: "Arrive", desc: "Drive in. Staff scans your plate or you scan your reservation QR." },
-                { step: "2", title: "AI scores every slot", desc: "Vehicle type match, floor load, distance to entry, peak-hour bonus — all weighted in milliseconds." },
-                { step: "3", title: "Park in the best one", desc: "The highest-scoring slot is assigned. No circling, no guessing, no manual override." },
-              ].map((s) => (
-                <div key={s.step} className="text-center">
-                  <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-fg">
-                    {s.step}
+                { title: "Arrive", desc: "Drive in. Staff scans your plate or you scan your reservation QR." },
+                { title: "AI scores every slot", desc: "Vehicle type match, floor load, distance to entry, peak-hour bonus. All weighted in milliseconds." },
+                { title: "Park in the best one", desc: "The highest-scoring slot is assigned. No circling, no guessing." },
+              ].map((s, i) => (
+                <Reveal key={s.title} delay={i * 0.08}>
+                  <div className="flex gap-5 border-t border-line py-6">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-fg">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold tracking-tight">{s.title}</h3>
+                      <p className="mt-1 max-w-md text-sm leading-relaxed text-muted">{s.desc}</p>
+                    </div>
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">{s.desc}</p>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>

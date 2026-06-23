@@ -26,10 +26,12 @@ export default function AuthShell({ title, subtitle, children, footer }) {
             <SquareParking className="text-text" size={24} />
             <span className="text-lg font-semibold tracking-tight">ParkMaster</span>
           </Link>
-          <div className="rounded-[var(--radius)] border border-line bg-surface p-6 shadow-[var(--shadow-pop)]">
+          <div className="rounded-[calc(var(--radius)+4px)] bg-text/[0.03] p-1.5">
+          <div className="rounded-[var(--radius)] border border-line bg-surface p-6 shadow-[var(--shadow-pop)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
             <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
             {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
             <div className="mt-6">{children}</div>
+          </div>
           </div>
           {footer && <div className="mt-4 text-center text-sm text-muted lg:text-left">{footer}</div>}
         </div>

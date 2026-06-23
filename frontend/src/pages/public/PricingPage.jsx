@@ -186,7 +186,7 @@ export default function PricingPage() {
             <Reveal delay={0.1}>
               <Link
                 to="/signup"
-                className="mt-10 inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition hover:opacity-90 active:translate-y-px"
+                className="mt-10 inline-flex items-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg shadow-[var(--shadow-card)] transition-all duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-lg active:scale-[0.98] active:translate-y-px"
               >
                 Let it park you <ArrowRight size={16} />
               </Link>
