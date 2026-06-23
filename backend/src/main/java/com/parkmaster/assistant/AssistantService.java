@@ -39,11 +39,27 @@ class AssistantService {
 
     private String systemInstruction(String context) {
         return """
-            You are ParkMaster Assistant, a helpful guide for a parking building management \
-            system. Answer questions about parking availability, pricing, reservations, \
-            monthly passes, and how to use the app. Be concise (2-4 sentences). If asked \
-            something unrelated to parking or this app, politely redirect. Use the live data \
-            below when relevant; do not invent buildings or prices that are not listed.
+            You are ParkMaster Assistant, a helpful guide for a smart parking building \
+            management system built for FPT University (SWP391 capstone). Answer questions \
+            about parking availability, pricing, AI slot allocation, reservations, monthly \
+            passes, payments, exception reports, feedback, and how to use the app. \
+            Be concise (2-4 sentences). If asked something unrelated to parking or this \
+            app, politely redirect. Use the live data below when relevant; do not invent \
+            buildings or prices that are not listed.
+
+            KEY FEATURE - AI Slot Allocation:
+            When a vehicle checks in, our algorithm scores every available slot using four \
+            weighted criteria: Vehicle Type Match (40 points - floor assigned to this type), \
+            Load Balance (30 - favors emptier floors), Distance to Entry (20 - lower floors \
+            score higher), and Peak-Hour Bonus (10 - extra spread during busy times). The \
+            highest-scoring slot is assigned automatically.
+
+            PAYMENT: Drivers pay per hour with a grace period (no charge if exit within grace). \
+            A daily cap limits the maximum charge. Payment methods: Cash, Online, or VNPay. \
+            Drivers with an active monthly pass exit free.
+
+            EXCEPTION REPORTS: Staff can file reports for lost tickets, wrong license plates, \
+            overtime stays, or vehicles parked in the wrong zone. Managers review and resolve them.
 
             %s""".formatted(context);
     }
@@ -76,8 +92,36 @@ class AssistantService {
                     + "and check them out to compute the charge. Drivers track their active "
                     + "session in My Parking.";
         }
-        return "I can help with parking availability, pricing, reservations, monthly passes, and "
-                + "using the app. Try \"What are your prices?\" or \"Are there free slots?\".";
+        if (containsAny(m, "ai", "algorithm", "allocation", "scoring", "auto", "smart",
+                "assign", "criteria", "weight")) {
+            return "Our AI scores every available slot on four criteria: Vehicle Type Match (40 pts), "
+                    + "Load Balance (30 pts, favors emptier floors), Distance to Entry (20 pts, "
+                    + "lower floors score higher), and Peak-Hour Bonus (10 pts). The highest-scoring "
+                    + "slot is assigned instantly.";
+        }
+        if (containsAny(m, "pay", "payment", "cash", "online", "vnpay", "charge", "fee")) {
+            return "Parking is charged per hour with a grace period (no charge if you exit within it). "
+                    + "A daily cap limits maximum charges. We accept Cash, Online payment, and VNPay. "
+                    + "Monthly pass holders exit free.";
+        }
+        if (containsAny(m, "exception", "lost ticket", "wrong plate", "overtime", "wrong zone",
+                "report")) {
+            return "If something goes wrong (lost ticket, wrong plate, overtime, or wrong zone), "
+                    + "staff file an exception report. A manager reviews and resolves it. You can "
+                    + "view your reports in your session history.";
+        }
+        if (containsAny(m, "feedback", "review", "rating", "rate")) {
+            return "After a completed session, drivers can leave feedback with a 1-5 star rating "
+                    + "and a comment. Managers see aggregated ratings in the analytics dashboard.";
+        }
+        if (containsAny(m, "building", "floor", "location", "address", "where")) {
+            return "Current buildings:\n" + availabilityLines()
+                    + "\nEach building has multiple floors assigned to specific vehicle types "
+                    + "(Car, Motorbike, EV). Check live availability for real-time counts.";
+        }
+        return "I can help with parking availability, pricing, AI allocation, payments, reservations, "
+                + "monthly passes, feedback, and more. Try \"How does AI allocation work?\" or "
+                + "\"What are your prices?\".";
     }
 
     private String buildContext() {

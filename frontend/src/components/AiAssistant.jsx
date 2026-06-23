@@ -7,10 +7,15 @@ const RADIUS = "rounded-[var(--radius)]";
 
 const GREETING = {
   role: "assistant",
-  text: "Hi! I'm the ParkMaster assistant. Ask me about availability, pricing, reservations, or monthly passes.",
+  text: "Hi! I'm the ParkMaster assistant. Ask me about availability, pricing, AI slot allocation, payments, or reservations.",
 };
 
-const SUGGESTIONS = ["What are your prices?", "Are there free slots?", "How do I reserve?"];
+const SUGGESTIONS = [
+  "How does AI allocation work?",
+  "What are your prices?",
+  "Are there free slots?",
+  "How do I pay?",
+];
 
 export default function AiAssistant() {
   const [open, setOpen] = useState(false);
