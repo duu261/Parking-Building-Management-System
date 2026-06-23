@@ -170,44 +170,27 @@ function SessionDetail({ session: s, payment: pay, feedback: fb, onPaid }) {
 
 function PayButton({ paymentId, onDone }) {
   const [loading, setLoading] = useState(false);
-  const [vnLoading, setVnLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  const handlePay = async () => {
-    setLoading(true);
-    setErr("");
-    try {
-      await driverApi.pay(paymentId);
-      onDone();
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleVnPay = async () => {
-    setVnLoading(true);
+    setLoading(true);
     setErr("");
     try {
       const { paymentUrl } = await driverApi.vnpay(paymentId);
       window.location.href = paymentUrl;
     } catch (e) {
       setErr(e.message);
-      setVnLoading(false);
+      setLoading(false);
     }
   };
 
   return (
     <div className="mt-3 pt-3 border-t border-line">
       {err && <p className="mb-2 text-sm text-occupied">{err}</p>}
-      <div className="flex gap-2">
-        <Button onClick={handlePay} loading={loading}>Pay (mark paid)</Button>
-        <Button onClick={handleVnPay} loading={vnLoading} variant="accent">
-          <CreditCard size={14} className="mr-1.5" />
-          Pay with VNPay
-        </Button>
-      </div>
+      <Button onClick={handleVnPay} loading={loading} variant="accent">
+        <CreditCard size={14} className="mr-1.5" />
+        Pay with VNPay
+      </Button>
     </div>
   );
 }
