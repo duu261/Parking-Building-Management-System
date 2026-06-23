@@ -143,6 +143,7 @@ class DevDataSeeder implements CommandLineRunner {
         VehicleTypeResponse[] vt = seedVehicleTypes();
         seedBuilding(vt);
         seedBuilding2(vt);
+        seedSlotStatuses();
 
         List<User> allDrivers = new ArrayList<>();
         allDrivers.add(driver);
@@ -230,6 +231,22 @@ class DevDataSeeder implements CommandLineRunner {
         log.info("Campus Parking seeded: 2 floors, 40 slots");
     }
 
+    private void seedSlotStatuses() {
+        List<ParkingSlot> available = slots.findAll().stream()
+                .filter(s -> s.getStatus() == SlotStatus.AVAILABLE)
+                .toList();
+        if (available.size() >= 2) {
+            ParkingSlot maint = available.get(available.size() - 1);
+            maint.setStatus(SlotStatus.MAINTENANCE);
+            slots.save(maint);
+
+            ParkingSlot locked = available.get(available.size() - 2);
+            locked.setStatus(SlotStatus.LOCKED);
+            slots.save(locked);
+            log.info("Set slot {} to MAINTENANCE, {} to LOCKED.", maint.getCode(), locked.getCode());
+        }
+    }
+
     private void fillSlots(FloorResponse floor, String prefix, int count) {
         for (int i = 1; i <= count; i++) {
             parking.createSlot(floor.id(), new SlotRequest(String.format("%s-%02d", prefix, i)));
@@ -313,26 +330,40 @@ class DevDataSeeder implements CommandLineRunner {
 
     private void seedLiveDriverSession(VehicleTypeResponse[] vt, User driver) {
         VehicleType car = vehicleTypes.findById(vt[0].id()).orElseThrow();
-        ParkingSlot slot = slots.findAll().stream()
+        List<ParkingSlot> available = slots.findAll().stream()
                 .filter(s -> s.getStatus() == SlotStatus.AVAILABLE)
-                .findFirst().orElseThrow();
+                .toList();
 
+        // Live session with AI score (45 min, car)
+        ParkingSlot slot1 = available.get(0);
         Instant checkIn = Instant.now().minus(Duration.ofMinutes(45));
-        ParkingSession s = new ParkingSession(slot, car, "51F-00777", false);
+        ParkingSession s = new ParkingSession(slot1, car, "51F-00777", true);
         s.setUser(driver);
         s.setCheckInAt(checkIn);
+        s.setAllocationScore(ALLOC_SCORES[0]);
         sessions.save(s);
+        slot1.setStatus(SlotStatus.OCCUPIED);
+        slots.save(slot1);
 
-        slot.setStatus(SlotStatus.OCCUPIED);
-        slots.save(slot);
+        // Billable demo session (3h, EV — highest rate 15k/hr ≈ 45k charge)
+        VehicleType ev = vehicleTypes.findById(vt[2].id()).orElseThrow();
+        ParkingSlot slot2 = available.get(1);
+        ParkingSession demo = new ParkingSession(slot2, ev, "30K-99999", true);
+        demo.setUser(driver);
+        demo.setCheckInAt(Instant.now().minus(Duration.ofHours(3)));
+        demo.setAllocationScore(ALLOC_SCORES[1]);
+        sessions.save(demo);
+        slot2.setStatus(SlotStatus.OCCUPIED);
+        slots.save(slot2);
 
-        log.info("Seeded live driver session (plate 51F-00777), 45 min ago.");
+        log.info("Seeded 2 live driver sessions: 45min car + 3h EV (billable demo).");
     }
 
     private void seedLiveSessions(VehicleTypeResponse[] vt, List<User> extraDrivers) {
         VehicleType[] types = {
             vehicleTypes.findById(vt[0].id()).orElseThrow(),
             vehicleTypes.findById(vt[1].id()).orElseThrow(),
+            vehicleTypes.findById(vt[2].id()).orElseThrow(),
         };
         List<ParkingSlot> available = slots.findAll().stream()
                 .filter(s -> s.getStatus() == SlotStatus.AVAILABLE)

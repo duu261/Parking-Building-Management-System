@@ -13,6 +13,7 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
 
   const load = () => {
     setError("");
@@ -97,14 +98,38 @@ export default function UsersPage() {
           <EmptyState icon={Users} title="No users" hint="Create the first account above." />
         </div>
       ) : (<>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {ROLES.map((r) => (
+            <Card key={r} className="p-4">
+              <div className="text-xs text-muted">{r}</div>
+              <div className="mt-1 nums text-2xl font-semibold">{users.filter((u) => u.role === r).length}</div>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {["ALL", ...ROLES].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                roleFilter === r ? "bg-accent text-accent-fg" : "bg-elevated text-muted hover:text-text"
+              }`}
+            >
+              {r === "ALL" ? `All (${users.length})` : `${r} (${users.filter((u) => u.role === r).length})`}
+            </button>
+          ))}
+        </div>
+
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, or role..."
-          className="mt-4"
+          placeholder="Search by name or email..."
+          className="mt-3"
         />
         <Card className="mt-3 divide-y divide-line">
           {users.filter((u) => {
+            if (roleFilter !== "ALL" && u.role !== roleFilter) return false;
             if (!search.trim()) return true;
             const q = search.toLowerCase().trim();
             return [u.fullName, u.email, u.role].some((v) => (v ?? "").toLowerCase().includes(q));

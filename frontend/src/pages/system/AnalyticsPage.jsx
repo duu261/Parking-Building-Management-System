@@ -117,7 +117,7 @@ export default function AnalyticsPage() {
 
           <ChartCard
             title="Auto vs manual allocation"
-            hint="Does auto-allocation park drivers faster? (RQ2)"
+            hint="Share of drivers who let the AI pick their slot (RQ2)."
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <AllocStat
@@ -133,7 +133,7 @@ export default function AnalyticsPage() {
                 avg={data.alloc.manualAvgMinutes}
               />
             </div>
-            <EffectivenessCallout auto={data.alloc.autoAvgMinutes} manual={data.alloc.manualAvgMinutes} />
+            <AdoptionCallout auto={data.alloc.autoCount} manual={data.alloc.manualCount} />
           </ChartCard>
         </div>
       )}
@@ -156,19 +156,19 @@ function AllocStat({ icon: Icon, label, count, avg }) {
   );
 }
 
-function EffectivenessCallout({ auto, manual }) {
+function AdoptionCallout({ auto, manual }) {
   const a = Number(auto ?? 0);
   const m = Number(manual ?? 0);
-  if (a <= 0 || m <= 0) return null;
-  const diff = m - a;
-  const pct = Math.round((Math.abs(diff) / m) * 100);
-  const faster = diff > 0;
+  const total = a + m;
+  if (total === 0) return null;
+  const pct = Math.round((a / total) * 100);
+  const majority = pct >= 50;
   return (
-    <div className={`mt-4 flex items-center gap-2 rounded-[var(--radius)] px-4 py-3 text-sm font-medium ${faster ? "bg-available/10 text-available" : "bg-elevated text-muted"}`}>
+    <div className={`mt-4 flex items-center gap-2 rounded-[var(--radius)] px-4 py-3 text-sm font-medium ${majority ? "bg-available/10 text-available" : "bg-elevated text-muted"}`}>
       <Sparkles size={16} />
-      {faster
-        ? `Auto-allocation parks drivers ${pct}% faster (${Math.round(diff)}m less) than manual choice.`
-        : `Auto and manual allocation perform within ${pct}% — no significant difference this window.`}
+      {majority
+        ? `${pct}% of drivers let the AI pick their slot (${a} of ${total} sessions).`
+        : `${pct}% of drivers used AI allocation (${a} of ${total}) — most still pick manually.`}
     </div>
   );
 }

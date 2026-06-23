@@ -13,6 +13,7 @@ import ActiveSessionsPage from "./pages/staff/ActiveSessionsPage";
 import ExceptionsPage from "./pages/staff/ExceptionsPage";
 import PaymentsPage from "./pages/staff/PaymentsPage";
 import OverviewPage from "./pages/system/OverviewPage";
+import AdminOverviewPage from "./pages/system/AdminOverviewPage";
 import AnalyticsPage from "./pages/system/AnalyticsPage";
 import BuildingsPage from "./pages/system/BuildingsPage";
 import PricingPage from "./pages/system/PricingPage";
@@ -31,6 +32,7 @@ function AppHome() {
   const role = getUser()?.role;
   if (role === "STAFF") return <CheckInPage />;
   if (role === "USER") return <MyParkingPage />;
+  if (role === "ADMIN") return <AdminOverviewPage />;
   return <OverviewPage />;
 }
 
