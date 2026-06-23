@@ -133,6 +133,7 @@ export default function AnalyticsPage() {
                 avg={data.alloc.manualAvgMinutes}
               />
             </div>
+            <EffectivenessCallout auto={data.alloc.autoAvgMinutes} manual={data.alloc.manualAvgMinutes} />
           </ChartCard>
         </div>
       )}
@@ -151,6 +152,23 @@ function AllocStat({ icon: Icon, label, count, avg }) {
       <div className="mt-2 nums text-sm">
         {Math.round(Number(avg ?? 0))}m <span className="text-muted">avg duration</span>
       </div>
+    </div>
+  );
+}
+
+function EffectivenessCallout({ auto, manual }) {
+  const a = Number(auto ?? 0);
+  const m = Number(manual ?? 0);
+  if (a <= 0 || m <= 0) return null;
+  const diff = m - a;
+  const pct = Math.round((Math.abs(diff) / m) * 100);
+  const faster = diff > 0;
+  return (
+    <div className={`mt-4 flex items-center gap-2 rounded-[var(--radius)] px-4 py-3 text-sm font-medium ${faster ? "bg-available/10 text-available" : "bg-elevated text-muted"}`}>
+      <Sparkles size={16} />
+      {faster
+        ? `Auto-allocation parks drivers ${pct}% faster (${Math.round(diff)}m less) than manual choice.`
+        : `Auto and manual allocation perform within ${pct}% — no significant difference this window.`}
     </div>
   );
 }

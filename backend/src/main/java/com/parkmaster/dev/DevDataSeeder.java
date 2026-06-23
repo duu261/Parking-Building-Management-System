@@ -92,9 +92,9 @@ class DevDataSeeder implements CommandLineRunner {
     };
 
     private static final String[] ALLOC_SCORES = {
-        "{\"vehicleTypeMatch\":40,\"loadBalance\":22,\"distanceToEntry\":18,\"peakHour\":8}",
-        "{\"vehicleTypeMatch\":20,\"loadBalance\":28,\"distanceToEntry\":14,\"peakHour\":10}",
-        "{\"vehicleTypeMatch\":40,\"loadBalance\":18,\"distanceToEntry\":20,\"peakHour\":6}",
+        "{\"vehicleTypeMatch\":40,\"loadBalance\":22,\"distanceToEntry\":18,\"peakHour\":8,\"total\":88,\"alternativesConsidered\":12}",
+        "{\"vehicleTypeMatch\":20,\"loadBalance\":28,\"distanceToEntry\":14,\"peakHour\":10,\"total\":72,\"alternativesConsidered\":18}",
+        "{\"vehicleTypeMatch\":40,\"loadBalance\":18,\"distanceToEntry\":20,\"peakHour\":6,\"total\":84,\"alternativesConsidered\":15}",
     };
 
     private final UserRepository users;

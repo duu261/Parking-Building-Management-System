@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Banknote, Building2, Car, Gauge, TrendingUp, Clock, IdCard } from "lucide-react";
+import { Banknote, Building2, Car, Gauge, TrendingUp, Clock, IdCard, TriangleAlert, Star } from "lucide-react";
 import { Card, Spinner, Alert, StatusBadge } from "../../components/ui";
 import { AreaLine } from "../../components/charts";
 import { managerApi, staffApi } from "../../lib/endpoints";
@@ -27,9 +27,11 @@ export default function OverviewPage() {
       managerApi.revenue(from, to),
       staffApi.active(),
       managerApi.passes(),
+      managerApi.openExceptions().catch(() => []),
+      managerApi.feedback().catch(() => []),
     ])
-      .then(([buildings, daily, revenue, active, passes]) =>
-        setData({ buildings, daily, revenue, active, passes }),
+      .then(([buildings, daily, revenue, active, passes, openExc, feedback]) =>
+        setData({ buildings, daily, revenue, active, passes, openExc, feedback }),
       )
       .catch((e) => setError(e.message));
   }, []);
@@ -55,9 +57,11 @@ export default function OverviewPage() {
         <Stat icon={Building2} label="Buildings" value={data.buildings.length} />
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={TrendingUp} label="Active sessions now" value={data.active?.length ?? 0} accent />
-        <Stat icon={IdCard} label="Active monthly passes" value={activePasses} />
+        <Stat icon={IdCard} label="Active passes" value={activePasses} />
+        <Stat icon={TriangleAlert} label="Open exceptions" value={data.openExc?.length ?? 0} accent={data.openExc?.length > 0} />
+        <Stat icon={Star} label="Avg feedback" value={data.feedback?.length > 0 ? (data.feedback.reduce((s, f) => s + f.rating, 0) / data.feedback.length).toFixed(1) + " ★" : "—"} />
       </div>
 
       <Card className="mt-4 p-5">

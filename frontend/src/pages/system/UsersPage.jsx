@@ -12,6 +12,7 @@ export default function UsersPage() {
   const [form, setForm] = useState(EMPTY);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const [search, setSearch] = useState("");
 
   const load = () => {
     setError("");
@@ -95,9 +96,19 @@ export default function UsersPage() {
         <div className="mt-6">
           <EmptyState icon={Users} title="No users" hint="Create the first account above." />
         </div>
-      ) : (
-        <Card className="mt-6 divide-y divide-line">
-          {users.map((u) => (
+      ) : (<>
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, email, or role..."
+          className="mt-4"
+        />
+        <Card className="mt-3 divide-y divide-line">
+          {users.filter((u) => {
+            if (!search.trim()) return true;
+            const q = search.toLowerCase().trim();
+            return [u.fullName, u.email, u.role].some((v) => (v ?? "").toLowerCase().includes(q));
+          }).map((u) => (
             <div key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-5">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
@@ -133,7 +144,7 @@ export default function UsersPage() {
             </div>
           ))}
         </Card>
-      )}
+      </>)}
     </div>
   );
 }
