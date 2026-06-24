@@ -105,6 +105,7 @@ export const adminApi = {
 export const driverApi = {
   sessions: () => apiRequest("/driver/sessions"),
   session: (id) => apiRequest(`/driver/sessions/${id}`),
+  sessionEstimate: (id) => apiRequest(`/driver/sessions/${id}/estimate`),
   ticketBlob: (id) => apiBlobUrl(`/driver/sessions/${id}/ticket.png`),
   payments: () => apiRequest("/driver/payments"),
   pay: (id, method = "ONLINE") =>
@@ -122,6 +123,8 @@ export const driverApi = {
   reservations: () => apiRequest("/driver/reservations"),
   reservationQr: (id) => apiBlobUrl(`/driver/reservations/${id}/qr.png`),
   reserve: (body) => apiRequest("/driver/reservations", { method: "POST", body }),
+  suggestSlots: (buildingId, vehicleTypeId) =>
+    apiRequest(`/driver/reservations/suggest?buildingId=${buildingId}&vehicleTypeId=${vehicleTypeId}`),
   cancelReservation: (id) =>
     apiRequest(`/driver/reservations/${id}/cancel`, { method: "POST" }),
 

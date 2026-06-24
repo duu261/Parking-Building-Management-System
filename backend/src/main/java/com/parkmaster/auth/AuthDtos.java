@@ -33,4 +33,6 @@ public final class AuthDtos {
             @NotBlank @Size(min = 8, max = 100) String newPassword) {}
 
     public record MessageResponse(String message) {}
+
+    public record ForgotPasswordResponse(String message, String token, String resetUrl) {}
 }

@@ -1,6 +1,8 @@
 package com.parkmaster.reservation;
 
+import com.parkmaster.parking.ParkingBuilding;
 import com.parkmaster.parking.ParkingSlot;
+import com.parkmaster.payment.Payment;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.user.User;
 import jakarta.persistence.Column;
@@ -14,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -35,8 +38,8 @@ public class Reservation {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "slot_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "slot_id")
     private ParkingSlot slot;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -59,6 +62,24 @@ public class Reservation {
     @Column(name = "allocation_score", columnDefinition = "jsonb")
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private String allocationScore;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "building_id")
+    private ParkingBuilding building;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reservation_type", nullable = false)
+    private ReservationType reservationType = ReservationType.FREE;
+
+    @Column(name = "reserved_start")
+    private Instant reservedStart;
+
+    @Column(name = "deposit_amount")
+    private BigDecimal depositAmount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "deposit_payment_id")
+    private Payment depositPayment;
 
     public Reservation(User user, ParkingSlot slot, VehicleType vehicleType, String licensePlate,
             Instant holdUntil) {

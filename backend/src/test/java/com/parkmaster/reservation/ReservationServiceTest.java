@@ -8,12 +8,17 @@ import static org.mockito.Mockito.when;
 import com.parkmaster.common.ApiException;
 import com.parkmaster.parking.Floor;
 import com.parkmaster.parking.ParkingBuilding;
+import com.parkmaster.parking.ParkingBuildingRepository;
 import com.parkmaster.parking.ParkingSlot;
+import com.parkmaster.parking.ParkingSlotRepository;
 import com.parkmaster.parking.SlotStatus;
+import com.parkmaster.payment.PaymentRepository;
+import com.parkmaster.payment.VnPayService;
+import com.parkmaster.pricing.PricingPolicyRepository;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
+import com.parkmaster.reservation.ReservationDtos.CreateReservationRequest;
 import com.parkmaster.session.SlotAllocationService;
-import com.parkmaster.session.SlotAllocationService.ScoreBreakdown;
 import com.parkmaster.user.Role;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
@@ -25,13 +30,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-/** Unit test for ReservationService — repositories mocked, no Spring context. */
 class ReservationServiceTest {
 
     private ReservationRepository reservations;
     private UserRepository users;
     private VehicleTypeRepository vehicleTypes;
     private SlotAllocationService allocation;
+    private ParkingSlotRepository slots;
+    private ParkingBuildingRepository buildings;
+    private PricingPolicyRepository pricingPolicies;
+    private PaymentRepository payments;
+    private VnPayService vnPay;
     private ReservationService service;
 
     @BeforeEach
@@ -40,11 +49,21 @@ class ReservationServiceTest {
         users = Mockito.mock(UserRepository.class);
         vehicleTypes = Mockito.mock(VehicleTypeRepository.class);
         allocation = Mockito.mock(SlotAllocationService.class);
-        service = new ReservationService(reservations, users, vehicleTypes, allocation);
+        slots = Mockito.mock(ParkingSlotRepository.class);
+        buildings = Mockito.mock(ParkingBuildingRepository.class);
+        pricingPolicies = Mockito.mock(PricingPolicyRepository.class);
+        payments = Mockito.mock(PaymentRepository.class);
+        vnPay = Mockito.mock(VnPayService.class);
+        service = new ReservationService(reservations, users, vehicleTypes, allocation,
+                slots, buildings, pricingPolicies, payments, vnPay);
+    }
+
+    private ParkingBuilding building() {
+        return new ParkingBuilding("Downtown Garage", null);
     }
 
     private ParkingSlot slot(SlotStatus status) {
-        ParkingSlot s = new ParkingSlot(new Floor(new ParkingBuilding("B", null), 1, "P1"), "A1");
+        ParkingSlot s = new ParkingSlot(new Floor(building(), 1, "P1"), "A1");
         s.setStatus(status);
         return s;
     }
@@ -53,41 +72,52 @@ class ReservationServiceTest {
         return new User("driver@x.com", "hash", "Driver", Role.USER);
     }
 
-    @Test
-    void createHoldsSlotAndReturnsPending() {
-        ParkingSlot slot = slot(SlotStatus.AVAILABLE);
-        when(users.findByEmail("driver@x.com")).thenReturn(Optional.of(driver()));
-        when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
-        var scoreBreakdown = new ScoreBreakdown(slot, 20.0, 15.0, 10.0, 5.0);
-        when(allocation.rank(10L, 2L)).thenReturn(List.of(scoreBreakdown));
-        when(reservations.save(any(Reservation.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        var resp = service.create("driver@x.com", 10L, 2L, "51A-123");
-
-        assertThat(resp.status()).isEqualTo(ReservationStatus.PENDING);
-        assertThat(resp.slotCode()).isEqualTo("A1");
-        assertThat(resp.licensePlate()).isEqualTo("51A-123");
-        assertThat(resp.holdUntil()).isAfter(Instant.now());
-        assertThat(slot.getStatus()).isEqualTo(SlotStatus.RESERVED);
+    private CreateReservationRequest freeRequest() {
+        return new CreateReservationRequest(10L, 2L, "51A-123",
+                Instant.now().plusSeconds(3600), ReservationType.FREE, null);
     }
 
     @Test
-    void createRejectsWhenAllocatedSlotNotAvailable() {
-        // Allocator returns a slot that was taken concurrently (already RESERVED).
+    void createFreeReservationWithNullSlot() {
+        var bldg = building();
         when(users.findByEmail("driver@x.com")).thenReturn(Optional.of(driver()));
         when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
-        var reservedSlot = slot(SlotStatus.RESERVED);
-        var scoreBreakdown = new ScoreBreakdown(reservedSlot, 20.0, 15.0, 10.0, 5.0);
-        when(allocation.rank(10L, 2L)).thenReturn(List.of(scoreBreakdown));
+        when(buildings.findById(10L)).thenReturn(Optional.of(bldg));
+        when(reservations.save(any(Reservation.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThatThrownBy(() -> service.create("driver@x.com", 10L, 2L, "51A-123"))
+        var resp = service.createFree("driver@x.com", freeRequest());
+
+        assertThat(resp.status()).isEqualTo(ReservationStatus.PENDING);
+        assertThat(resp.slotId()).isNull();
+        assertThat(resp.slotCode()).isNull();
+        assertThat(resp.reservationType()).isEqualTo(ReservationType.FREE);
+        assertThat(resp.reservedStart()).isNotNull();
+    }
+
+    @Test
+    void createFreeRejectsUnknownUser() {
+        when(users.findByEmail("ghost@x.com")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.createFree("ghost@x.com", freeRequest()))
                 .isInstanceOf(ApiException.class);
     }
 
     @Test
-    void createRejectsUnknownUser() {
-        when(users.findByEmail("ghost@x.com")).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.create("ghost@x.com", 10L, 2L, "51A-123"))
+    void createFreeRejectsPastTime() {
+        when(users.findByEmail("driver@x.com")).thenReturn(Optional.of(driver()));
+        when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
+        var pastReq = new CreateReservationRequest(10L, 2L, "51A-123",
+                Instant.now().minusSeconds(60), ReservationType.FREE, null);
+        assertThatThrownBy(() -> service.createFree("driver@x.com", pastReq))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void createFreeRejectsTooFarAhead() {
+        when(users.findByEmail("driver@x.com")).thenReturn(Optional.of(driver()));
+        when(vehicleTypes.findById(2L)).thenReturn(Optional.of(new VehicleType("Car", null)));
+        var farReq = new CreateReservationRequest(10L, 2L, "51A-123",
+                Instant.now().plus(Duration.ofHours(4)), ReservationType.FREE, null);
+        assertThatThrownBy(() -> service.createFree("driver@x.com", farReq))
                 .isInstanceOf(ApiException.class);
     }
 

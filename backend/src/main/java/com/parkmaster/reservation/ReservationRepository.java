@@ -9,4 +9,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByUser_EmailOrderByCreatedAtDesc(String email);
 
     List<Reservation> findByStatusAndHoldUntilBefore(ReservationStatus status, Instant time);
+
+    boolean existsByLicensePlateAndStatus(String licensePlate, ReservationStatus status);
+
+    java.util.Optional<Reservation> findByDepositPaymentId(Long paymentId);
 }

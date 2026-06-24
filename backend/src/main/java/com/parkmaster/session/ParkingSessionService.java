@@ -55,12 +55,41 @@ public class ParkingSessionService {
             com.parkmaster.reservation.Reservation reservation =
                     reservationService.consumeForCheckIn(req.reservationId());
             rejectIfAlreadyParked(reservation.getLicensePlate());
-            ParkingSlot reservedSlot = reservation.getSlot();
-            ParkingSession session = new ParkingSession(reservedSlot, reservation.getVehicleType(),
+
+            ParkingSlot slot;
+            String allocationScoreJson = reservation.getAllocationScore();
+
+            if (reservation.getSlot() == null) {
+                // FREE reservation: AI allocates at check-in
+                var ranked = allocation.rank(
+                        reservation.getBuilding().getId(),
+                        reservation.getVehicleType().getId());
+                if (ranked.isEmpty()) {
+                    throw new ApiException(HttpStatus.CONFLICT, "No available slots in building");
+                }
+                var winner = ranked.get(0);
+                slot = winner.slot();
+                var score = new SessionDtos.AllocationScore(
+                        round(winner.vehicleTypeMatch()), round(winner.loadBalance()),
+                        round(winner.distanceToEntry()), round(winner.peakHour()),
+                        round(winner.total()), ranked.size());
+                try {
+                    allocationScoreJson = new ObjectMapper().writeValueAsString(score);
+                } catch (Exception ignored) {}
+            } else {
+                // PAID reservation: slot already reserved
+                slot = reservation.getSlot();
+            }
+
+            ParkingSession session = new ParkingSession(slot, reservation.getVehicleType(),
                     reservation.getLicensePlate(), true);
             session.setUser(reservation.getUser());
-            session.setAllocationScore(reservation.getAllocationScore());
-            reservedSlot.setStatus(SlotStatus.OCCUPIED);
+            session.setAllocationScore(allocationScoreJson);
+            session.setFromReservation(true);
+            if (reservation.getDepositAmount() != null) {
+                session.setDepositCredit(reservation.getDepositAmount());
+            }
+            slot.setStatus(SlotStatus.OCCUPIED);
             return SessionResponse.from(sessions.save(session));
         }
 
@@ -133,19 +162,7 @@ public class ParkingSessionService {
 
         Instant checkOut = Instant.now();
         session.setCheckOutAt(checkOut);
-        // An active monthly pass for this plate+type parks free; otherwise bill normally.
-        // "Today" uses the app calendar zone so a pass does not expire on UTC midnight.
-        BigDecimal amount;
-        if (monthlyPasses.hasActivePass(session.getLicensePlate(),
-                session.getVehicleType().getId(), LocalDate.now(PeakHours.VN_ZONE))) {
-            amount = BigDecimal.ZERO;
-        } else {
-            // Peak surcharge keyed to check-in time (encourages off-peak entry), not check-out.
-            BigDecimal multiplier = PeakHours.isPeak(session.getCheckInAt())
-                    ? policy.getPeakMultiplier() : BigDecimal.ONE;
-            amount = ChargeCalculator.charge(session.getCheckInAt(), checkOut,
-                    policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier);
-        }
+        BigDecimal amount = computeCharge(session, policy, checkOut);
         session.setAmountCharged(amount);
         Payment payment = payments.createForSession(session, amount);
         if (amount.signum() == 0) {
@@ -155,6 +172,37 @@ public class ParkingSessionService {
             session.setStatus(SessionStatus.AWAITING_PAYMENT);
         }
         return SessionResponse.from(session, payment.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal estimateCharge(Long sessionId) {
+        ParkingSession session = sessions.findById(sessionId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
+        if (session.getStatus() != SessionStatus.ACTIVE) {
+            return session.getAmountCharged() != null ? session.getAmountCharged() : BigDecimal.ZERO;
+        }
+        PricingPolicy policy = policies.findByVehicleTypeId(session.getVehicleType().getId())
+                .orElse(null);
+        if (policy == null) return BigDecimal.ZERO;
+        return computeCharge(session, policy, Instant.now());
+    }
+
+    private BigDecimal computeCharge(ParkingSession session, PricingPolicy policy, Instant checkOut) {
+        if (monthlyPasses.hasActivePass(session.getLicensePlate(),
+                session.getVehicleType().getId(), LocalDate.now(PeakHours.VN_ZONE))) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal multiplier = PeakHours.isPeak(session.getCheckInAt())
+                ? policy.getPeakMultiplier() : BigDecimal.ONE;
+        BigDecimal amount = ChargeCalculator.charge(session.getCheckInAt(), checkOut,
+                policy.getRatePerHour(), policy.getDailyCap(), policy.getGraceMinutes(), multiplier);
+        if (session.isFromReservation() && session.getDepositCredit() != null) {
+            amount = amount.subtract(session.getDepositCredit()).max(BigDecimal.ZERO);
+        } else if (session.isFromReservation() && session.getDepositCredit() == null) {
+            amount = amount.multiply(new BigDecimal("0.9"))
+                    .setScale(0, java.math.RoundingMode.CEILING);
+        }
+        return amount;
     }
 
     @Transactional(readOnly = true)

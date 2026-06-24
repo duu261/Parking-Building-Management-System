@@ -32,7 +32,7 @@ class AuthServiceTest {
         // Valid 256-bit base64 secret for tests.
         JwtService jwt = new JwtService(
                 "ZGV2LW9ubHktc2VjcmV0LWNoYW5nZS1tZS1pbi1wcm9kdWN0aW9uLTI1Ni1iaXQ=", 60);
-        authService = new AuthService(repo, encoder, jwt, null);
+        authService = new AuthService(repo, encoder, jwt, null, "http://localhost:5173");
     }
 
     @Test

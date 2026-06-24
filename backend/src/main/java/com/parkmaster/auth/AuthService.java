@@ -30,13 +30,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PasswordResetTokenRepository resetTokens;
+    private final String frontendOrigin;
 
     public AuthService(UserRepository users, PasswordEncoder passwordEncoder,
-                       JwtService jwtService, PasswordResetTokenRepository resetTokens) {
+                       JwtService jwtService, PasswordResetTokenRepository resetTokens,
+                       @org.springframework.beans.factory.annotation.Value("${FRONTEND_ORIGIN:http://localhost:5173}") String frontendOrigin) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.resetTokens = resetTokens;
+        this.frontendOrigin = frontendOrigin;
     }
 
     @Transactional
@@ -66,16 +69,21 @@ public class AuthService {
     }
 
     @Transactional
-    public String forgotPassword(ForgotPasswordRequest request) {
+    public AuthDtos.ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         var user = users.findByEmail(request.email()).orElse(null);
         if (user == null) {
-            return "If an account exists with that email, a reset link has been sent.";
+            return new AuthDtos.ForgotPasswordResponse(
+                    "If an account exists with that email, a reset link has been sent.",
+                    null, null);
         }
         String token = UUID.randomUUID().toString().replace("-", "");
         var resetToken = new PasswordResetToken(user, token, Instant.now().plus(30, ChronoUnit.MINUTES));
         resetTokens.save(resetToken);
-        log.info("Password reset token for {}: {}", user.getEmail(), token);
-        return "If an account exists with that email, a reset link has been sent.";
+        // ponytail: return token in response for demo; send via email in production
+        String origin = frontendOrigin.contains(",") ? frontendOrigin.split(",")[0].trim() : frontendOrigin;
+        String resetUrl = origin + "/reset-password?token=" + token;
+        return new AuthDtos.ForgotPasswordResponse(
+                "Password reset link generated.", token, resetUrl);
     }
 
     @Transactional

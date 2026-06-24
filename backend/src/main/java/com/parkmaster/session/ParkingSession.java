@@ -74,6 +74,12 @@ public class ParkingSession {
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     private String allocationScore;
 
+    @Column(name = "deposit_credit")
+    private BigDecimal depositCredit;
+
+    @Column(name = "from_reservation", nullable = false)
+    private boolean fromReservation = false;
+
     public ParkingSession(ParkingSlot slot, VehicleType vehicleType, String licensePlate,
             boolean autoAllocated) {
         this.slot = slot;
