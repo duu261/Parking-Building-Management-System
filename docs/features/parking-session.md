@@ -18,15 +18,24 @@ stateDiagram-v2
    The AI allocator scores all AVAILABLE slots and picks the best one.
    Slot → OCCUPIED, session created with a UUID `ticketCode` (QR-printable).
    Duplicate check-in guard: same plate already ACTIVE → 409.
+   - **Reservation check-in**: pass `reservationId` → consumes reservation,
+     sets `fromReservation=true`. PAID reservations must have deposit PAID.
+     FREE reservations trigger AI allocation at check-in moment.
+     PAID reservations use the pre-assigned slot.
 2. **Check-out** — charge computed from the vehicle type's `PricingPolicy`
    (rate × hours, grace period, daily cap, peak multiplier).
+   Reservation discounts applied: 10% off for free, deposit credit for paid.
    Session → AWAITING_PAYMENT, Payment record created as PENDING.
    Monthly-pass holders: charge = 0, auto-PAID.
 3. **Payment settled** — staff settles (CASH/ONLINE) or driver pays via VNPay.
    Slot → AVAILABLE, session → COMPLETED.
 
-Conflicts: non-available slot → 409; closing a closed session → 409; no pricing
-policy for the type at checkout → 409.
+## Live Cost Estimate
+
+`GET /api/driver/sessions/{id}/estimate` returns the exact charge the driver
+would pay if checked out right now — uses the same `computeCharge` as checkout
+(grace period, daily cap, peak multiplier, reservation discounts). The driver
+dashboard polls this every 30 seconds.
 
 ## Model
 
@@ -43,6 +52,8 @@ policy for the type at checkout → 409.
 | `status` | ENUM | ACTIVE → AWAITING_PAYMENT → COMPLETED |
 | `autoAllocated` | BOOLEAN | True when AI picked the slot |
 | `allocationScore` | JSONB | Full scoring breakdown for audit |
+| `fromReservation` | BOOLEAN | True if session originated from a reservation |
+| `depositCredit` | NUMERIC | Deposit amount credited at checkout (PAID reservations) |
 
 ## Charge Math (`ChargeCalculator`)
 
@@ -50,6 +61,9 @@ policy for the type at checkout → 409.
 - First N minutes free (`grace_minutes` from PricingPolicy)
 - Daily cap: max charge per 24h stay (optional)
 - Peak-hour multiplier: surcharge when check-in falls in 7–9 AM or 5–7 PM
+- Reservation discounts:
+  - Free reservation: `charge × 0.9` (10% off)
+  - Paid reservation: `max(0, charge - depositCredit)`
 
 ## API (`/api/staff/sessions`, STAFF role)
 
@@ -63,8 +77,19 @@ policy for the type at checkout → 409.
 | GET | `/by-plate?plate=` | Lookup by license plate |
 | GET | `/{id}/ticket.png` | QR code image for the ticket |
 
+## API (`/api/driver/sessions`, USER role)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/` | List own sessions |
+| GET | `/{id}` | Session detail |
+| GET | `/{id}/estimate` | Live cost estimate (backend-computed) |
+| GET | `/{id}/ticket.png` | QR code image |
+
 ## Research Link
 
 Session duration and allocation-method split (auto vs manual) feed into
 RQ2 (time-to-park comparison) and RQ4 (peak-hour utilization). The
 `autoAllocated` flag and `allocationScore` JSONB make every session auditable.
+`fromReservation` + `depositCredit` enable comparing reservation vs walk-in
+session costs and fulfillment rates.

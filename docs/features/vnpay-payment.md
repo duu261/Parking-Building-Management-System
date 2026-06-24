@@ -1,16 +1,23 @@
 # VNPay Online Payment Gateway
 
-Real Vietnam payment gateway (VNPay sandbox, API v2.1.0). A driver pays a pending
-parking charge online: the backend builds a signed checkout URL, VNPay collects the
-money on its hosted page, then calls back to the backend which verifies the signature
-and settles the payment. Replaces the earlier mock "pay online" stub. Builds on the
-core [Payment](payment.md) flow.
+Real Vietnam payment gateway (VNPay sandbox, API v2.1.0). Handles three payment
+types: parking session charges, reservation deposits, and monthly pass purchases.
+The backend builds a signed checkout URL, VNPay collects the money, then calls
+back to verify and settle.
 
 ## Why it matters
 
 - VNPay is the de-facto payment gateway for SWP391 / Vietnamese student projects.
 - Demonstrates a real third-party integration: redirect flow, HMAC signing,
   server-to-server verification, idempotent settlement — not a fake button.
+
+## Payment Types via VNPay
+
+| Type | Trigger | After payment confirmed |
+|------|---------|----------------------|
+| Session charge | Driver clicks "Pay via VNPay" on dashboard | Session → COMPLETED, slot freed |
+| Reservation deposit | Driver creates paid reservation | holdUntil extended to reservedStart + 30min |
+| Monthly pass | Driver purchases pass | Pass → ACTIVE |
 
 ## Actors & flow
 
@@ -27,8 +34,19 @@ sequenceDiagram
     VP-->>D: redirect to vnp_ReturnUrl (backend callback) with result + hash
     D->>BE: GET /api/public/payments/vnpay-return?vnp_*
     BE->>BE: verify hash, match gatewayRef, check amount, settle (idempotent)
-    BE-->>D: 302 redirect to frontend result page (?status=&ref=)
+    BE-->>D: 302 redirect to frontend page (?status=&ref=)
 ```
+
+## Smart Redirect Routing
+
+After VNPay callback, the backend redirects to the correct frontend page based
+on payment type:
+- **Session payment** → `/sessions`
+- **Reservation deposit** → `/reservations`
+- **Monthly pass** → `/my-passes`
+
+Determined by checking: session FK present → sessions; linked reservation found →
+reservations; otherwise → passes.
 
 ## API
 
@@ -56,29 +74,26 @@ also re-checks `vnp_ResponseCode == "00"`, `vnp_TransactionStatus == "00"`, and 
 `vnp_Amount` equals the stored charge × 100 — so a tampered amount or a forged
 "success" is rejected. Amounts are sent in VND × 100 per VNPay convention.
 
-`VnPayService` owns URL building + verification and is unit-tested in isolation
-(`VnPayServiceTest`): sign→verify roundtrip, tampered amount, and missing hash.
-
-## Idempotent settlement
+## Idempotent settlement with cascading
 
 `vnp_TxnRef` is `paymentId_yyyyMMddHHmmss` (Asia/Ho_Chi_Minh), unique per attempt and
 stored on the Payment as `gatewayRef`. The callback looks the payment up by that ref.
 Settlement only fires when the payment is still `PENDING`, so a duplicated callback
-(browser refresh, retry) records the gateway response without double-charging or
-re-opening a completed session. On success the payment becomes `PAID` with method
-`VNPAY`, and the session's slot is freed via the shared check-out completion path.
+(browser refresh, retry) records the gateway response without double-charging.
 
-## Model & schema — `V16__payment_vnpay.sql`
+On success, cascading actions run:
+- **Session payment**: slot → AVAILABLE, session → COMPLETED
+- **Pass payment**: pass → ACTIVE
+- **Reservation deposit**: holdUntil extended to `reservedStart + 30min`
 
-Three columns added to `payment`:
+## Reservation Deposit Flow
 
-| Column | Maps to | Notes |
-|---|---|---|
-| `gateway_ref` | `vnp_TxnRef` we generated | unique index; matches the callback back |
-| `gateway_txn_no` | `vnp_TransactionNo` | VNPay's own transaction id |
-| `gateway_response_code` | `vnp_ResponseCode` | `"00"` = success |
+Paid reservations lock a slot for 15 minutes (payment window). The driver sees a
+confirmation card with "Pay via VNPay" button. After VNPay confirms payment, the
+backend extends `holdUntil` to the real arrival window. If payment never completes,
+the sweep releases the slot after 15 minutes.
 
-`PaymentMethod` gains `VNPAY` (alongside `CASH`, `ONLINE`).
+Check-in is blocked for PAID reservations until the deposit is confirmed PAID.
 
 ## Configuration (`parkmaster.vnpay.*`)
 
@@ -88,22 +103,4 @@ Three columns added to `payment`:
 | `hash-secret` | `VNPAY_HASH_SECRET` | _(empty)_ |
 | `pay-url` | `VNPAY_PAY_URL` | `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html` |
 | `return-url` | `VNPAY_RETURN_URL` | `http://localhost:5000/api/public/payments/vnpay-return` |
-| `result-url` | `VNPAY_RESULT_URL` | `http://localhost:5173/driver/payments` |
-
-To transact, register a sandbox merchant at <https://sandbox.vnpayment.vn> and set
-`VNPAY_TMN_CODE` + `VNPAY_HASH_SECRET`. In a deployed setup, `return-url` must be the
-backend's public callback URL.
-
-## Scope note
-
-Settlement is driven by the **return** callback, which is authoritative and
-idempotent — it fires for both local and deployed demos. A separate IPN
-(server-to-server) endpoint is intentionally omitted; it would only add value as a
-fallback when a user closes the browser before the redirect completes on the deployed
-app, and reuses the same verify-and-settle logic.
-
-## Frontend status
-
-Backend complete. Frontend wiring pending: a "Pay with VNPay" button that calls the
-start endpoint and does `window.location = paymentUrl`, plus a result view that reads
-`?status=` / `?ref=` after the redirect back.
+| `result-url` | `VNPAY_RESULT_URL` | `http://localhost:5173/app` |

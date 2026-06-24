@@ -9,7 +9,7 @@ Dev-profile seed data (`@Profile("dev")`, runs once on empty database).
 | Admin | `admin@parkmaster.dev` | `password123` | User management, role assignment |
 | Manager | `manager@parkmaster.dev` | `password123` | Building/floor/slot CRUD, pricing, analytics, passes, revenue |
 | Staff | `staff@parkmaster.dev` | `password123` | Check-in/out, payment settlement, exception reports |
-| Driver | `driver@parkmaster.dev` | `password123` | Reservation, session history, feedback, monthly pass purchase |
+| Driver | `driver@parkmaster.dev` | `password123` | All demoable states — see below |
 
 ## Extra Drivers (for realistic data volume)
 
@@ -23,13 +23,44 @@ Dev-profile seed data (`@Profile("dev")`, runs once on empty database).
 | `bao.hoang@gmail.com` | `password123` | History only |
 | `huong.dang@gmail.com` | `password123` | History only |
 
+## Driver Account — All Demoable States
+
+Login: `driver@parkmaster.dev` / `password123`
+
+### Dashboard (`/app`)
+| What | Plate | Shows |
+|------|-------|-------|
+| Walk-in active (45min Car) | 51F-00777 | Normal live cost estimate |
+| Walk-in active (3h EV, billable) | 30K-99999 | High charge, best for checkout demo |
+| FREE reservation active (90min) | 51A-888.88 | "10% off" badge + live cost |
+| PAID reservation active (60min) | 51A-777.77 | "5,000₫ deposit" badge + live cost |
+| AWAITING_PAYMENT (checked out 5min ago) | 51A-666.66 | "Pay now via VNPay" button |
+
+### Reservations (`/app/reservations`)
+| What | Plate | Shows |
+|------|-------|-------|
+| PAID reservation (deposit paid, arrives in 1h) | 51A-999.99 | "Paid" badge, slot locked, QR |
+| FREE reservation (arrives in 1.5h) | 51A-888.88 | "10% off" badge, AI at check-in |
+
+### Sessions (`/app/sessions`)
+| What | Plate | Shows |
+|------|-------|-------|
+| Completed FREE reservation session | 51A-555.55 | "10% off applied", charge 9,000₫ |
+| Completed PAID reservation session | 51A-444.44 | "Deposit credited 5,000₫", charge 5,000₫ |
+| All active + awaiting payment sessions above | — | — |
+| ~30 days historical sessions | various | Revenue/duration data |
+
+### Other
+- Active monthly pass (Motorbike) — free checkout demo
+- Feedback entries on completed sessions
+
 ## Seeded Data Overview
 
 | Data | Count | Notes |
 |------|-------|-------|
 | Historical sessions | ~180-450 | Spread across 30 days, all drivers, with PAID payments |
-| Active sessions | 5 | 2 main driver (45min Car + 3h EV billable demo) + 3 extras |
-| Reservations | 5 | Driver: PENDING. Extras: FULFILLED, CANCELLED, EXPIRED, PENDING |
+| Active sessions | 7 | Driver: 4 active + 1 awaiting payment + 2 completed reservation. Extras: 3 |
+| Reservations | 6 | Driver: PAID + FREE pending. Extras: FULFILLED, CANCELLED, EXPIRED, PENDING |
 | Monthly passes | 5 | Driver: 2× ACTIVE (Motorbike + Car). Extras: EXPIRED, ACTIVE, PENDING |
 | Exception reports | 6 | 3 OPEN + 3 RESOLVED (LOST_TICKET, WRONG_PLATE, OVERTIME, WRONG_ZONE) |
 | Feedback entries | 12 | Ratings 2-5 stars |
@@ -46,4 +77,6 @@ Dev-profile seed data (`@Profile("dev")`, runs once on empty database).
 
 ## AI Allocation Demo
 
-All 5 active sessions have `allocationScore` JSON with AI scoring breakdown (`vehicleTypeMatch`, `loadBalance`, `distanceToEntry`, `peakHour`). Driver's 3h EV session is the best for demonstrating checkout → payment flow (≈45k VND charge, past grace period).
+All active sessions have `allocationScore` JSON with AI scoring breakdown (`vehicleTypeMatch`, `loadBalance`, `distanceToEntry`, `peakHour`). Driver's 3h EV session (30K-99999) is the best for checkout → payment demo (≈45k VND charge, past grace period).
+
+The PAID reservation page shows the full AI recommendation card with score breakdown when selecting a slot.

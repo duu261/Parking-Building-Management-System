@@ -191,6 +191,8 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `status` | `VARCHAR(50)` enum | NOT NULL, default=ACTIVE | `ACTIVE`, `AWAITING_PAYMENT`, `COMPLETED` |
 | `auto_allocated` | `BOOLEAN` | NOT NULL, default=false | True if slot chosen by allocation service |
 | `allocation_score` | `JSONB` | — | AI allocation scoring metadata (nullable) |
+| `from_reservation` | `BOOLEAN` | NOT NULL, default=false | True if session originated from a reservation |
+| `deposit_credit` | `DECIMAL(10,2)` | — | Deposit credited at checkout (PAID reservations only) |
 
 **Relationships:**
 - N:1 → User (user_id, optional)
@@ -205,38 +207,46 @@ This document defines all JPA entities, their fields, relationships, and enumera
 ### Reservation
 
 **Table:** `reservation`  
-**Purpose:** Pre-booking slots for future time windows
+**Purpose:** Pre-booking slots with two tiers: FREE (AI at check-in, 10% off) and PAID (pick slot, deposit via VNPay)
 
 | Field | Type | Constraints | Notes |
 |-------|------|-------------|-------|
 | `id` | `BIGINT` | PRIMARY KEY, auto-increment | — |
 | `user_id` | `BIGINT` | NOT NULL, FK → users | Reservation owner |
-| `slot_id` | `BIGINT` | NOT NULL, FK → parking_slot | Reserved slot |
+| `slot_id` | `BIGINT` | FK → parking_slot | Reserved slot (nullable for FREE tier) |
+| `building_id` | `BIGINT` | FK → parking_building | Target building |
 | `vehicle_type_id` | `BIGINT` | NOT NULL, FK → vehicle_type | Vehicle type reserved for |
-| `license_plate` | `VARCHAR(255)` | NOT NULL | Expected plate (for validation) |
-| `hold_until` | `TIMESTAMP` | NOT NULL | When the hold expires |
+| `license_plate` | `VARCHAR(255)` | NOT NULL | Expected plate (unique per PENDING status) |
+| `reservation_type` | `VARCHAR(10)` | NOT NULL, default=FREE | `FREE` or `PAID` |
+| `reserved_start` | `TIMESTAMP` | — | Driver's chosen arrival time |
+| `hold_until` | `TIMESTAMP` | NOT NULL | 15min for unpaid PAID; reservedStart+30min after payment/FREE |
 | `status` | `VARCHAR(50)` enum | NOT NULL, default=PENDING | `PENDING`, `FULFILLED`, `CANCELLED`, `EXPIRED` |
+| `deposit_amount` | `DECIMAL(10,2)` | — | 1hr rate deposit (PAID only) |
+| `deposit_payment_id` | `BIGINT` | FK → payment | Linked deposit payment (PAID only) |
 | `allocation_score` | `JSONB` | — | Allocation scoring metadata (nullable) |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Creation timestamp |
 
 **Relationships:**
 - N:1 → User (user_id)
-- N:1 → ParkingSlot (slot_id)
+- N:1 → ParkingSlot (slot_id, optional)
+- N:1 → ParkingBuilding (building_id)
 - N:1 → VehicleType (vehicle_type_id)
+- N:1 → Payment (deposit_payment_id, optional)
 
 ---
 
 ### Payment
 
 **Table:** `payment`  
-**Purpose:** Payment records per session (supports CASH, ONLINE, VNPAY)
+**Purpose:** Payment records for sessions, reservation deposits, and monthly passes
 
 | Field | Type | Constraints | Notes |
 |-------|------|-------------|-------|
 | `id` | `BIGINT` | PRIMARY KEY, auto-increment | — |
-| `session_id` | `BIGINT` | — | FK → parking_session, UNIQUE (nullable for standalone payments) |
+| `session_id` | `BIGINT` | — | FK → parking_session, UNIQUE (nullable for deposits/passes) |
 | `amount` | `DECIMAL(10,2)` | NOT NULL | Total charged (base + penalty) |
-| `penalty_amount` | `DECIMAL(10,2)` | NOT NULL, default=0.00 | Surcharge component (lost ticket, overtime, etc.) |
+| `penalty_amount` | `DECIMAL(10,2)` | NOT NULL, default=0.00 | Surcharge component |
+| `description` | `VARCHAR(255)` | — | Identifies sessionless payments (e.g., "Reservation deposit · plate · slot") |
 | `processed_by_staff_id` | `BIGINT` | — | FK → users; nullable (null for online pay) |
 | `method` | `VARCHAR(50)` enum | — | `CASH`, `ONLINE`, `VNPAY` (nullable) |
 | `status` | `VARCHAR(50)` enum | NOT NULL, default=PENDING | `PENDING`, `PAID`, `VOIDED` |
@@ -244,14 +254,15 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `paid_at` | `TIMESTAMP` | — | When payment settled (nullable) |
 | `voided_at` | `TIMESTAMP` | — | When voided (nullable) |
 | `void_reason` | `VARCHAR(255)` | — | Reason for void (nullable) |
-| `gateway_ref` | `VARCHAR(255)` | — | VNPay txn ref we generated (vnp_TxnRef), UNIQUE (nullable) |
-| `gateway_txn_no` | `VARCHAR(255)` | — | VNPay's txn number (vnp_TransactionNo), nullable |
-| `gateway_response_code` | `VARCHAR(10)` | — | VNPay response code (e.g., "00" = success), nullable |
+| `gateway_ref` | `VARCHAR(255)` | — | VNPay txn ref (vnp_TxnRef), UNIQUE (nullable) |
+| `gateway_txn_no` | `VARCHAR(255)` | — | VNPay's txn number, nullable |
+| `gateway_response_code` | `VARCHAR(10)` | — | VNPay response code ("00" = success), nullable |
 
 **Relationships:**
 - 1:1 → ParkingSession (session_id, unique, optional)
 - N:1 → User (processed_by_staff_id, optional)
 - 1:N ← MonthlyPass (payment_id, optional)
+- 1:N ← Reservation (deposit_payment_id, optional)
 
 ---
 
@@ -387,16 +398,27 @@ This document defines all JPA entities, their fields, relationships, and enumera
 
 ---
 
+### ReservationType
+
+**Used by:** Reservation.reservation_type
+
+| Value | Meaning |
+|-------|---------|
+| `FREE` | AI assigns slot at check-in, 10% discount |
+| `PAID` | Driver picks slot, pays 1hr deposit via VNPay |
+
+---
+
 ### ReservationStatus
 
 **Used by:** Reservation.status
 
 | Value | Meaning |
 |-------|---------|
-| `PENDING` | Reservation waiting for occupancy |
+| `PENDING` | Reservation waiting for occupancy or payment |
 | `FULFILLED` | Driver has checked in to the reserved slot |
 | `CANCELLED` | User cancelled the reservation |
-| `EXPIRED` | Hold-until window passed without checkin |
+| `EXPIRED` | Hold-until window passed without checkin/payment |
 
 ---
 

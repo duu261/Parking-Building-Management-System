@@ -27,9 +27,12 @@ import com.parkmaster.pricing.PricingDtos.VehicleTypeResponse;
 import com.parkmaster.pricing.PricingService;
 import com.parkmaster.pricing.VehicleType;
 import com.parkmaster.pricing.VehicleTypeRepository;
+import com.parkmaster.parking.ParkingBuilding;
+import com.parkmaster.parking.ParkingBuildingRepository;
 import com.parkmaster.reservation.Reservation;
 import com.parkmaster.reservation.ReservationRepository;
 import com.parkmaster.reservation.ReservationStatus;
+import com.parkmaster.reservation.ReservationType;
 import com.parkmaster.session.ParkingSession;
 import com.parkmaster.session.ParkingSessionRepository;
 import com.parkmaster.session.SessionStatus;
@@ -109,12 +112,14 @@ class DevDataSeeder implements CommandLineRunner {
     private final MonthlyPassRepository passes;
     private final ExceptionReportRepository exceptions;
     private final FeedbackRepository feedbacks;
+    private final ParkingBuildingRepository buildings;
 
     DevDataSeeder(UserRepository users, AdminUserService adminUsers, ParkingService parking,
             PricingService pricing, VehicleTypeRepository vehicleTypes, ParkingSlotRepository slots,
             ParkingSessionRepository sessions, PaymentRepository payments,
             ReservationRepository reservations, MonthlyPassRepository passes,
-            ExceptionReportRepository exceptions, FeedbackRepository feedbacks) {
+            ExceptionReportRepository exceptions, FeedbackRepository feedbacks,
+            ParkingBuildingRepository buildings) {
         this.users = users;
         this.adminUsers = adminUsers;
         this.parking = parking;
@@ -127,6 +132,7 @@ class DevDataSeeder implements CommandLineRunner {
         this.passes = passes;
         this.exceptions = exceptions;
         this.feedbacks = feedbacks;
+        this.buildings = buildings;
     }
 
     @Override
@@ -356,7 +362,78 @@ class DevDataSeeder implements CommandLineRunner {
         slot2.setStatus(SlotStatus.OCCUPIED);
         slots.save(slot2);
 
-        log.info("Seeded 2 live driver sessions: 45min car + 3h EV (billable demo).");
+        // Active session from FREE reservation (10% off demo)
+        ParkingSlot slot3 = available.get(2);
+        ParkingSession resSess = new ParkingSession(slot3, car, "51A-888.88", true);
+        resSess.setUser(driver);
+        resSess.setCheckInAt(Instant.now().minus(Duration.ofMinutes(90)));
+        resSess.setFromReservation(true);
+        resSess.setAllocationScore(ALLOC_SCORES[0]);
+        sessions.save(resSess);
+        slot3.setStatus(SlotStatus.OCCUPIED);
+        slots.save(slot3);
+
+        // Active session from PAID reservation (deposit credited demo)
+        ParkingSlot slot4 = available.get(3);
+        ParkingSession paidSess = new ParkingSession(slot4, car, "51A-777.77", true);
+        paidSess.setUser(driver);
+        paidSess.setCheckInAt(Instant.now().minus(Duration.ofMinutes(60)));
+        paidSess.setFromReservation(true);
+        paidSess.setDepositCredit(new BigDecimal("5000"));
+        paidSess.setAllocationScore(ALLOC_SCORES[1]);
+        sessions.save(paidSess);
+        slot4.setStatus(SlotStatus.OCCUPIED);
+        slots.save(slot4);
+
+        // AWAITING_PAYMENT session (shows "Pay now" on dashboard)
+        ParkingSlot slot5 = available.get(4);
+        ParkingSession awaitPay = new ParkingSession(slot5, car, "51A-666.66", true);
+        awaitPay.setUser(driver);
+        awaitPay.setCheckInAt(Instant.now().minus(Duration.ofHours(2)));
+        awaitPay.setCheckOutAt(Instant.now().minus(Duration.ofMinutes(5)));
+        awaitPay.setAmountCharged(new BigDecimal("10000"));
+        awaitPay.setStatus(SessionStatus.AWAITING_PAYMENT);
+        awaitPay.setAllocationScore(ALLOC_SCORES[0]);
+        sessions.save(awaitPay);
+        Payment awaitPayment = new Payment(awaitPay, new BigDecimal("10000"));
+        payments.save(awaitPayment);
+
+        // Completed session from FREE reservation (shows "10% off applied" in history)
+        ParkingSlot slot6 = available.get(5);
+        ParkingSession freeCompleted = new ParkingSession(slot6, car, "51A-555.55", true);
+        freeCompleted.setUser(driver);
+        freeCompleted.setCheckInAt(Instant.now().minus(Duration.ofHours(5)));
+        freeCompleted.setCheckOutAt(Instant.now().minus(Duration.ofHours(3)));
+        freeCompleted.setFromReservation(true);
+        freeCompleted.setAmountCharged(new BigDecimal("9000"));
+        freeCompleted.setStatus(SessionStatus.COMPLETED);
+        sessions.save(freeCompleted);
+        slot6.setStatus(SlotStatus.AVAILABLE);
+        Payment freePay = new Payment(freeCompleted, new BigDecimal("9000"));
+        freePay.setStatus(PaymentStatus.PAID);
+        freePay.setPaidAt(Instant.now().minus(Duration.ofHours(3)));
+        freePay.setMethod(PaymentMethod.VNPAY);
+        payments.save(freePay);
+
+        // Completed session from PAID reservation (shows "Deposit credited" in history)
+        ParkingSlot slot7 = available.get(6);
+        ParkingSession paidCompleted = new ParkingSession(slot7, car, "51A-444.44", true);
+        paidCompleted.setUser(driver);
+        paidCompleted.setCheckInAt(Instant.now().minus(Duration.ofHours(6)));
+        paidCompleted.setCheckOutAt(Instant.now().minus(Duration.ofHours(4)));
+        paidCompleted.setFromReservation(true);
+        paidCompleted.setDepositCredit(new BigDecimal("5000"));
+        paidCompleted.setAmountCharged(new BigDecimal("5000"));
+        paidCompleted.setStatus(SessionStatus.COMPLETED);
+        sessions.save(paidCompleted);
+        slot7.setStatus(SlotStatus.AVAILABLE);
+        Payment paidPay = new Payment(paidCompleted, new BigDecimal("5000"));
+        paidPay.setStatus(PaymentStatus.PAID);
+        paidPay.setPaidAt(Instant.now().minus(Duration.ofHours(4)));
+        paidPay.setMethod(PaymentMethod.VNPAY);
+        payments.save(paidPay);
+
+        log.info("Seeded 7 driver sessions: walk-in×2, free-res active, paid-res active, awaiting payment, free-res completed, paid-res completed.");
     }
 
     private void seedLiveSessions(VehicleTypeResponse[] vt, List<User> extraDrivers) {
@@ -390,57 +467,94 @@ class DevDataSeeder implements CommandLineRunner {
 
     private void seedReservation(VehicleTypeResponse[] vt, User driver) {
         VehicleType carType = vehicleTypes.findById(vt[0].id()).orElseThrow();
-        ParkingSlot slot = slots.findAll().stream()
+        ParkingBuilding building = buildings.findAll().get(0);
+        List<ParkingSlot> avail = slots.findAll().stream()
                 .filter(s -> s.getStatus() == SlotStatus.AVAILABLE
                         && s.getFloor().getVehicleType() != null
                         && s.getFloor().getVehicleType().getId().equals(carType.getId()))
-                .skip(1).findFirst().orElseThrow();
-        slot.setStatus(SlotStatus.RESERVED);
-        slots.save(slot);
-        Reservation reservation = new Reservation(driver, slot, carType, "51A-999.99",
-                Instant.now().plus(Duration.ofMinutes(30)));
-        reservations.save(reservation);
-        log.info("Reservation seeded for driver (slot {})", slot.getCode());
+                .toList();
+
+        // PAID reservation with deposit
+        ParkingSlot paidSlot = avail.get(0);
+        paidSlot.setStatus(SlotStatus.RESERVED);
+        slots.save(paidSlot);
+        Payment deposit = new Payment(new BigDecimal("5000"));
+        deposit.setMethod(PaymentMethod.VNPAY);
+        deposit.setStatus(PaymentStatus.PAID);
+        deposit.setPaidAt(Instant.now());
+        deposit.setDescription("Reservation deposit · 51A-999.99 · " + paidSlot.getCode());
+        payments.save(deposit);
+        Instant paidArrival = Instant.now().plus(Duration.ofHours(1));
+        Reservation paid = new Reservation(driver, paidSlot, carType, "51A-999.99",
+                paidArrival.plus(Duration.ofMinutes(30)));
+        paid.setReservationType(ReservationType.PAID);
+        paid.setReservedStart(paidArrival);
+        paid.setBuilding(building);
+        paid.setDepositAmount(new BigDecimal("5000"));
+        paid.setDepositPayment(deposit);
+        reservations.save(paid);
+
+        // FREE reservation
+        Reservation free = new Reservation(driver, null, carType, "51A-888.88",
+                Instant.now().plus(Duration.ofHours(2)));
+        free.setReservationType(ReservationType.FREE);
+        free.setReservedStart(Instant.now().plus(Duration.ofHours(1).plusMinutes(30)));
+        free.setBuilding(building);
+        reservations.save(free);
+
+        log.info("Seeded PAID reservation (slot {}) + FREE reservation for driver.", paidSlot.getCode());
     }
 
     private void seedExtraReservations(VehicleTypeResponse[] vt, List<User> extraDrivers) {
         VehicleType carType = vehicleTypes.findById(vt[0].id()).orElseThrow();
         VehicleType bikeType = vehicleTypes.findById(vt[1].id()).orElseThrow();
+        ParkingBuilding building = buildings.findAll().get(0);
         List<ParkingSlot> available = slots.findAll().stream()
                 .filter(s -> s.getStatus() == SlotStatus.AVAILABLE)
                 .toList();
 
-        // FULFILLED reservation (arrived, checked in yesterday)
+        // FULFILLED paid reservation (arrived yesterday)
         if (available.size() > 0 && extraDrivers.size() > 0) {
             Reservation r1 = new Reservation(extraDrivers.get(0), available.get(0), carType,
                     DRIVER_PLATES[0], Instant.now().minus(Duration.ofDays(1)));
             r1.setStatus(ReservationStatus.FULFILLED);
+            r1.setReservationType(ReservationType.PAID);
+            r1.setReservedStart(Instant.now().minus(Duration.ofDays(1).minusHours(1)));
+            r1.setBuilding(building);
+            r1.setDepositAmount(new BigDecimal("5000"));
             reservations.save(r1);
         }
 
-        // CANCELLED reservation
+        // CANCELLED free reservation
         if (available.size() > 1 && extraDrivers.size() > 1) {
-            Reservation r2 = new Reservation(extraDrivers.get(1), available.get(1), bikeType,
+            Reservation r2 = new Reservation(extraDrivers.get(1), null, bikeType,
                     DRIVER_PLATES[1], Instant.now().minus(Duration.ofHours(5)));
             r2.setStatus(ReservationStatus.CANCELLED);
+            r2.setReservationType(ReservationType.FREE);
+            r2.setReservedStart(Instant.now().minus(Duration.ofHours(6)));
+            r2.setBuilding(building);
             reservations.save(r2);
         }
 
-        // EXPIRED reservation (hold time passed, never showed up)
+        // EXPIRED paid reservation (no-show, deposit forfeit)
         if (available.size() > 2 && extraDrivers.size() > 2) {
             Reservation r3 = new Reservation(extraDrivers.get(2), available.get(2), carType,
                     DRIVER_PLATES[2], Instant.now().minus(Duration.ofHours(2)));
             r3.setStatus(ReservationStatus.EXPIRED);
+            r3.setReservationType(ReservationType.PAID);
+            r3.setReservedStart(Instant.now().minus(Duration.ofHours(3)));
+            r3.setBuilding(building);
+            r3.setDepositAmount(new BigDecimal("5000"));
             reservations.save(r3);
         }
 
-        // Another PENDING reservation (upcoming)
+        // PENDING free reservation (upcoming)
         if (available.size() > 3 && extraDrivers.size() > 3) {
-            ParkingSlot slot = available.get(3);
-            slot.setStatus(SlotStatus.RESERVED);
-            slots.save(slot);
-            Reservation r4 = new Reservation(extraDrivers.get(3), slot, bikeType,
+            Reservation r4 = new Reservation(extraDrivers.get(3), null, bikeType,
                     DRIVER_PLATES[3], Instant.now().plus(Duration.ofHours(1)));
+            r4.setReservationType(ReservationType.FREE);
+            r4.setReservedStart(Instant.now().plus(Duration.ofMinutes(45)));
+            r4.setBuilding(building);
             reservations.save(r4);
         }
 
@@ -453,6 +567,7 @@ class DevDataSeeder implements CommandLineRunner {
         Payment payment = new Payment(new BigDecimal("100000"));
         payment.setMethod(PaymentMethod.ONLINE);
         payment.setStatus(PaymentStatus.PAID);
+        payment.setDescription("Monthly pass · 59C-678.90 · " + motoType.getName());
         payment.setPaidAt(Instant.now().minus(Duration.ofDays(5)));
         payments.save(payment);
 
