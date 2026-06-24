@@ -41,7 +41,8 @@ public final class SessionDtos {
             String buildingName, Long vehicleTypeId, String vehicleTypeName, String licensePlate,
             String ticketCode, Instant checkInAt, Instant checkOutAt, BigDecimal amountCharged,
             SessionStatus status, boolean autoAllocated, AllocationScore allocationScore,
-            Long userId, String userFullName, String userEmail, Long paymentId) {
+            Long userId, String userFullName, String userEmail, Long paymentId,
+            boolean fromReservation, BigDecimal depositCredit) {
         static SessionResponse from(ParkingSession s) {
             return from(s, null);
         }
@@ -59,7 +60,8 @@ public final class SessionDtos {
                     user != null ? user.getId() : null,
                     user != null ? user.getFullName() : null,
                     user != null ? user.getEmail() : null,
-                    paymentId);
+                    paymentId,
+                    s.isFromReservation(), s.getDepositCredit());
         }
     }
 }

@@ -5,33 +5,14 @@ import { driverApi, publicApi } from "../../lib/endpoints";
 import ScoreBreakdownCard from "../../components/ScoreBreakdownCard";
 import SlotMap from "../../components/SlotMap";
 
-function estimateCharge(checkInIso, pricing) {
-  if (!pricing) return null;
-  const now = Date.now();
-  const checkIn = new Date(checkInIso).getTime();
-  const totalMinutes = Math.floor((now - checkIn) / 60000);
-  const billable = totalMinutes - (pricing.graceMinutes ?? 0);
-  if (billable <= 0) return 0;
-  const hours = Math.ceil(billable / 60);
-  let amount = (pricing.ratePerHour ?? 0) * hours;
-  if (pricing.dailyCap) {
-    const days = Math.max(1, Math.ceil(totalMinutes / 1440));
-    const cap = pricing.dailyCap * days;
-    if (amount > cap) amount = cap;
-  }
-  const peak = pricing.peakMultiplier ?? 1;
-  return amount * peak;
-}
-
-function LiveCost({ checkInAt, vehicleTypeId, pricingMap }) {
-  const [tick, setTick] = useState(0);
+function LiveCost({ sessionId, checkInAt }) {
+  const [est, setEst] = useState(null);
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30000);
+    const fetch = () => driverApi.sessionEstimate(sessionId).then(r => setEst(r.estimate)).catch(() => {});
+    fetch();
+    const id = setInterval(fetch, 30000);
     return () => clearInterval(id);
-  }, []);
-  const pricing = pricingMap?.[vehicleTypeId];
-  const est = useMemo(() => estimateCharge(checkInAt, pricing), [checkInAt, pricing, tick]);
-  if (est === null) return null;
+  }, [sessionId]);
   const elapsed = Math.floor((Date.now() - new Date(checkInAt).getTime()) / 60000);
   const h = Math.floor(elapsed / 60);
   const m = elapsed % 60;
@@ -44,7 +25,7 @@ function LiveCost({ checkInAt, vehicleTypeId, pricingMap }) {
       </div>
       <div className="text-right">
         <div className="text-[11px] text-muted">Est. cost</div>
-        <div className="nums text-sm font-semibold">{money(est)}</div>
+        <div className="nums text-sm font-semibold">{est !== null ? money(est) : "..."}</div>
       </div>
     </div>
   );
@@ -114,6 +95,10 @@ export default function MyParkingPage() {
     () => (sessions ?? []).filter((s) => s.status === "ACTIVE"),
     [sessions],
   );
+  const awaitingPayment = useMemo(
+    () => (sessions ?? []).filter((s) => s.status === "AWAITING_PAYMENT"),
+    [sessions],
+  );
 
   const insights = useMemo(() => {
     if (!sessions || sessions.length === 0) return null;
@@ -151,9 +136,22 @@ export default function MyParkingPage() {
       ) : (
         <div className="mt-6 space-y-3">
           {active.map((s) => (
-            <ActiveSessionCard key={s.id} session={s} hasCoveringPass={hasCoveringPass(s)} pricingMap={pricingMap} />
+            <ActiveSessionCard key={s.id} session={s} hasCoveringPass={hasCoveringPass(s)} />
           ))}
         </div>
+      )}
+
+      {awaitingPayment.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-tight">
+            <DollarSign size={16} className="text-yellow-500" /> Unpaid charges
+          </h2>
+          <div className="space-y-3">
+            {awaitingPayment.map((s) => (
+              <UnpaidCard key={s.id} session={s} onPaid={load} />
+            ))}
+          </div>
+        </section>
       )}
 
       {activePasses.length > 0 && (
@@ -221,7 +219,7 @@ export default function MyParkingPage() {
   );
 }
 
-function ActiveSessionCard({ session: s, hasCoveringPass: covered, pricingMap }) {
+function ActiveSessionCard({ session: s, hasCoveringPass: covered }) {
   const [showQr, setShowQr] = useState(false);
   return (
     <Card className="p-4">
@@ -231,6 +229,12 @@ function ActiveSessionCard({ session: s, hasCoveringPass: covered, pricingMap })
             <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
             <StatusBadge status={s.status} />
             {s.autoAllocated && <ScoreBreakdownCard score={s.allocationScore} compact />}
+            {s.fromReservation && !s.depositCredit && (
+              <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-green-600">10% off</span>
+            )}
+            {s.fromReservation && s.depositCredit > 0 && (
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">{money(s.depositCredit)} deposit</span>
+            )}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
             <span className="flex items-center gap-1">
@@ -249,7 +253,7 @@ function ActiveSessionCard({ session: s, hasCoveringPass: covered, pricingMap })
           <span className="text-sm font-medium text-available">Monthly pass active · Free checkout</span>
         </div>
       ) : (
-        <LiveCost checkInAt={s.checkInAt} vehicleTypeId={s.vehicleTypeId} pricingMap={pricingMap} />
+        <LiveCost sessionId={s.id} checkInAt={s.checkInAt} />
       )}
       {showQr && (
         <div className="mt-3 flex items-center gap-4 border-t border-line pt-3">
@@ -265,6 +269,45 @@ function ActiveSessionCard({ session: s, hasCoveringPass: covered, pricingMap })
           <ScoreBreakdownCard score={s.allocationScore} />
         </div>
       )}
+    </Card>
+  );
+}
+
+function UnpaidCard({ session: s, onPaid }) {
+  const [loading, setLoading] = useState(false);
+  const pay = async () => {
+    setLoading(true);
+    try {
+      const res = await driverApi.vnpay(s.paymentId);
+      window.location.href = res.paymentUrl;
+    } catch { setLoading(false); }
+  };
+  return (
+    <Card className="border-l-4 border-l-yellow-500 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2.5">
+            <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
+            <StatusBadge status={s.status} />
+            {s.fromReservation && !s.depositCredit && (
+              <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-green-600">10% off applied</span>
+            )}
+            {s.fromReservation && s.depositCredit > 0 && (
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">{money(s.depositCredit)} deposit credited</span>
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted">
+            <span>{s.buildingName} › {s.slotCode}</span>
+            <span className="nums">{time(s.checkInAt)} → {time(s.checkOutAt)}</span>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="nums text-lg font-semibold">{money(s.amountCharged)}</div>
+          <Button size="sm" onClick={pay} loading={loading} className="mt-1">
+            Pay via VNPay
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 }

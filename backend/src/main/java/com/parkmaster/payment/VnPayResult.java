@@ -8,5 +8,5 @@ public enum VnPayResult {
     NOT_FOUND,
     AMOUNT_MISMATCH;
 
-    record Outcome(VnPayResult result, boolean passPayment) {}
+    record Outcome(VnPayResult result, String redirectPage) {}
 }

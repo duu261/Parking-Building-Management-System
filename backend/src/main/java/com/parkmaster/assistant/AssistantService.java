@@ -74,12 +74,18 @@ class AssistantService {
             return "Live slot availability:\n" + availabilityLines();
         }
         if (containsAny(m, "reserve", "reservation", "book")) {
-            return "To reserve a slot: log in as a driver, open Reservations, pick a vehicle "
-                    + "type and time window, then confirm. You will get a QR code for entry.";
+            return "We offer two reservation tiers:\n"
+                    + "• Free reservation — pick building, vehicle type, and arrival time (up to 3h ahead). "
+                    + "No slot locked; AI assigns the best slot when you arrive. 10% discount on parking.\n"
+                    + "• Paid reservation — same, plus you pick a specific slot (AI suggests the best one). "
+                    + "Pay a 1-hour deposit via VNPay. Slot guaranteed and locked immediately. "
+                    + "Deposit credited toward your final charge at checkout.\n\n"
+                    + "Both have a 30-minute grace period. No-show = reservation expires (paid deposit non-refundable).";
         }
         if (containsAny(m, "monthly", "pass", "subscription")) {
-            return "Monthly passes give entry for a fixed period and waive the per-exit charge. "
-                    + "A manager issues them; once logged in you can see your active pass.";
+            return "Monthly passes give unlimited entry for a fixed period and waive the per-exit charge. "
+                    + "Purchase one from the Passes page — pay via VNPay or cash at the booth. "
+                    + "Once active, just check in normally and exit free.";
         }
         if (containsAny(m, "login", "log in", "sign in", "sign up", "signup", "register",
                 "account")) {
@@ -101,8 +107,9 @@ class AssistantService {
         }
         if (containsAny(m, "pay", "payment", "cash", "online", "vnpay", "charge", "fee")) {
             return "Parking is charged per hour with a grace period (no charge if you exit within it). "
-                    + "A daily cap limits maximum charges. We accept Cash, Online payment, and VNPay. "
-                    + "Monthly pass holders exit free.";
+                    + "A daily cap limits maximum charges. We accept Cash and VNPay.\n"
+                    + "Reservation discounts: free reservations get 10% off, paid reservation deposits are credited at checkout.\n"
+                    + "Monthly pass holders exit free. Staff can settle cash or void charges at the booth.";
         }
         if (containsAny(m, "exception", "lost ticket", "wrong plate", "overtime", "wrong zone",
                 "report")) {

@@ -70,6 +70,9 @@ public class Payment {
     @Column(name = "void_reason")
     private String voidReason;
 
+    @Column
+    private String description;
+
     /** VNPay transaction reference we generated (vnp_TxnRef); unique per pay attempt. */
     @Column(name = "gateway_ref", unique = true)
     private String gatewayRef;

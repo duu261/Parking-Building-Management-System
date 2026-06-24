@@ -131,7 +131,7 @@ export default function AppLayout() {
   return (
     <div className="flex min-h-[100dvh] bg-bg text-text">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-surface sm:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-surface sm:flex sticky top-0 h-[100dvh] overflow-y-auto">
         <Link to="/app" className="flex items-center gap-2 px-5 py-4 transition hover:opacity-80">
           <SquareParking className="text-text" size={20} />
           <span className="font-semibold tracking-tight">ParkMaster</span>

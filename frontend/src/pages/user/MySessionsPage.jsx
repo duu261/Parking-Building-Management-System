@@ -103,6 +103,16 @@ export default function MySessionsPage() {
                         <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
                         <StatusBadge status={s.status} />
                         {s.autoAllocated && <ScoreBreakdownCard score={s.allocationScore} compact />}
+                        {s.fromReservation && !s.depositCredit && (
+                          <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[11px] font-medium text-green-600">
+                            Free reservation · 10% off at checkout
+                          </span>
+                        )}
+                        {s.fromReservation && s.depositCredit > 0 && (
+                          <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                            Paid reservation · {money(s.depositCredit)} deposit credited
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
                         <span className="nums">{time(s.checkInAt)}</span>
@@ -150,6 +160,8 @@ function SessionDetail({ session: s, payment: pay, feedback: fb, onPaid }) {
         <Info label="Checked in" value={time(s.checkInAt)} />
         <Info label="Checked out" value={s.checkOutAt ? time(s.checkOutAt) : "Still parked"} />
         <Info label="Charge" value={money(s.amountCharged)} />
+        {s.fromReservation && !s.depositCredit && <Info label="Discount" value="Free reservation · 10% off applied" />}
+        {s.fromReservation && s.depositCredit > 0 && <Info label="Deposit credit" value={`${money(s.depositCredit)} subtracted from charge`} />}
         {pay && (
           <>
             <Info label="Payment status" value={pay.status} />

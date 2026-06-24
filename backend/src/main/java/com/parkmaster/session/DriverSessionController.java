@@ -1,7 +1,9 @@
 package com.parkmaster.session;
 
 import com.parkmaster.session.SessionDtos.SessionResponse;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,11 @@ class DriverSessionController {
     @GetMapping("/{id}")
     SessionResponse one(@PathVariable Long id, Authentication auth) {
         return service.getForUser(auth.getName(), id);
+    }
+
+    @GetMapping("/{id}/estimate")
+    Map<String, BigDecimal> estimate(@PathVariable Long id) {
+        return Map.of("estimate", service.estimateCharge(id));
     }
 
     @GetMapping(value = "/{id}/ticket.png", produces = MediaType.IMAGE_PNG_VALUE)

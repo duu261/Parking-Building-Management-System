@@ -86,6 +86,7 @@ public class MonthlyPassService {
                 req.validFrom(), req.validUntil());
 
         Payment payment = new Payment(passPrice);
+        payment.setDescription("Monthly pass · " + req.licensePlate() + " · " + type.getName());
         if (cashPayment) {
             payment.setMethod(PaymentMethod.CASH);
             payment.setStatus(PaymentStatus.PAID);

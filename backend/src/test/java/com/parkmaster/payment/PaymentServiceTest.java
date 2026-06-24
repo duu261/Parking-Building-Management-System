@@ -33,6 +33,7 @@ class PaymentServiceTest {
     private com.parkmaster.user.UserRepository users;
     private MonthlyPassService passService;
     private MonthlyPassRepository passRepo;
+    private com.parkmaster.reservation.ReservationRepository reservationRepo;
     private PaymentService service;
 
     @BeforeEach
@@ -41,11 +42,12 @@ class PaymentServiceTest {
         users = Mockito.mock(com.parkmaster.user.UserRepository.class);
         passService = Mockito.mock(MonthlyPassService.class);
         passRepo = Mockito.mock(MonthlyPassRepository.class);
+        reservationRepo = Mockito.mock(com.parkmaster.reservation.ReservationRepository.class);
         when(payments.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
         VnPayService vnPay = new VnPayService("TESTCODE", "TESTSECRETKEY1234567890",
                 "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
                 "http://localhost:5000/api/public/payments/vnpay-return");
-        service = new PaymentService(payments, users, vnPay, passService, passRepo);
+        service = new PaymentService(payments, users, vnPay, passService, passRepo, reservationRepo);
     }
 
     @Test

@@ -5,14 +5,19 @@ import com.parkmaster.parking.SlotStatus;
 import com.parkmaster.pass.MonthlyPass;
 import com.parkmaster.pass.MonthlyPassRepository;
 import com.parkmaster.pass.MonthlyPassService;
+import com.parkmaster.pass.PassStatus;
 import com.parkmaster.payment.PaymentDtos.PaymentResponse;
 import com.parkmaster.payment.PaymentDtos.RevenueResponse;
+import com.parkmaster.reservation.Reservation;
+import com.parkmaster.reservation.ReservationRepository;
+import com.parkmaster.reservation.ReservationStatus;
 import com.parkmaster.session.ParkingSession;
 import com.parkmaster.session.SessionStatus;
 import com.parkmaster.user.User;
 import com.parkmaster.user.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -33,14 +38,17 @@ public class PaymentService {
     private final VnPayService vnPay;
     private final MonthlyPassService passService;
     private final MonthlyPassRepository passRepo;
+    private final ReservationRepository reservationRepo;
 
     public PaymentService(PaymentRepository payments, UserRepository users, VnPayService vnPay,
-            MonthlyPassService passService, MonthlyPassRepository passRepo) {
+            MonthlyPassService passService, MonthlyPassRepository passRepo,
+            ReservationRepository reservationRepo) {
         this.payments = payments;
         this.users = users;
         this.vnPay = vnPay;
         this.passService = passService;
         this.passRepo = passRepo;
+        this.reservationRepo = reservationRepo;
     }
 
     /** Called at check-out. Zero-charge exits are auto-settled; otherwise PENDING. */
@@ -82,8 +90,9 @@ public class PaymentService {
         payment.setVoidedAt(Instant.now());
         payment.setVoidReason(reason);
         payment.setProcessedByStaff(staff(staffEmail));
-        // Charge waived: the car still leaves, so release its slot too.
         completeCheckedOutSession(payment);
+        cancelLinkedReservation(payment);
+        cancelLinkedPass(payment);
         return PaymentResponse.from(payment);
     }
 
@@ -115,6 +124,39 @@ public class PaymentService {
             session.setStatus(SessionStatus.COMPLETED);
             session.getSlot().setStatus(SlotStatus.AVAILABLE);
         }
+    }
+
+    private void cancelLinkedReservation(Payment payment) {
+        reservationRepo.findByDepositPaymentId(payment.getId()).ifPresent(r -> {
+            if (r.getStatus() == ReservationStatus.PENDING) {
+                r.setStatus(ReservationStatus.CANCELLED);
+                if (r.getSlot() != null) {
+                    r.getSlot().setStatus(SlotStatus.AVAILABLE);
+                }
+            }
+        });
+    }
+
+    private String resolveRedirectPage(Payment payment) {
+        if (payment.getSession() != null) return "/sessions";
+        if (reservationRepo.findByDepositPaymentId(payment.getId()).isPresent()) return "/reservations";
+        return "/my-passes";
+    }
+
+    private void confirmLinkedReservation(Payment payment) {
+        reservationRepo.findByDepositPaymentId(payment.getId()).ifPresent(r -> {
+            if (r.getStatus() == ReservationStatus.PENDING && r.getReservedStart() != null) {
+                r.setHoldUntil(r.getReservedStart().plus(Duration.ofMinutes(30)));
+            }
+        });
+    }
+
+    private void cancelLinkedPass(Payment payment) {
+        passRepo.findByPayment_Id(payment.getId()).ifPresent(p -> {
+            if (p.getStatus() == PassStatus.PENDING) {
+                p.setStatus(PassStatus.EXPIRED);
+            }
+        });
     }
 
     @Transactional(readOnly = true)
@@ -185,31 +227,32 @@ public class PaymentService {
     @Transactional
     public VnPayResult.Outcome handleVnPayReturn(Map<String, String> params) {
         if (!vnPay.isValidSignature(params)) {
-            return new VnPayResult.Outcome(VnPayResult.INVALID_SIGNATURE, false);
+            return new VnPayResult.Outcome(VnPayResult.INVALID_SIGNATURE, "/sessions");
         }
         Payment payment = payments.findByGatewayRef(params.get("vnp_TxnRef")).orElse(null);
         if (payment == null) {
-            return new VnPayResult.Outcome(VnPayResult.NOT_FOUND, false);
+            return new VnPayResult.Outcome(VnPayResult.NOT_FOUND, "/sessions");
         }
-        boolean isPass = payment.getSession() == null;
+        String page = resolveRedirectPage(payment);
         payment.setGatewayResponseCode(params.get("vnp_ResponseCode"));
         payment.setGatewayTxnNo(params.get("vnp_TransactionNo"));
 
         boolean ok = "00".equals(params.get("vnp_ResponseCode"))
                 && "00".equals(params.get("vnp_TransactionStatus"));
         if (!ok) {
-            return new VnPayResult.Outcome(VnPayResult.FAILED, isPass);
+            return new VnPayResult.Outcome(VnPayResult.FAILED, page);
         }
         if (Long.parseLong(params.get("vnp_Amount")) != amountVnd(payment) * 100) {
-            return new VnPayResult.Outcome(VnPayResult.AMOUNT_MISMATCH, isPass);
+            return new VnPayResult.Outcome(VnPayResult.AMOUNT_MISMATCH, page);
         }
         if (payment.getStatus() == PaymentStatus.PENDING) {
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(Instant.now());
             completeCheckedOutSession(payment);
             activateLinkedPass(payment);
+            confirmLinkedReservation(payment);
         }
-        return new VnPayResult.Outcome(VnPayResult.SUCCESS, isPass);
+        return new VnPayResult.Outcome(VnPayResult.SUCCESS, page);
     }
 
     /** Resolve a payment owned by the given driver, else 404 (no ownership leak). */
