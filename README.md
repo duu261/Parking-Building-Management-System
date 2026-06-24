@@ -4,7 +4,7 @@ FPT University SWP391 capstone. A full-stack parking building management
 system with role-based access, AI slot allocation, online payments, and
 real-time analytics.
 
-**Live demo:** Frontend — [parkmaster.vercel.app](https://parking-building-management-system.vercel.app) · Backend API — hosted on [Render](https://render.com)
+**Live demo:** Frontend — [parkmaster.vercel.app](https://parkmaster.vercel.app) · Backend API — hosted on [Render](https://render.com)
 
 ## Stack
 
