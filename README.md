@@ -1,108 +1,100 @@
 # ParkMaster — Parking Building Management System
 
-FPT University SWP391 capstone. A full-stack parking building management
-system with role-based access, AI slot allocation, online payments, and
-real-time analytics.
+> FPT University SWP391 capstone project
 
-**Live demo:** Frontend — [parkmaster.vercel.app](https://parkmaster.vercel.app) · Backend API — hosted on [Render](https://render.com)
+Full-stack parking management system with AI-powered slot allocation, two-tier reservations (free/paid), VNPay payment integration, and real-time analytics.
 
-## Stack
+**Live demo:** [parkmaster.vercel.app](https://parkmaster.vercel.app)
 
-| Layer | Tech |
-|---|---|
+Demo accounts — see [docs/demo-accounts.md](docs/demo-accounts.md) (all use password `password123`):
+- `admin@parkmaster.dev` · `manager@parkmaster.dev` · `staff@parkmaster.dev` · `driver@parkmaster.dev`
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
 | Frontend | React 19, Vite, Tailwind CSS v4, React Router v7 |
-| Backend | Spring Boot 3.3, Spring Data JPA, Spring Security (JWT), Flyway |
+| Backend | Spring Boot 3.3, Spring Security (JWT), Spring Data JPA, Flyway |
 | Database | PostgreSQL (Neon in production) |
+| Payment | VNPay sandbox (API v2.1.0, HMAC-SHA512) |
+| AI | Slot allocation algorithm + Google Gemini chat assistant |
 | Deploy | Vercel (frontend) + Render (backend) + Neon (Postgres) |
 
-## Roles
+## Roles & Access
 
-| Role | Access |
-|------|--------|
-| `ADMIN` | User management, roles, system config |
-| `MANAGER` | Building/floor/slot CRUD, pricing, reports, analytics |
-| `STAFF` | Check-in, check-out, payment settlement, exception handling |
-| `USER` (Driver) | Reserve, track sessions, pay, feedback, monthly passes |
-| Guest (no auth) | Public overview, pricing, slot availability |
+| Role | What they do |
+|------|-------------|
+| **Admin** | User management, role assignment, system config |
+| **Manager** | Building/floor/slot CRUD, pricing policies, analytics, passes, revenue reports |
+| **Staff** | Gate check-in/out, payment settlement (cash/void), exception reports |
+| **Driver** | Reserve slots, track sessions, pay online, feedback, monthly passes |
+| **Guest** | Public overview, live availability, pricing, AI chat |
 
-## Features
+## Key Features
 
-- Building / floor / slot management with vehicle-type segmentation
-- Vehicle types and pricing policies with peak-hour multiplier
-- Parking sessions (check-in / check-out) and charge calculation (grace period + daily cap)
-- Payments (CASH / ONLINE / VNPay) and manager revenue reporting
-- Reservations — pre-book a slot, auto-allocated and held, staff convert at the gate
-- **AI slot allocation** — scores slots by load balance, vehicle-type match, distance, and peak hour
-- Exception reports — lost ticket, wrong plate, overtime, wrong zone
-- Monthly passes — driver self-purchase via VNPay, free exit while active
-- VNPay online payment — sandbox-integrated (API v2.1.0, HMAC-signed, IPN callback)
-- Driver feedback — 1–5 star rating per completed session
-- AI chat assistant — hybrid (local FAQ always on, Google Gemini when keyed)
+### AI Slot Allocation (RQ2–RQ4)
+Scores every available slot on four criteria: vehicle type match (40pts), floor load balance (30pts), distance to entry (20pts), peak-hour bonus (10pts). Full score breakdown visible to users — not a black box.
 
-See [`docs/features/`](docs/features/) for detailed per-feature notes.
+### Two-Tier Reservations
+- **Free** — book a time (up to 3h ahead), AI assigns best slot at check-in. 10% discount on parking.
+- **Paid** — pick a specific slot (AI recommendation shown with score breakdown), pay 1hr deposit via VNPay. Slot guaranteed. Deposit credited at checkout.
+
+### VNPay Payment Integration
+Real sandbox integration with HMAC-SHA512 signing, IPN callback verification, and idempotent settlement. Handles session charges, reservation deposits, and monthly pass purchases. Smart redirect routing back to the correct page.
+
+### Other
+- Parking sessions with QR ticket codes, live cost estimate (backend-computed)
+- Charge calculator: grace period, daily cap, peak-hour multiplier, reservation discounts
+- Monthly passes with self-purchase via VNPay, free exit while active
+- Exception reports: lost ticket, wrong plate, overtime, wrong zone
+- Void cascading: void a payment → auto-cancels linked reservation/pass
+- AI chat assistant (local FAQ + Google Gemini when configured)
+- Driver feedback with 1–5 star ratings
+- Manager analytics: revenue charts, check-in patterns, allocation comparison
 
 ## Quick Start
 
 ### Prerequisites
-
-- JDK 21+ (JDK 23 works)
-- Maven or `mvnd` (`mvn` is aliased to `mvnd`)
+- JDK 21+ (23 works fine)
+- Maven or `mvnd` (aliased as `mvn`)
 - Node.js 18+
 - Docker (for local PostgreSQL)
 
-### 1. Start database
-
+### 1. Database
 ```bash
 docker compose up -d
 ```
 
 ### 2. Backend (port 5000)
-
 ```bash
 cd backend
 mvnd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-The `dev` profile activates Flyway migrations and runs the **data seeder** on first start,
-populating 2 buildings, 6 floors, 86 slots, demo accounts, sessions, payments, and more.
-See [demo accounts](docs/demo-accounts.md) for login credentials.
+The `dev` profile runs Flyway migrations + data seeder on first start: 2 buildings, 6 floors, 86 slots, demo accounts with every demoable state (active sessions, reservations, payments, passes, feedback).
 
-> **Re-seeding:** The seeder only runs on an empty database. To re-seed, drop and recreate
-> the database: `docker compose down -v && docker compose up -d`, then restart the backend.
+> **Re-seed:** `docker compose down -v && docker compose up -d`, then restart backend.
 
 ### 3. Frontend (port 5173)
-
 ```bash
 cd frontend
 npm install
-npm run dev              # proxies /api -> localhost:5000
+npm run dev       # proxies /api → localhost:5000
 ```
 
-### AI assistant key (optional)
+### AI Chat (optional)
+Works without config (local FAQ). For Gemini answers: get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey), set `GEMINI_API_KEY` in `backend/.env`.
 
-The chat assistant works with no config (local FAQ). To enable Google Gemini answers,
-get a free key at <https://aistudio.google.com/apikey>, then:
+## API
 
-```bash
-cd backend
-cp .env.example .env      # edit .env: GEMINI_API_KEY=...
-./run-local.sh            # loads .env and starts the backend (dev profile)
-```
+Six endpoint groups: `/api/auth` · `/api/admin` · `/api/manager` · `/api/staff` · `/api/driver` · `/api/public`
 
-`.env` is gitignored. On Render, set `GEMINI_API_KEY` (and optional `GEMINI_MODEL`,
-default `gemini-2.5-flash`) as service env vars.
-
-## API Groups
-
-`/api/auth` · `/api/admin` · `/api/manager` · `/api/staff` · `/api/driver` · `/api/public`
-
-Full API reference: [`docs/api-docs.md`](docs/api-docs.md)
+50+ endpoints. Full reference: [docs/api-docs.md](docs/api-docs.md)
 
 ## Testing
 
 ```bash
-cd backend
-mvnd test                # 101 tests — JUnit 5 + Mockito
+cd backend && mvnd test    # 102 tests — JUnit 5 + Mockito
 ```
 
 ## Deployment
@@ -113,30 +105,33 @@ Two-branch workflow: `main` (development) → `deploy` (production).
 git checkout deploy && git merge main && git push origin deploy
 ```
 
-Render and Vercel auto-redeploy on push to `deploy`. UptimeRobot pings
-`/api/public/health` every 14 min to prevent Render cold starts.
+Vercel + Render auto-redeploy on push to `deploy`. UptimeRobot pings `/api/public/health` every 14min to prevent Render cold starts.
 
-See [`docs/env.md`](docs/env.md) for environment variables.
+Environment variables: [docs/env.md](docs/env.md)
 
 ## Documentation
 
 | Document | Description |
-|---|---|
-| [SRS](docs/srs.md) | Software Requirements Specification |
-| [Use Cases](docs/use-cases.md) | 17 use cases, all 5 actors |
+|----------|-------------|
+| [Use Cases](docs/use-cases.md) | 17 use cases across 5 actors |
 | [User Flows](docs/user-flows.md) | Step-by-step UI flows per role |
-| [ERD](docs/erd.md) | Entity-Relationship Diagram — 12 entities, 9 enums |
-| [Architecture](docs/architecture.md) | Layered design, package layout, security, data flow |
-| [API Docs](docs/api-docs.md) | REST API reference — 50+ endpoints |
-| [Test Plan](docs/test-plan.md) | Test strategy and manual scenarios |
-| [Contributing](docs/contributing.md) | Setup, conventions, and dev workflow |
-| [Demo Accounts](docs/demo-accounts.md) | Test accounts and seeded data |
-| [Environment](docs/env.md) | Environment variables |
+| [ERD](docs/erd.md) | 13 entities, 10 enums, full field reference |
+| [Architecture](docs/architecture.md) | Package layout, security, data flow |
+| [API Docs](docs/api-docs.md) | REST API reference (50+ endpoints) |
+| [Demo Accounts](docs/demo-accounts.md) | Login credentials + seeded data guide |
+| [Contributing](docs/contributing.md) | Setup, conventions, dev workflow |
+| [Environment](docs/env.md) | All environment variables |
 | [Integrations](docs/integrations.md) | VNPay, Gemini AI, UptimeRobot |
 
 ### Feature Notes
 
-Slide-ready summaries in [`docs/features/`](docs/features/) for instructor presentations:
+Slide-ready summaries for instructor presentations in [`docs/features/`](docs/features/):
 
-AI Slot Allocation · Monthly Pass · Parking Session · Payment · Reservation ·
-Vehicle Type & Pricing · VNPay Payment · AI Assistant · Exception Report · Feedback
+AI Slot Allocation · Reservation (Free/Paid) · Parking Session · Payment · VNPay · Monthly Pass · Vehicle Type & Pricing · AI Assistant · Exception Report · Feedback
+
+## Research Questions (SWP391 RBL)
+
+- **RQ1**: How does floor/zone segmentation by vehicle type affect slot utilization?
+- **RQ2**: Does AI auto-allocation reduce time-to-park vs free choice?
+- **RQ3**: Which allocation criteria matter most: distance, floor, vehicle type, time, fill rate?
+- **RQ4**: Can the allocation algorithm improve peak-hour utilization?
