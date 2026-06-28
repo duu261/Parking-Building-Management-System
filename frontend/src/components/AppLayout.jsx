@@ -70,14 +70,14 @@ function initials(name) {
 
 function SidebarNav({ items }) {
   return (
-    <nav className="flex-1 space-y-0.5 px-3 py-2">
+    <nav className="flex-1 space-y-0.5 px-4 py-3">
       {items.map((it) => (
         <NavLink
           key={it.to}
           to={it.to}
           end={it.end}
           className={({ isActive }) =>
-            `relative flex items-center gap-3 rounded-[var(--radius)] px-3 py-2 text-sm transition ${
+            `relative flex items-center gap-3.5 rounded-[var(--radius)] px-4 py-2.5 text-sm transition ${
               isActive
                 ? "bg-elevated font-medium text-text"
                 : "text-muted hover:bg-elevated hover:text-text"
@@ -91,7 +91,7 @@ function SidebarNav({ items }) {
                   isActive ? "h-5 w-[3px]" : "h-0 w-0"
                 }`}
               />
-              <it.icon size={18} className="shrink-0" />
+              <it.icon size={20} className="shrink-0" />
               {it.label}
             </>
           )}
@@ -103,11 +103,11 @@ function SidebarNav({ items }) {
 
 function UserBadge({ user }) {
   return (
-    <div className="flex items-center gap-3 border-t border-line px-4 py-3">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-text text-xs font-semibold text-accent-fg">
+    <div className="flex items-center gap-3 border-t border-line px-5 py-4">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-text text-sm font-semibold text-accent-fg">
         {initials(user?.fullName)}
       </span>
-      <div className="min-w-0 text-xs">
+      <div className="min-w-0 text-sm">
         <div className="truncate font-medium text-text">{user?.fullName}</div>
         <div className="truncate uppercase tracking-wide text-muted">{user?.role}</div>
       </div>
@@ -131,10 +131,10 @@ export default function AppLayout() {
   return (
     <div className="flex min-h-[100dvh] bg-bg text-text">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-line bg-surface sm:flex sticky top-0 h-[100dvh] overflow-y-auto">
-        <Link to="/app" className="flex items-center gap-2 px-5 py-4 transition hover:opacity-80">
-          <SquareParking className="text-text" size={20} />
-          <span className="font-semibold tracking-tight">ParkMaster</span>
+      <aside className="hidden w-[17rem] shrink-0 flex-col border-r border-line bg-surface sm:flex sticky top-0 h-[100dvh] overflow-y-auto">
+        <Link to="/app" className="flex items-center gap-3 px-6 py-5 transition hover:opacity-80">
+          <SquareParking className="text-text" size={22} />
+          <span className="text-base font-semibold tracking-tight">ParkMaster</span>
         </Link>
         <SidebarNav items={items} />
         <UserBadge user={user} />
