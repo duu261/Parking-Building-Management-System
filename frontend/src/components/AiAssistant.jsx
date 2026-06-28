@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { MessageCircle, X, Send, Bot, ArrowLeftFromLine, ArrowRightFromLine } from "lucide-react";
 import { publicApi } from "../lib/endpoints";
 
@@ -26,6 +27,9 @@ function loadSide() {
 }
 
 export default function AiAssistant() {
+  const { pathname } = useLocation();
+  if (["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname)) return null;
+
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
