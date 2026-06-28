@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot } from "lucide-react";
+import { MessageCircle, X, Send, Bot, ArrowLeftFromLine, ArrowRightFromLine } from "lucide-react";
 import { publicApi } from "../lib/endpoints";
 
 const RADIUS = "rounded-[var(--radius)]";
+const LS_SIDE_KEY = "parkmaster-assistant-side";
 
 const GREETING = {
   role: "assistant",
@@ -16,16 +17,33 @@ const SUGGESTIONS = [
   "How do I pay?",
 ];
 
+function loadSide() {
+  try {
+    const raw = localStorage.getItem(LS_SIDE_KEY);
+    if (raw === "left" || raw === "right") return raw;
+  } catch {}
+  return "right";
+}
+
 export default function AiAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [side, setSide] = useState(loadSide);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
+
+  function toggleSide() {
+    setSide((prev) => {
+      const next = prev === "right" ? "left" : "right";
+      try { localStorage.setItem(LS_SIDE_KEY, next); } catch {}
+      return next;
+    });
+  }
 
   async function send(text) {
     const message = text.trim();
@@ -48,17 +66,21 @@ export default function AiAssistant() {
   }
 
   const canSend = input.trim().length > 0 && !sending;
+  const isRight = side === "right";
+  const panelSideClass = isRight ? "right-3" : "left-3";
+  const btnSideClass = isRight ? "right-6" : "left-6";
 
   return (
     <>
+      {/* ── Chat panel ── */}
       <div
-        className={`fixed bottom-6 right-6 z-50 flex h-[min(36rem,calc(100vh-8rem))] w-[26rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden border border-line bg-surface shadow-[var(--shadow-pop)] transition-all duration-300 ease-out ${RADIUS} ${
+        className={`fixed bottom-3 z-50 flex h-[min(36rem,calc(100vh-6rem))] w-[26rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden border border-line bg-surface shadow-[var(--shadow-pop)] transition-all duration-300 ease-out ${RADIUS} ${panelSideClass} ${
           open
             ? "translate-y-0 scale-100 opacity-100"
             : "pointer-events-none translate-y-4 scale-95 opacity-0"
         }`}
       >
-        <header className="flex items-center justify-between bg-accent px-4 py-3.5 text-accent-fg">
+        <header className="flex items-center justify-between bg-accent px-4 py-3.5 text-accent-fg select-none">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-fg/15">
               <Bot size={16} />
@@ -68,13 +90,22 @@ export default function AiAssistant() {
               <p className="text-xs text-accent-fg/70">Parking help, anytime</p>
             </div>
           </div>
-          <button
-            onClick={() => setOpen(false)}
-            aria-label="Close assistant"
-            className="flex h-7 w-7 items-center justify-center rounded-full opacity-70 transition hover:bg-accent-fg/15 hover:opacity-100"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleSide}
+              aria-label={isRight ? "Move assistant to left" : "Move assistant to right"}
+              className="flex h-7 w-7 items-center justify-center rounded-full opacity-70 transition hover:bg-accent-fg/15 hover:opacity-100 cursor-pointer"
+            >
+              {isRight ? <ArrowLeftFromLine size={15} /> : <ArrowRightFromLine size={15} />}
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close assistant"
+              className="flex h-7 w-7 items-center justify-center rounded-full opacity-70 transition hover:bg-accent-fg/15 hover:opacity-100 cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </header>
 
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-bg px-4 py-4">
@@ -109,7 +140,7 @@ export default function AiAssistant() {
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-muted transition hover:border-text/30 hover:bg-elevated hover:text-text"
+                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-muted transition hover:border-text/30 hover:bg-elevated hover:text-text cursor-pointer"
                 >
                   {s}
                 </button>
@@ -135,7 +166,7 @@ export default function AiAssistant() {
             type="submit"
             disabled={!canSend}
             aria-label="Send message"
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/30 ${
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/30 cursor-pointer ${
               canSend
                 ? "bg-accent text-accent-fg shadow-[var(--shadow-card)] hover:bg-accent-strong hover:shadow-lg active:scale-95"
                 : "bg-elevated text-muted cursor-not-allowed"
@@ -146,11 +177,14 @@ export default function AiAssistant() {
         </form>
       </div>
 
+      {/* ── Floating button ── */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close assistant" : "Open assistant"}
-        className={`fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[var(--shadow-pop)] transition-all duration-300 hover:opacity-90 hover:shadow-xl active:scale-95 ${
-          open ? "pointer-events-none opacity-0" : "opacity-100"
+        className={`fixed bottom-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[var(--shadow-pop)] transition-all duration-300 hover:opacity-90 hover:shadow-xl active:scale-95 cursor-pointer ${
+          btnSideClass
+        } ${
+          open ? "pointer-events-none opacity-0 scale-75" : "opacity-100 scale-100"
         }`}
       >
         <MessageCircle size={24} />
