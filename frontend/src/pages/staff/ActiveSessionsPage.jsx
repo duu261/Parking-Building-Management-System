@@ -104,7 +104,7 @@ export default function ActiveSessionsPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2.5">
                   <span className="nums text-xs text-muted">#{s.id}</span>
-                  <span className="nums text-[15px] font-semibold">{s.licensePlate}</span>
+                  <span className="nums text-sm font-semibold">{s.licensePlate}</span>
                   <StatusBadge status={s.status} />
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">

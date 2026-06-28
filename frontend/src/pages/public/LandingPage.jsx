@@ -75,7 +75,7 @@ function LiveAvailability() {
                   </div>
                   <div className="text-right">
                     <div className="nums text-2xl font-semibold text-available">{open}</div>
-                    <div className="nums text-[11px] text-muted">{open}/{total}</div>
+                    <div className="nums text-xs text-muted">{open}/{total}</div>
                   </div>
                 </div>
                 <div className="mt-3 h-1.5 rounded-full bg-elevated overflow-hidden">

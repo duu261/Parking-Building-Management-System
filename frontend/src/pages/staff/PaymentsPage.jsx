@@ -107,7 +107,7 @@ function PaymentCard({ payment, onDone, onError }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="nums text-lg font-semibold">{money(payment.amount)}</span>
-            <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+            <span className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${
               payment.method === "VNPAY" ? "bg-blue-500/10 text-blue-600"
                 : payment.method === "CASH" ? "bg-green-500/10 text-green-600"
                 : "bg-elevated text-muted"

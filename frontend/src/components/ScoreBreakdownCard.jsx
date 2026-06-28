@@ -14,7 +14,7 @@ export default function ScoreBreakdownCard({ score, compact = false }) {
 
   if (compact) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+      <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
         <Sparkles size={10} /> AI pick · {score.total}/100
       </span>
     );
@@ -34,14 +34,14 @@ export default function ScoreBreakdownCard({ score, compact = false }) {
       {open && (
         <div className="border-t border-accent/15 px-3 pb-3 pt-2">
           {score.alternativesConsidered > 1 && (
-            <p className="mb-2 text-[11px] text-muted">
+            <p className="mb-2 text-xs text-muted">
               Scored {score.alternativesConsidered} slots, picked the best.
             </p>
           )}
           <div className="space-y-1.5">
             {CRITERIA.map(({ key, label, max }) => (
               <div key={key}>
-                <div className="flex items-baseline justify-between text-[11px]">
+                <div className="flex items-baseline justify-between text-xs">
                   <span className="text-muted">{label}</span>
                   <span className="nums text-text/80">{score[key]}/{max}</span>
                 </div>

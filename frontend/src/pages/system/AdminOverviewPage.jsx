@@ -65,11 +65,11 @@ export default function AdminOverviewPage() {
             <div key={u.id} className="flex items-center gap-3 px-4 py-3 text-sm">
               <span className="font-medium">{u.fullName}</span>
               <span className="text-xs text-muted">{u.email}</span>
-              <span className="ml-auto rounded-md bg-elevated px-2 py-0.5 text-[11px] font-medium text-muted">
+              <span className="ml-auto rounded-md bg-elevated px-2 py-0.5 text-xs font-medium text-muted">
                 {ROLE_META[u.role]?.label ?? u.role}
               </span>
               {!u.active && (
-                <span className="rounded-md bg-occupied/10 px-2 py-0.5 text-[11px] font-medium text-occupied">
+                <span className="rounded-md bg-occupied/10 px-2 py-0.5 text-xs font-medium text-occupied">
                   inactive
                 </span>
               )}

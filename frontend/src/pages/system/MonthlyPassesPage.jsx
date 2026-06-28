@@ -261,7 +261,7 @@ function PassCard({ pass, onRevoke, onActivate }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
-            <span className="nums text-[15px] font-semibold">{pass.licensePlate}</span>
+            <span className="nums text-sm font-semibold">{pass.licensePlate}</span>
             <StatusBadge status={pass.status} />
             <span className="text-sm text-muted">{pass.userFullName}</span>
           </div>

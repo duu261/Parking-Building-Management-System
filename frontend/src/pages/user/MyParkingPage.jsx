@@ -45,7 +45,7 @@ function TicketQr({ id }) {
   }, [id]);
 
   if (failed) {
-    return <div className="flex aspect-square w-32 items-center justify-center rounded bg-elevated text-[11px] text-muted">QR unavailable</div>;
+    return <div className="flex aspect-square w-32 items-center justify-center rounded bg-elevated text-xs text-muted">QR unavailable</div>;
   }
   if (!url) return <div className="aspect-square w-32 animate-pulse rounded bg-elevated" />;
   return (
@@ -240,7 +240,7 @@ function SummaryCard({ icon: Icon, label, value, accent }) {
         <Icon size={15} className={accent ? "text-locked" : "text-muted"} />
       </div>
       <div className="min-w-0">
-        <div className="text-[11px] text-muted">{label}</div>
+        <div className="text-xs text-muted">{label}</div>
         <div className={`nums mt-0.5 text-lg font-semibold ${accent ? "text-locked" : ""}`}>{value}</div>
       </div>
     </Card>
@@ -258,10 +258,10 @@ function ActiveSessionCard({ session: s, hasCoveringPass: covered }) {
               <span className="nums text-sm font-semibold">{s.licensePlate}</span>
               <StatusBadge status={s.status} />
               {s.fromReservation && !s.depositCredit && (
-                <span className="rounded-full bg-available/10 px-2 py-0.5 text-[11px] font-medium text-available">10% off</span>
+                <span className="rounded-full bg-available/10 px-2 py-0.5 text-xs font-medium text-available">10% off</span>
               )}
               {s.fromReservation && s.depositCredit > 0 && (
-                <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">{money(s.depositCredit)} deposit</span>
+                <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">{money(s.depositCredit)} deposit</span>
               )}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
@@ -279,7 +279,7 @@ function ActiveSessionCard({ session: s, hasCoveringPass: covered }) {
         {covered ? (
           <div className="mt-2 flex items-center gap-1.5 rounded-md border border-available/20 bg-available/[0.06] px-2.5 py-1.5">
             <IdCard size={13} className="text-available shrink-0" />
-            <span className="text-[12px] font-medium text-available">Monthly pass active · Free checkout</span>
+            <span className="text-xs font-medium text-available">Monthly pass active · Free checkout</span>
           </div>
         ) : (
           <div className="mt-2">
@@ -329,7 +329,7 @@ function UnpaidCard({ session: s, onPaid }) {
               <span className="nums">{time(s.checkInAt)} → {time(s.checkOutAt)}</span>
             </div>
             {s.fromReservation && (
-              <div className="mt-1 text-[11px] text-muted">
+              <div className="mt-1 text-xs text-muted">
                 {!s.depositCredit ? (
                   <span className="text-available">10% off applied</span>
                 ) : (
@@ -358,7 +358,7 @@ function PassCard({ pass: p }) {
         <div className="nums text-sm font-semibold">{p.licensePlate}</div>
         <div className="text-xs text-muted">{p.vehicleTypeName} · until {p.validUntil}</div>
       </div>
-      <span className="shrink-0 rounded-full bg-available/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-available">
+      <span className="shrink-0 rounded-full bg-available/15 px-2 py-0.5 text-xs font-medium tracking-wide text-available">
         FREE CHECKOUT
       </span>
     </Card>

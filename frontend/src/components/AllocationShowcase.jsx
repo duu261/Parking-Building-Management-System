@@ -157,7 +157,7 @@ export default function AllocationShowcase() {
             className="rounded-[var(--radius)] border-2 bg-surface p-6 shadow-[var(--shadow-pop)]"
             style={{ borderColor: "var(--accent)" }}
           >
-            <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-accent">
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-accent">
               <Trophy size={12} /> AI pick{typeName ? ` for ${typeName}` : ""}
             </span>
 

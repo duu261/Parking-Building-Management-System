@@ -181,7 +181,7 @@ export default function ReservationsPage() {
                     <div className="mt-1.5 flex gap-1.5">
                       {[{m: 30, l: "30 min"}, {m: 60, l: "1 hr"}, {m: 120, l: "2 hr"}, {m: 180, l: "3 hr"}].map(({m, l}) => (
                         <button key={m} type="button" onClick={() => presetTime(m)}
-                          className="rounded-full border border-line px-2.5 py-0.5 text-[11px] text-muted transition hover:border-accent hover:text-accent">
+                          className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted transition hover:border-accent hover:text-accent">
                           +{l}
                         </button>
                       ))}
@@ -237,7 +237,7 @@ export default function ReservationsPage() {
                             (acc[s.floorName] ??= []).push(s); return acc;
                           }, {})).map(([floor, slots]) => (
                             <div key={floor} className="mb-2.5 last:mb-0">
-                              <div className="mb-1.5 text-[11px] font-medium text-muted">{floor}</div>
+                              <div className="mb-1.5 text-xs font-medium text-muted">{floor}</div>
                               <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8">
                                 {slots.map((s) => (
                                   <button key={s.slotId} type="button"
@@ -367,24 +367,24 @@ function ReservationCard({ reservation: r, onCancel, cancelling }) {
               <span className={`nums text-sm font-semibold ${isExpired ? "text-muted" : ""}`}>{r.licensePlate}</span>
               <StatusBadge status={r.status} />
               {r.reservationType === "PAID" && !r.depositPaid && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-locked/10 px-2 py-0.5 text-[11px] font-medium text-locked">
+                <span className="inline-flex items-center gap-1 rounded-full bg-locked/10 px-2 py-0.5 text-xs font-medium text-locked">
                   <Clock size={10} /> Awaiting payment
                 </span>
               )}
               {r.reservationType === "PAID" && r.depositPaid && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
                   <CreditCard size={10} /> Paid
                 </span>
               )}
               {r.reservationType === "FREE" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-available/10 px-2 py-0.5 text-[11px] font-medium text-available">
+                <span className="inline-flex items-center gap-1 rounded-full bg-available/10 px-2 py-0.5 text-xs font-medium text-available">
                   <CheckCircle2 size={10} /> 10% off
                 </span>
               )}
               {r.allocationScore ? (
                 <ScoreBreakdownCard score={r.allocationScore} compact />
               ) : r.slotCode ? (
-                <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                <span className="inline-flex items-center gap-1 text-xs text-muted">
                   <Sparkles size={10} /> AI-assigned
                 </span>
               ) : null}
@@ -475,7 +475,7 @@ function AvailabilitySidebar({ buildings }) {
                 <div className="h-full rounded-full transition-all"
                   style={{ width: `${pct}%`, backgroundColor: barColor }} />
               </div>
-              <div className="mt-1 text-[11px]" style={{ color: barColor }}>
+              <div className="mt-1 text-xs" style={{ color: barColor }}>
                 {a ? `${pct}% · ${statusLabel}` : "Loading..."}
               </div>
             </Card>
