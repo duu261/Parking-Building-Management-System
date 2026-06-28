@@ -116,7 +116,7 @@ export default function MyParkingPage() {
   if (sessions === null) return <Spinner label="Loading your parking" />;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <div className="flex items-baseline justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
@@ -257,7 +257,6 @@ function ActiveSessionCard({ session: s, hasCoveringPass: covered }) {
             <div className="flex items-center gap-2">
               <span className="nums text-sm font-semibold">{s.licensePlate}</span>
               <StatusBadge status={s.status} />
-              {s.autoAllocated && <ScoreBreakdownCard score={s.allocationScore} compact />}
               {s.fromReservation && !s.depositCredit && (
                 <span className="rounded-full bg-available/10 px-2 py-0.5 text-[11px] font-medium text-available">10% off</span>
               )}
