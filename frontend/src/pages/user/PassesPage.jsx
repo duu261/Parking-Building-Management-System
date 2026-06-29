@@ -115,7 +115,7 @@ function PassQr({ id }) {
     return () => objectUrl && URL.revokeObjectURL(objectUrl);
   }, [id]);
 
-  if (failed) return <div className="flex h-40 w-40 items-center justify-center rounded bg-elevated text-[11px] text-muted">QR unavailable</div>;
+  if (failed) return <div className="flex h-40 w-40 items-center justify-center rounded bg-elevated text-xs text-muted">QR unavailable</div>;
   if (!url) return <div className="h-40 w-40 animate-pulse rounded bg-elevated" />;
   return <img src={url} alt={`Pass QR ${id}`} className="block h-40 w-40" />;
 }
@@ -156,10 +156,10 @@ function PassCard({ pass: p }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
-            <span className="nums text-[15px] font-semibold">{p.licensePlate}</span>
+            <span className="nums text-sm font-semibold">{p.licensePlate}</span>
             <StatusBadge status={p.status} />
             {isActive && (
-              <span className="rounded-full bg-available/15 px-2 py-0.5 text-[11px] font-medium text-available">
+              <span className="rounded-full bg-available/15 px-2 py-0.5 text-xs font-medium text-available">
                 FREE CHECKOUT
               </span>
             )}

@@ -72,7 +72,7 @@ export function StatusBadge({ status }) {
   const color = STATUS_COLOR[status] ?? "var(--muted)";
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide"
+      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide"
       style={{ color, borderColor: `color-mix(in oklab, ${color} 35%, transparent)`, backgroundColor: `color-mix(in oklab, ${color} 12%, transparent)` }}
     >
       <span className="size-1.5 rounded-full" style={{ backgroundColor: color }} />

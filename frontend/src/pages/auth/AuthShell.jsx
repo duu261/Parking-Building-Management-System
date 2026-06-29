@@ -1,39 +1,99 @@
-import { SquareParking } from "lucide-react";
+import { SquareParking, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function AuthShell({ title, subtitle, children, footer }) {
   return (
-    <div className="flex min-h-[100dvh] bg-bg text-text">
-      <div className="hidden lg:flex lg:w-1/2 lg:flex-col lg:justify-between lg:border-r lg:border-line lg:p-12">
-        <Link to="/" className="inline-flex items-center gap-2 transition hover:opacity-80">
-          <SquareParking className="text-text" size={24} />
-          <span className="text-lg font-semibold tracking-tight">ParkMaster</span>
-        </Link>
-        <div>
-          <h2 className="max-w-sm text-3xl font-semibold leading-tight tracking-tight">
-            Every slot, every session, in one quiet view.
-          </h2>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
-            Live availability, smart allocation, and role-based control for your parking building.
-          </p>
-        </div>
-        <p className="text-xs text-muted">FPT University - SWP391 Capstone</p>
-      </div>
+    <div
+      className="min-h-dvh relative flex items-center justify-center p-4 sm:p-6"
+      style={{
+        "--muted-foreground": "0 0% 58%",
+        "--foreground": "0 0% 96%",
+        backgroundColor: "hsl(0 0% 4%)",
+        color: "hsl(0 0% 96%)",
+        fontFamily: '"Inter", sans-serif',
+      }}
+    >
+      {/* Grid overlay */}
+      <div className="absolute inset-0 grid-paper opacity-[0.05] pointer-events-none" />
 
-      <div className="grid-paper flex flex-1 items-center justify-center px-4">
-        <div className="w-full max-w-sm">
-          <Link to="/" className="mb-6 inline-flex items-center gap-2 transition hover:opacity-80 lg:hidden">
-            <SquareParking className="text-text" size={24} />
-            <span className="text-lg font-semibold tracking-tight">ParkMaster</span>
-          </Link>
-          <div className="rounded-[calc(var(--radius)+4px)] bg-text/[0.03] p-1.5">
-          <div className="rounded-[var(--radius)] border border-line bg-surface p-6 shadow-[var(--shadow-pop)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-            {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
-            <div className="mt-6">{children}</div>
+      {/* Ambient glow */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(56,189,248,0.04) 0%, transparent 60%)",
+        }}
+      />
+
+      {/* Logo top-left */}
+      <Link
+        to="/"
+        className="absolute top-5 left-5 sm:top-6 sm:left-6 inline-flex items-center gap-2 no-underline hover:opacity-75 transition-opacity z-20"
+        style={{ color: "hsl(var(--foreground))" }}
+      >
+        <SquareParking size={20} />
+        <span className="text-sm font-semibold tracking-tight">ParkMaster</span>
+      </Link>
+
+      {/* Back to home top-right */}
+      <Link
+        to="/"
+        className="absolute top-5 right-5 sm:top-6 sm:right-6 inline-flex items-center gap-1.5 text-sm text-white/35 hover:text-white no-underline transition-colors duration-200 z-20"
+      >
+        <ArrowLeft size={14} />
+        <span className="hidden sm:inline">Back to home</span>
+      </Link>
+
+      {/* ───── Auth card ───── */}
+      <div
+        className="w-[min(1120px,calc(100vw-32px))] sm:w-[min(1120px,calc(100vw-48px))] min-h-[min(620px,calc(100dvh-48px))] rounded-[28px] sm:rounded-[32px] overflow-hidden border flex relative z-10 shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
+        style={{
+          backgroundColor: "rgba(255,255,255,0.04)",
+          borderColor: "rgba(255,255,255,0.08)",
+        }}
+      >
+        {/* ─── Left: Image panel (desktop) ─── */}
+        <div className="hidden lg:block w-1/2 relative overflow-hidden">
+          <img
+            src="/images/parking.png"
+            alt="ParkMaster parking system preview"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent pointer-events-none" />
+        </div>
+
+        {/* ─── Right: Form panel ─── */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-10 lg:px-12 lg:py-10">
+          <div className="w-full max-w-md">
+            {/* Mobile image */}
+            <div className="lg:hidden relative mb-6 rounded-2xl overflow-hidden">
+              <img
+                src="/images/parking.png"
+                alt="ParkMaster parking system preview"
+                className="w-full h-48 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+            </div>
+
+            {/* Title */}
+            <h1 className="text-xl font-semibold tracking-tight" style={{ color: "hsl(var(--foreground))" }}>
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="mt-1.5 text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
+                {subtitle}
+              </p>
+            )}
+
+            {/* Form content */}
+            <div className="mt-8">{children}</div>
+
+            {/* Footer links */}
+            {footer && (
+              <div className="mt-6 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                {footer}
+              </div>
+            )}
           </div>
-          </div>
-          {footer && <div className="mt-4 text-center text-sm text-muted lg:text-left">{footer}</div>}
         </div>
       </div>
     </div>
