@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { CalendarClock, MapPin, QrCode, X, Building2, Sparkles, Clock, CreditCard, CheckCircle2 } from "lucide-react";
 import { driverApi, publicApi } from "../../lib/endpoints";
 import { Card, Button, Spinner, Alert, EmptyState, StatusBadge, Field, Select, Input } from "../../components/ui";
@@ -57,18 +57,17 @@ export default function ReservationsPage() {
     }
   }, [isPaid, form.buildingId, form.vehicleTypeId]);
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const submitWith = async (f) => {
     setError("");
     setSubmitting(true);
     try {
       const body = {
-        buildingId: Number(form.buildingId),
-        vehicleTypeId: Number(form.vehicleTypeId),
-        licensePlate: form.licensePlate.trim(),
-        reservedStart: new Date(form.reservedStart).toISOString(),
-        reservationType: form.reservationType,
-        ...(isPaid && form.slotId ? { slotId: Number(form.slotId) } : {}),
+        buildingId: Number(f.buildingId),
+        vehicleTypeId: Number(f.vehicleTypeId),
+        licensePlate: f.licensePlate.trim(),
+        reservedStart: new Date(f.reservedStart).toISOString(),
+        reservationType: f.reservationType,
+        ...(f.reservationType === "PAID" && f.slotId ? { slotId: Number(f.slotId) } : {}),
       };
       const res = await driverApi.reserve(body);
       if (res.vnpayUrl) {
@@ -86,6 +85,17 @@ export default function ReservationsPage() {
     }
   };
 
+  const submit = (e) => { e.preventDefault(); submitWith(form); };
+
+  const aiPickAndSubmit = (timeVal) => {
+    const next = { ...form, reservedStart: timeVal };
+    setForm(next);
+    // PAID tier needs explicit submit (deposit review + slot selection required)
+    if (!isPaid && next.buildingId && next.vehicleTypeId && next.licensePlate.trim()) {
+      submitWith(next);
+    }
+  };
+
   const cancel = async (id) => {
     setCancelling(id);
     try {
@@ -96,17 +106,6 @@ export default function ReservationsPage() {
     }
   };
 
-  const toLocalISO = (d) => {
-    const p = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-  };
-  const minTime = () => { const d = new Date(); d.setMinutes(d.getMinutes() + 5); return toLocalISO(d); };
-  const maxTime = () => { const d = new Date(); d.setHours(d.getHours() + 3); return toLocalISO(d); };
-  const presetTime = (mins) => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() + mins);
-    setForm({ ...form, reservedStart: toLocalISO(d) });
-  };
 
   if (!list && !error) return <Spinner />;
   if (error && list === null) return <Alert>{error}</Alert>;
@@ -176,16 +175,12 @@ export default function ReservationsPage() {
                     <Input value={form.licensePlate} onChange={set("licensePlate")} placeholder="51A-12345" maxLength={20} required />
                   </Field>
                   <Field label="Arrival time">
-                    <DateTimeInput value={form.reservedStart} onChange={set("reservedStart")}
-                      min={minTime()} max={maxTime()} />
-                    <div className="mt-1.5 flex gap-1.5">
-                      {[{m: 30, l: "30 min"}, {m: 60, l: "1 hr"}, {m: 120, l: "2 hr"}, {m: 180, l: "3 hr"}].map(({m, l}) => (
-                        <button key={m} type="button" onClick={() => presetTime(m)}
-                          className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted transition hover:border-accent hover:text-accent">
-                          +{l}
-                        </button>
-                      ))}
-                    </div>
+                    <TimeSlotPicker
+                      key={form.reservedStart ? "t" : "e"}
+                      onChange={set("reservedStart")}
+                      onAiPick={aiPickAndSubmit}
+                      isPaid={isPaid}
+                    />
                   </Field>
                 </div>
 
@@ -322,34 +317,48 @@ export default function ReservationsPage() {
   );
 }
 
-function DateTimeInput({ value, onChange, min, max }) {
-  const ref = useRef(null);
+function TimeSlotPicker({ onChange, onAiPick, isPaid }) {
+  const [selectedM, setSelectedM] = useState(null);
 
-  const handleClick = () => {
-    if (ref.current) {
-      ref.current.focus();
-      if (typeof ref.current.showPicker === "function") {
-        ref.current.showPicker();
-      }
-    }
+  const slots = [30, 60, 90, 120, 150, 180];
+
+  const toLocalISO = (d) => {
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  const isoFor = (m) => { const d = new Date(); d.setMinutes(d.getMinutes() + m); return toLocalISO(d); };
+  const label = (m) => m < 60 ? `${m} min` : m % 60 === 0 ? `${m / 60} hr` : `${Math.floor(m / 60)}.5 hr`;
+
+  const pick = (m) => {
+    setSelectedM(m);
+    const iso = isoFor(m);
+    onChange({ target: { value: iso } });
+    if (!isPaid && m === 30) onAiPick(iso);
   };
 
   return (
-    <div onClick={handleClick} className="relative cursor-text">
-      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted/70">
-        <Clock size={15} />
+    <div>
+      <div className="flex flex-wrap gap-1.5">
+        {slots.map((m) => (
+          <button key={m} type="button" onClick={() => pick(m)}
+            className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition ${
+              selectedM === m
+                ? "border-accent bg-accent/10 text-accent font-medium"
+                : m === 30
+                ? "border-accent/40 text-accent/70 hover:border-accent hover:text-accent"
+                : "border-line text-muted hover:border-accent hover:text-accent"
+            }`}>
+            {m === 30 && !isPaid && <Sparkles size={10} />}
+            +{label(m)}
+          </button>
+        ))}
       </div>
-      <input
-        ref={ref}
-        type="datetime-local"
-        value={value}
-        onChange={onChange}
-        onClick={(e) => e.stopPropagation()}
-        min={min}
-        max={max}
-        required
-        className="w-full border border-line bg-surface px-3 py-2 pl-10 text-sm text-text outline-none transition rounded-[var(--radius)] placeholder:text-muted/70 focus:border-text/40 focus:ring-2 focus:ring-text/15 disabled:opacity-50"
-      />
+      {!isPaid && (
+        <p className="mt-1.5 text-xs text-muted">
+          <Sparkles size={10} className="inline mr-1 text-accent" />
+          +30 min auto-books when all fields filled
+        </p>
+      )}
     </div>
   );
 }
@@ -382,7 +391,7 @@ function ReservationCard({ reservation: r, onCancel, cancelling }) {
                   <CheckCircle2 size={10} /> 10% off
                 </span>
               )}
-              {r.allocationScore ? (
+              {r.reservationType === "FREE" && r.allocationScore ? (
                 <ScoreBreakdownCard score={r.allocationScore} compact />
               ) : r.reservationType === "FREE" && r.slotCode ? (
                 <span className="inline-flex items-center gap-1 text-xs text-muted">
