@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
-// Class-based dark mode on <html>. Persists choice; falls back to system.
+// Class-based dark mode on <html>. Persists choice; defaults to dark.
 function initial() {
   const saved = localStorage.getItem("theme");
   if (saved === "light" || saved === "dark") return saved;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "dark";
 }
 
 export function useTheme() {

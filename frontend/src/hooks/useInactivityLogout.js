@@ -1,21 +1,21 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { clearSession } from "../lib/session";
+import { clearSession, getStayLoggedIn } from "../lib/session";
 
-const TIMEOUT_MS = 15 * 60 * 1000;
+const TIMEOUT_MS = 60 * 60 * 1000;
 const ACTIVITY_EVENTS = ["mousedown", "keydown", "scroll", "touchstart"];
 
-// Logs the user out after 15 minutes without interaction.
+// Logs the user out after 60 minutes of inactivity. Skipped if "stay logged in" is set.
 export function useInactivityLogout() {
-  const navigate = useNavigate();
   const timer = useRef(null);
 
   useEffect(() => {
+    if (getStayLoggedIn()) return;
+
     const reset = () => {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         clearSession();
-        navigate("/login", { replace: true });
+        window.location.replace("/login");
       }, TIMEOUT_MS);
     };
 
@@ -26,5 +26,5 @@ export function useInactivityLogout() {
       if (timer.current) clearTimeout(timer.current);
       ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, reset));
     };
-  }, [navigate]);
+  }, []);
 }
