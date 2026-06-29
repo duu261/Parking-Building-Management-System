@@ -703,9 +703,11 @@ function AIAllocationShowcaseSection() {
                   onMouseLeave={() => setHoveredStep(null)}
                   className="w-full max-w-[280px] rounded-3xl border border-white/10 bg-black/55 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-white/[0.07]"
                 >
-                  <span className="pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04]">01</span>
+                  <span className="pointer-events-none absolute left-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04]">01</span>
                   <div className="relative">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70"><ScanLine size={20} /></span>
+                    <div className="flex justify-end">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70"><ScanLine size={20} /></span>
+                    </div>
                     <h4 className="mt-3 text-sm font-semibold text-white">Scan available slots</h4>
                     <p className="mt-1 text-xs leading-relaxed text-white/50">ParkMaster reads every available slot in the selected building before scoring candidates.</p>
                   </div>
@@ -720,9 +722,11 @@ function AIAllocationShowcaseSection() {
                   onMouseLeave={() => setHoveredStep(null)}
                   className="w-full max-w-[280px] rounded-3xl border border-white/10 bg-black/55 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-white/[0.07]"
                 >
-                  <span className="pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04]">03</span>
+                  <span className="pointer-events-none absolute left-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04]">03</span>
                   <div className="relative">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70"><Layers size={20} /></span>
+                    <div className="flex justify-end">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70"><Layers size={20} /></span>
+                    </div>
                     <h4 className="mt-3 text-sm font-semibold text-white">Rank best-first</h4>
                     <p className="mt-1 text-xs leading-relaxed text-white/50">Top candidates sorted by total score descending.</p>
                   </div>
