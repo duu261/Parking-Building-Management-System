@@ -97,15 +97,20 @@ export default function LoginPage() {
           </div>
         </Field>
         <div className="flex items-center justify-between -mt-1">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={keepLoggedIn}
-              onChange={(e) => setKeepLoggedIn(e.target.checked)}
-              className="w-4 h-4 accent-white cursor-pointer"
-            />
+          <button
+            type="button"
+            onClick={() => setKeepLoggedIn((v) => !v)}
+            className="flex items-center gap-2 select-none py-2 text-left"
+          >
+            <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${keepLoggedIn ? "bg-white border-white" : "border-white/30"}`}>
+              {keepLoggedIn && (
+                <svg viewBox="0 0 10 8" className="w-2.5 h-2.5" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="1,4 3.5,6.5 9,1" />
+                </svg>
+              )}
+            </div>
             <span className="text-xs text-white/55">Stay logged in</span>
-          </label>
+          </button>
           <Link to="/forgot-password" className="text-xs text-white/55 hover:text-white transition-colors duration-200 no-underline">
             Forgot password?
           </Link>
