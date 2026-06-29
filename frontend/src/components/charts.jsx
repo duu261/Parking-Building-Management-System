@@ -51,7 +51,7 @@ export function Bars({ data, format = identity, height = 220 }) {
           const h = d.value ? Math.max((d.value / max) * barZone, 4) : 0;
           return (
             <div key={i} className="group relative flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="nums text-[10px] text-muted">
+              <span className="nums text-xs text-muted">
                 {format(d.value)}
               </span>
               <div
@@ -59,7 +59,7 @@ export function Bars({ data, format = identity, height = 220 }) {
                 style={{ height: h }}
                 title={`${d.label}: ${format(d.value)}`}
               />
-              <span className="nums text-[10px] text-muted">{d.label}</span>
+              <span className="nums text-xs text-muted">{d.label}</span>
             </div>
           );
         })}
@@ -94,7 +94,7 @@ export function AreaLine({ data, format = identity, height = 180 }) {
           </circle>
         ))}
       </svg>
-      <div className="mt-2 flex justify-between nums text-[10px] text-muted">
+      <div className="mt-2 flex justify-between nums text-xs text-muted">
         <span>{data[0]?.label}</span>
         <span>{data[data.length - 1]?.label}</span>
       </div>

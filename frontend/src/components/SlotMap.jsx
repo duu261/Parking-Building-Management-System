@@ -116,7 +116,7 @@ export default function SlotMap() {
                             <div
                               key={s.id}
                               title={`${s.code} — ${STATUS_LABEL[s.status]}`}
-                              className="flex h-9 w-12 items-center justify-center rounded text-[11px] font-medium text-white transition hover:opacity-80"
+                              className="flex h-9 w-12 items-center justify-center rounded text-xs font-medium text-white transition hover:opacity-80"
                             style={{ backgroundColor: STATUS_STYLE[s.status] }}
                             >
                               {s.code.split("-").pop()}

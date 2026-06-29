@@ -139,7 +139,7 @@ export default function UsersPage() {
                 <div className="flex items-center gap-2.5">
                   <span className="font-medium">{u.fullName}</span>
                   {!u.active && (
-                    <span className="rounded-full border border-line px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted">
+                    <span className="rounded-full border border-line px-2 py-0.5 text-xs uppercase tracking-wide text-muted">
                       Inactive
                     </span>
                   )}

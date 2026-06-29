@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, ArrowLeftRight } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { MessageCircle, X, Send, Bot, ArrowLeftFromLine, ArrowRightFromLine } from "lucide-react";
 import { publicApi } from "../lib/endpoints";
-import { Button } from "./ui";
 
 const RADIUS = "rounded-[var(--radius)]";
+const LS_SIDE_KEY = "parkmaster-assistant-side";
 
 const GREETING = {
   role: "assistant",
@@ -17,22 +18,35 @@ const SUGGESTIONS = [
   "How do I pay?",
 ];
 
+function loadSide() {
+  try {
+    const raw = localStorage.getItem(LS_SIDE_KEY);
+    if (raw === "left" || raw === "right") return raw;
+  } catch {}
+  return "right";
+}
+
 export default function AiAssistant() {
+  const { pathname } = useLocation();
+  if (["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname)) return null;
+
   const [open, setOpen] = useState(false);
-  const [side, setSide] = useState(() => localStorage.getItem("ai-chat-side") || "right");
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [side, setSide] = useState(loadSide);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
 
-  function flipSide() {
-    const next = side === "right" ? "left" : "right";
-    setSide(next);
-    localStorage.setItem("ai-chat-side", next);
+  function toggleSide() {
+    setSide((prev) => {
+      const next = prev === "right" ? "left" : "right";
+      try { localStorage.setItem(LS_SIDE_KEY, next); } catch {}
+      return next;
+    });
   }
 
   async function send(text) {
@@ -55,66 +69,82 @@ export default function AiAssistant() {
     }
   }
 
+  const canSend = input.trim().length > 0 && !sending;
   const isRight = side === "right";
+  const panelSideClass = isRight ? "right-3" : "left-3";
+  const btnSideClass = isRight ? "right-6" : "left-6";
 
   return (
     <>
+      {/* ── Chat panel ── */}
       <div
-        className={`fixed bottom-24 z-50 flex h-[30rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden border border-line bg-surface shadow-[var(--shadow-pop)] transition-transform duration-300 ease-out ${RADIUS} ${
-          isRight ? "right-5" : "left-5"
-        } ${open ? "translate-x-0" : isRight ? "translate-x-[120%]" : "-translate-x-[120%]"} ${
-          open ? "" : "pointer-events-none"
+        className={`fixed bottom-3 z-50 flex h-[min(36rem,calc(100vh-6rem))] w-[26rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden border border-line bg-surface shadow-[var(--shadow-pop)] transition-all duration-300 ease-out ${RADIUS} ${panelSideClass} ${
+          open
+            ? "translate-y-0 scale-100 opacity-100"
+            : "pointer-events-none translate-y-4 scale-95 opacity-0"
         }`}
       >
-        <header className="flex items-center justify-between bg-accent px-4 py-3 text-accent-fg">
-          <div className="flex items-center gap-2">
-            <Bot size={18} />
+        <header className="flex items-center justify-between bg-accent px-4 py-3.5 text-accent-fg select-none">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-fg/15">
+              <Bot size={16} />
+            </div>
             <div>
               <p className="text-sm font-semibold leading-tight">ParkMaster Assistant</p>
-              <p className="text-xs opacity-70">Parking help, anytime</p>
+              <p className="text-xs text-accent-fg/70">Parking help, anytime</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={flipSide}
-              aria-label={`Move to ${isRight ? "left" : "right"} side`}
-              title={`Move to ${isRight ? "left" : "right"}`}
-              className="rounded-full p-1 opacity-80 transition hover:bg-accent-fg/15 hover:opacity-100"
+              onClick={toggleSide}
+              aria-label={isRight ? "Move assistant to left" : "Move assistant to right"}
+              className="flex h-7 w-7 items-center justify-center rounded-full opacity-70 transition hover:bg-accent-fg/15 hover:opacity-100 cursor-pointer"
             >
-              <ArrowLeftRight size={16} />
+              {isRight ? <ArrowLeftFromLine size={15} /> : <ArrowRightFromLine size={15} />}
             </button>
             <button
               onClick={() => setOpen(false)}
               aria-label="Close assistant"
-              className="rounded-full p-1 opacity-80 transition hover:bg-accent-fg/15 hover:opacity-100"
+              className="flex h-7 w-7 items-center justify-center rounded-full opacity-70 transition hover:bg-accent-fg/15 hover:opacity-100 cursor-pointer"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </header>
 
-        <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-bg px-4 py-3">
+        <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-bg px-4 py-4">
           {messages.map((m, i) => (
             <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-              <p
-                className={`max-w-[85%] whitespace-pre-line px-3 py-2 text-sm ${RADIUS} ${
+              <div
+                className={`max-w-[85%] whitespace-pre-line px-3.5 py-2.5 text-sm leading-relaxed ${RADIUS} ${
                   m.role === "user"
                     ? "bg-accent text-accent-fg"
                     : "border border-line bg-surface text-text shadow-[var(--shadow-card)]"
                 }`}
               >
+                {m.role === "assistant" && messages.indexOf(m) === 0 && (
+                  <span className="mr-1.5 inline-flex h-4 w-4 items-center justify-center align-middle">
+                    <Bot size={12} className="text-accent" />
+                  </span>
+                )}
                 {m.text}
-              </p>
+              </div>
             </div>
           ))}
-          {sending && <p className="text-xs text-muted">Assistant is typing…</p>}
+          {sending && (
+            <div className="flex justify-start">
+              <p className="max-w-[85%] whitespace-pre-line rounded-[var(--radius)] border border-line bg-surface px-3 py-2 text-xs text-muted shadow-[var(--shadow-card)]">
+                Assistant is typing…
+              </p>
+            </div>
+          )}
           {messages.length <= 3 && (
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap gap-2 pt-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="rounded-full border border-line bg-surface px-3 py-1 text-xs text-muted transition hover:bg-elevated hover:text-text"
+                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-muted transition hover:border-text/30 hover:bg-elevated hover:text-text cursor-pointer"
                 >
                   {s}
                 </button>
@@ -128,28 +158,40 @@ export default function AiAssistant() {
             e.preventDefault();
             send(input);
           }}
-          className="flex items-center gap-2 border-t border-line bg-surface px-3 py-2"
+          className="flex items-center gap-2 border-t border-line bg-surface px-4 py-3"
         >
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about parking…"
-            className={`flex-1 border border-line bg-surface px-3 py-2 text-sm text-text outline-none transition placeholder:text-muted/70 focus:border-text/40 focus:ring-2 focus:ring-text/15 ${RADIUS}`}
+            className={`flex-1 border border-line bg-bg px-3 py-2 text-sm text-text outline-none transition placeholder:text-muted/60 focus:border-text/30 focus:ring-2 focus:ring-text/10 ${RADIUS}`}
           />
-          <Button type="submit" disabled={sending || !input.trim()} aria-label="Send message">
-            <Send size={16} />
-          </Button>
+          <button
+            type="submit"
+            disabled={!canSend}
+            aria-label="Send message"
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/30 cursor-pointer ${
+              canSend
+                ? "bg-accent text-accent-fg shadow-[var(--shadow-card)] hover:bg-accent-strong hover:shadow-lg active:scale-95"
+                : "bg-elevated text-muted cursor-not-allowed"
+            }`}
+          >
+            <Send size={18} />
+          </button>
         </form>
       </div>
 
+      {/* ── Floating button ── */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close assistant" : "Open assistant"}
-        className={`fixed bottom-20 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[var(--shadow-pop)] transition-all duration-300 hover:opacity-90 active:translate-y-px ${
-          isRight ? "right-5" : "left-5"
+        className={`fixed bottom-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-[var(--shadow-pop)] transition-all duration-300 hover:opacity-90 hover:shadow-xl active:scale-95 cursor-pointer ${
+          btnSideClass
+        } ${
+          open ? "pointer-events-none opacity-0 scale-75" : "opacity-100 scale-100"
         }`}
       >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
+        <MessageCircle size={24} />
       </button>
     </>
   );

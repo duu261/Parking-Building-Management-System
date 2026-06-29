@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
     <button
       type="button"
       onClick={() => setShowPw(!showPw)}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-fg transition-colors"
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-accent transition-colors"
       aria-label={showPw ? "Hide password" : "Show password"}
     >
       {showPw ? (
@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <AuthShell title="Invalid link" subtitle="This reset link is missing or malformed.">
-        <Link to="/forgot-password" className="text-sm font-medium text-accent hover:underline">
+        <Link to="/forgot-password" className="text-sm font-medium text-white/55 hover:text-white no-underline transition-colors duration-200">
           Request a new reset link
         </Link>
       </AuthShell>
@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
       footer={
         <>
           Remember your password?{" "}
-          <Link to="/login" className="font-medium text-accent hover:underline">
+          <Link to="/login" className="font-medium text-white/55 hover:text-white no-underline transition-colors duration-200">
             Sign in
           </Link>
         </>
@@ -75,7 +75,7 @@ export default function ResetPasswordPage() {
           <div className="rounded-[var(--radius)] border border-green-500/30 bg-green-500/5 p-4 text-sm text-text">
             Your password has been reset successfully.
           </div>
-          <Link to="/login" className="inline-block text-sm font-medium text-accent hover:underline">
+          <Link to="/login" className="inline-block text-sm font-medium text-white/55 hover:text-white no-underline transition-colors duration-200">
             Sign in with your new password
           </Link>
         </div>
