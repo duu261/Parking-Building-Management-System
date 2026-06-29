@@ -23,7 +23,8 @@ export default function ScoreBreakdownCard({ score, compact = false }) {
   return (
     <div className="rounded-[var(--radius)] border border-accent/20 bg-accent/[0.04]">
       <button
-        onClick={() => setOpen(!open)}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
         className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-accent/[0.03]"
       >
         <Sparkles size={13} className="text-accent shrink-0" />

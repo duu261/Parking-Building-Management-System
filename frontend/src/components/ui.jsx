@@ -21,7 +21,7 @@ export function Button({ variant = "primary", className, disabled, loading, chil
     ghost: "text-muted hover:bg-elevated hover:text-text",
   };
   return (
-    <button className={cx(base, variants[variant], className)} disabled={disabled || loading} {...rest}>
+    <button type="button" className={cx(base, variants[variant], className)} disabled={disabled || loading} {...rest}>
       {loading && <Loader2 size={16} className="animate-spin" />}
       {children}
     </button>
