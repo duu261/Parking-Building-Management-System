@@ -433,7 +433,25 @@ class DevDataSeeder implements CommandLineRunner {
         paidPay.setMethod(PaymentMethod.VNPAY);
         payments.save(paidPay);
 
-        log.info("Seeded 7 driver sessions: walk-in×2, free-res active, paid-res active, awaiting payment, free-res completed, paid-res completed.");
+        // Active manual walk-ins (staff picked slot — no AI score)
+        VehicleType bike = vehicleTypes.findById(vt[1].id()).orElseThrow();
+        ParkingSlot slot8 = available.get(7);
+        ParkingSession manualA = new ParkingSession(slot8, bike, "59X-12345", false);
+        manualA.setUser(driver);
+        manualA.setCheckInAt(Instant.now().minus(Duration.ofMinutes(30)));
+        sessions.save(manualA);
+        slot8.setStatus(SlotStatus.OCCUPIED);
+        slots.save(slot8);
+
+        ParkingSlot slot9 = available.get(8);
+        ParkingSession manualB = new ParkingSession(slot9, car, "51G-67890", false);
+        manualB.setUser(driver);
+        manualB.setCheckInAt(Instant.now().minus(Duration.ofHours(1)));
+        sessions.save(manualB);
+        slot9.setStatus(SlotStatus.OCCUPIED);
+        slots.save(slot9);
+
+        log.info("Seeded 9 driver sessions: walk-in×2 AI, free-res active, paid-res active, awaiting payment, free-res completed, paid-res completed, manual×2 active.");
     }
 
     private void seedLiveSessions(VehicleTypeResponse[] vt, List<User> extraDrivers) {

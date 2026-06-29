@@ -109,6 +109,19 @@ Vercel + Render auto-redeploy on push to `deploy`. UptimeRobot pings `/api/publi
 
 Environment variables: [docs/env.md](docs/env.md)
 
+### Reset Demo Data (Production)
+
+Use before a presentation so active session timestamps show "just checked in".
+
+1. [Neon console](https://console.neon.tech) → SQL Editor → run:
+   ```sql
+   DROP SCHEMA public CASCADE;
+   CREATE SCHEMA public;
+   ```
+2. Render dashboard → Manual Deploy (or push any commit to `deploy`)
+3. Wait ~40s — Flyway re-migrates, seeder runs automatically
+4. Check Render logs for `Dev seed complete`
+
 ## Documentation
 
 | Document | Description |
