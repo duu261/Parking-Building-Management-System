@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Hand } from "lucide-react";
+import { Sparkles, Hand, TrendingUp, Car, Clock, Banknote, Activity, Gauge, BarChart3, ArrowUp, Zap } from "lucide-react";
 import { Card, Select, Spinner, Alert } from "../../components/ui";
-import { Bars, HorizontalBars, AreaLine } from "../../components/charts";
+import { Bars, HorizontalBars } from "../../components/charts";
 import { managerApi } from "../../lib/endpoints";
 
 const RANGES = [
@@ -17,19 +17,29 @@ function windowFor(days) {
 }
 
 const money = (n) => Number(n ?? 0).toLocaleString("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
+const shortMoney = (n) => {
+  const v = Number(n ?? 0);
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+  return String(v);
+};
 const mins = (n) => `${Math.round(Number(n ?? 0))}m`;
 const dayLabel = (iso) => new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
 
-function ChartCard({ title, hint, children }) {
-  return (
-    <Card className="p-5">
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
-      </div>
-      {children}
-    </Card>
-  );
+function groupByWeek(points) {
+  const weeks = {};
+  points.forEach((p) => {
+    const d = new Date(p.date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+    const key = monday.getTime();
+    if (!weeks[key]) weeks[key] = { date: monday, total: 0 };
+    weeks[key].total += Number(p.total);
+  });
+  return Object.values(weeks)
+    .sort((a, b) => a.date - b.date)
+    .map((w) => ({ label: dayLabel(w.date.toISOString()), value: w.total }));
 }
 
 export default function AnalyticsPage() {
@@ -54,12 +64,46 @@ export default function AnalyticsPage() {
       .catch((e) => setError(e.message));
   }, [days]);
 
+  if (error) return <Alert>{error}</Alert>;
+  if (!data) return <Spinner label="Loading analytics" />;
+
+  const { daily, byType, hourly, duration, alloc } = data;
+
+  const points = daily.points ?? [];
+  const monthTotal = points.reduce((s, p) => s + Number(p.total), 0);
+  const totalSessions = points.reduce((s, p) => s + Number(p.count), 0);
+  const avgPerDay = points.length ? monthTotal / points.length : 0;
+  const sessPerDay = points.length ? (totalSessions / points.length).toFixed(1) : "0";
+
+  const revTypes = byType?.points ?? [];
+  const topType = revTypes.length ? revTypes.reduce((a, b) => (Number(a.total) > Number(b.total) ? a : b)) : null;
+
+  const hourPoints = hourly?.points ?? [];
+  const peakHour = hourPoints.length ? hourPoints.reduce((a, b) => (Number(a.count) > Number(b.count) ? a : b)) : null;
+
+  const durPoints = duration?.points ?? [];
+  const longestDuration = durPoints.length ? durPoints.reduce((a, b) => (Number(a.avgMinutes) > Number(b.avgMinutes) ? a : b)) : null;
+  const avgDurationOverall = durPoints.length
+    ? durPoints.reduce((s, p) => s + Number(p.avgMinutes), 0) / durPoints.length
+    : 0;
+
+  const auto = Number(alloc?.autoCount ?? 0);
+  const manual = Number(alloc?.manualCount ?? 0);
+  const allocTotal = auto + manual;
+  const aiPct = allocTotal > 0 ? Math.round((auto / allocTotal) * 100) : 0;
+
+  const weeklyData = groupByWeek(points);
+  const useWeekly = days > 7 && weeklyData.length <= points.length / 2;
+  const chartData = useWeekly ? weeklyData : points.map((p) => ({ label: dayLabel(p.date), value: Number(p.total) }));
+  const bestItem = chartData.length ? chartData.reduce((a, b) => (a.value > b.value ? a : b)) : null;
+
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
+      {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Analytics</h1>
-          <p className="mt-1 text-sm text-muted">Revenue, demand, and allocation insight.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+          <p className="mt-1 text-sm text-muted">Performance and operational insights for your parking buildings.</p>
         </div>
         <div className="w-44">
           <Select value={days} onChange={(e) => setDays(Number(e.target.value))}>
@@ -72,103 +116,253 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mt-4">
-          <Alert>{error}</Alert>
-        </div>
-      )}
+      {/* ── Key Highlights ── */}
+      <div className="mt-6 flex flex-wrap gap-2">
+        <HighlightChip icon={Banknote} label="Total revenue" value={shortMoney(monthTotal)} />
+        <HighlightChip icon={Car} label="Sessions" value={totalSessions} />
+        <HighlightChip icon={Gauge} label="Revenue / day" value={shortMoney(avgPerDay)} />
+        <HighlightChip icon={Zap} label="Sessions / day" value={sessPerDay} />
+        <HighlightChip icon={Clock} label="Avg duration" value={mins(avgDurationOverall)} />
+        {peakHour && <HighlightChip icon={Activity} label="Peak hour" value={`${peakHour.hour}:00`} />}
+        {topType && <HighlightChip icon={TrendingUp} label="Top type" value={topType.vehicleType} />}
+        {allocTotal > 0 && (
+          <HighlightChip
+            icon={Sparkles}
+            label="AI adoption"
+            value={`${aiPct}%`}
+            accent={aiPct >= 50}
+          />
+        )}
+      </div>
 
-      {!data ? (
-        <div className="mt-10">
-          <Spinner label="Loading analytics" />
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-4">
-          <ChartCard title="Daily revenue" hint="Settled payments per day in the window.">
-            <AreaLine
-              format={money}
-              data={data.daily.points.map((p) => ({ label: dayLabel(p.date), value: Number(p.total) }))}
-            />
-          </ChartCard>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard title="Revenue by vehicle type" hint="Where the money comes from.">
-              <HorizontalBars
-                format={money}
-                data={data.byType.points.map((p) => ({ label: p.vehicleType, value: Number(p.total) }))}
-              />
-            </ChartCard>
-            <ChartCard title="Avg parked duration" hint="Minutes parked, by vehicle type.">
-              <HorizontalBars
-                format={mins}
-                data={data.duration.points.map((p) => ({
-                  label: p.vehicleType,
-                  value: Number(p.avgMinutes),
-                }))}
-              />
-            </ChartCard>
+      {/* ── Revenue Trend ── */}
+      <Card className="mt-8 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-elevated">
+              <TrendingUp size={15} className="text-muted" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold">Revenue trend</h2>
+              <p className="text-xs text-muted">
+                {useWeekly
+                  ? `Weekly revenue over ${RANGES.find((r) => r.days === days)?.label.toLowerCase()}`
+                  : `Daily revenue over the last ${days} days`}
+              </p>
+            </div>
           </div>
+          <div className="hidden text-right sm:block">
+            <p className="nums text-lg font-semibold">{money(monthTotal)}</p>
+            <p className="text-xs text-muted">{totalSessions} sessions</p>
+          </div>
+        </div>
+        {bestItem && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-available/20 bg-available/8 px-2.5 py-1 text-xs text-available">
+              <ArrowUp size={11} />
+              {useWeekly ? "Best week" : "Best day"}: {bestItem.label} · {money(bestItem.value)}
+            </span>
+          </div>
+        )}
+        <div className="mt-4">
+          <Bars
+            format={money}
+            height={chartData.length > 10 ? 140 : 180}
+            data={chartData}
+          />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs">
+          <Metric label="Total" value={money(monthTotal)} />
+          <Metric label="Daily avg" value={money(avgPerDay)} />
+          <Metric label="Sessions" value={totalSessions} />
+          <Metric label="Days" value={points.length} />
+          {useWeekly && <Metric label="Weeks" value={weeklyData.length} />}
+        </div>
+      </Card>
 
-          <ChartCard title="Check-ins by hour" hint="Peak-hour demand across 0-23h (RQ4).">
-            <Bars
-              data={data.hourly.points.map((p) => ({ label: p.hour, value: Number(p.count) }))}
+      {/* ── Vehicle Performance ── */}
+      <div className="mt-8">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md border border-line bg-elevated">
+            <Car size={13} className="text-muted" />
+          </span>
+          <h2 className="text-sm font-semibold">Vehicle performance</h2>
+        </div>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+          <ChartCard icon={Banknote} title="Revenue by type" hint="Share of total revenue"
+            insight={topType ? `${topType.vehicleType} leads with ${money(topType.total)}` : null}
+          >
+            <HorizontalBars
+              format={money}
+              data={revTypes.map((p) => ({ label: p.vehicleType, value: Number(p.total) }))}
             />
           </ChartCard>
-
-          <ChartCard
-            title="Auto vs manual allocation"
-            hint="Share of drivers who let the AI pick their slot (RQ2)."
+          <ChartCard icon={Clock} title="Avg parked duration" hint="Minutes by vehicle type"
+            insight={longestDuration ? `${longestDuration.vehicleType}: ${mins(longestDuration.avgMinutes)} longest` : null}
           >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <AllocStat
-                icon={Sparkles}
-                label="Auto-allocated"
-                count={data.alloc.autoCount}
-                avg={data.alloc.autoAvgMinutes}
-              />
-              <AllocStat
-                icon={Hand}
-                label="Manual pick"
-                count={data.alloc.manualCount}
-                avg={data.alloc.manualAvgMinutes}
+            <HorizontalBars
+              format={mins}
+              data={durPoints.map((p) => ({
+                label: p.vehicleType,
+                value: Number(p.avgMinutes),
+              }))}
+            />
+          </ChartCard>
+        </div>
+      </div>
+
+      {/* ── Operational Insights ── */}
+      <div className="mt-8">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md border border-line bg-elevated">
+            <Activity size={13} className="text-muted" />
+          </span>
+          <h2 className="text-sm font-semibold">Operational insights</h2>
+        </div>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+          {/* Check-ins by hour */}
+          <Card className="min-w-0 p-5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-elevated">
+                <BarChart3 size={15} className="text-muted" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold">Check-ins by hour</h3>
+                <p className="text-xs text-muted">Peak-hour demand across 0–23h</p>
+              </div>
+            </div>
+            {peakHour && (
+              <div className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-line bg-elevated px-3 py-1.5 text-xs">
+                <ArrowUp size={12} className="text-available" />
+                Peak at <span className="nums font-medium">{peakHour.hour}:00</span> —{" "}
+                <span className="nums font-medium">{peakHour.count}</span> check-ins
+              </div>
+            )}
+            <div className="mt-4">
+              <Bars
+                height={160}
+                data={hourPoints.map((p) => ({ label: p.hour, value: Number(p.count) }))}
               />
             </div>
-            <AdoptionCallout auto={data.alloc.autoCount} manual={data.alloc.manualCount} />
-          </ChartCard>
+          </Card>
+
+          {/* Auto vs Manual */}
+          <Card className="min-w-0 p-5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-elevated">
+                <Sparkles size={15} className="text-muted" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold">Allocation method</h3>
+                <p className="text-xs text-muted">Auto vs manual slot selection</p>
+              </div>
+            </div>
+            {allocTotal > 0 ? (
+              <>
+                <div className="mt-5 space-y-4">
+                  <AllocRow
+                    icon={Sparkles}
+                    label="Auto-allocated"
+                    count={auto}
+                    total={allocTotal}
+                    avg={alloc.autoAvgMinutes}
+                    dominant={aiPct >= 50}
+                  />
+                  <AllocRow
+                    icon={Hand}
+                    label="Manual pick"
+                    count={manual}
+                    total={allocTotal}
+                    avg={alloc.manualAvgMinutes}
+                    dominant={aiPct < 50}
+                  />
+                </div>
+                <div
+                  className={`mt-4 flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
+                    aiPct >= 50
+                      ? "border border-available/30 bg-available/10 text-available"
+                      : "border border-line bg-elevated text-muted"
+                  }`}
+                >
+                  <Sparkles size={16} />
+                  {aiPct >= 50
+                    ? `${aiPct}% of drivers let the AI pick their slot (${auto} of ${allocTotal} sessions).`
+                    : `${aiPct}% of drivers used AI allocation (${auto} of ${allocTotal}) — most still pick manually.`}
+                </div>
+              </>
+            ) : (
+              <div className="mt-10 text-center text-sm text-muted">No allocation data available.</div>
+            )}
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChartCard({ icon: Icon, title, hint, insight, children }) {
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-elevated">
+          <Icon size={15} className="text-muted" />
+        </span>
+        <div>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          {hint && <p className="text-xs text-muted">{hint}</p>}
+        </div>
+      </div>
+      {insight && (
+        <div className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-line bg-elevated px-3 py-1.5 text-xs">
+          <ArrowUp size={12} className="text-available" />
+          {insight}
         </div>
       )}
-    </div>
+      <div className="mt-4">{children}</div>
+    </Card>
   );
 }
 
-function AllocStat({ icon: Icon, label, count, avg }) {
+function HighlightChip({ icon: Icon, label, value, accent }) {
   return (
-    <div className="rounded-[var(--radius)] border border-line p-4">
-      <div className="flex items-center gap-2 text-sm text-muted">
-        {Icon && <Icon size={16} />} {label}
-      </div>
-      <div className="mt-3 nums text-2xl font-semibold">{count}</div>
-      <div className="text-xs text-muted">sessions</div>
-      <div className="mt-2 nums text-sm">
-        {Math.round(Number(avg ?? 0))}m <span className="text-muted">avg duration</span>
-      </div>
-    </div>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${accent ? "border-available/30 bg-available/10 text-available" : "border-line bg-surface text-muted"}`}>
+      {Icon && <Icon size={12} />}
+      <span className="text-text/70">{label}:</span>
+      <span className={`nums font-medium ${accent ? "text-available" : "text-text"}`}>{value}</span>
+    </span>
   );
 }
 
-function AdoptionCallout({ auto, manual }) {
-  const a = Number(auto ?? 0);
-  const m = Number(manual ?? 0);
-  const total = a + m;
-  if (total === 0) return null;
-  const pct = Math.round((a / total) * 100);
-  const majority = pct >= 50;
+function Metric({ label, value }) {
   return (
-    <div className={`mt-4 flex items-center gap-2 rounded-[var(--radius)] px-4 py-3 text-sm font-medium ${majority ? "bg-available/10 text-available" : "bg-elevated text-muted"}`}>
-      <Sparkles size={16} />
-      {majority
-        ? `${pct}% of drivers let the AI pick their slot (${a} of ${total} sessions).`
-        : `${pct}% of drivers used AI allocation (${a} of ${total}) — most still pick manually.`}
+    <span className="text-xs text-muted">
+      {label}: <span className="nums font-medium text-text">{value}</span>
+    </span>
+  );
+}
+
+function AllocRow({ icon: Icon, label, count, total, avg, dominant }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className={`rounded-lg border p-4 ${dominant ? "border-available/30 bg-available/[0.04]" : "border-line"}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted">
+          {Icon && <Icon size={16} />}
+          {label}
+        </div>
+        <span className="nums text-xl font-semibold">{count}</span>
+      </div>
+      <div className="mt-2 flex items-center gap-3 text-xs text-muted">
+        <span>{pct}% of total</span>
+        <span className="h-3 w-px bg-line" />
+        <span>{Math.round(Number(avg ?? 0))}m avg duration</span>
+      </div>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
+        <div
+          className={`h-full rounded-full transition-all ${dominant ? "bg-available" : "bg-muted/40"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
     </div>
   );
 }
