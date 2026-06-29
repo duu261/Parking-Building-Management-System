@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sparkles, Hand, TrendingUp, Car, Clock, Banknote, Activity, Gauge, BarChart3, ArrowUp, Zap } from "lucide-react";
 import { Card, Select, Spinner, Alert } from "../../components/ui";
-import { Bars, HorizontalBars } from "../../components/charts";
+import { AreaLine, Bars, HorizontalBars } from "../../components/charts";
 import { managerApi } from "../../lib/endpoints";
 
 const RANGES = [
@@ -12,7 +12,7 @@ const RANGES = [
 
 function windowFor(days) {
   const to = new Date();
-  const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+  const from = new Date(to.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
   return [from.toISOString(), to.toISOString()];
 }
 
@@ -23,6 +23,7 @@ const shortMoney = (n) => {
   if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
   return String(v);
 };
+const chartMoney = (n) => `${shortMoney(n)} ₫`;
 const mins = (n) => `${Math.round(Number(n ?? 0))}m`;
 const dayLabel = (iso) => new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" });
 
@@ -165,8 +166,8 @@ export default function AnalyticsPage() {
           </div>
         )}
         <div className="mt-4">
-          <Bars
-            format={money}
+          <AreaLine
+            format={chartMoney}
             height={chartData.length > 10 ? 140 : 180}
             data={chartData}
           />
@@ -228,7 +229,7 @@ export default function AnalyticsPage() {
               </span>
               <div>
                 <h3 className="text-sm font-semibold">Check-ins by hour</h3>
-                <p className="text-xs text-muted">Peak-hour demand across 0–23h</p>
+                <p className="text-xs text-muted">Active hours 06:00–22:00</p>
               </div>
             </div>
             {peakHour && (
@@ -241,7 +242,7 @@ export default function AnalyticsPage() {
             <div className="mt-4">
               <Bars
                 height={160}
-                data={hourPoints.map((p) => ({ label: p.hour, value: Number(p.count) }))}
+                data={hourPoints.filter((p) => Number(p.hour) >= 6 && Number(p.hour) <= 22).map((p) => ({ label: String(p.hour), value: Number(p.count) }))}
               />
             </div>
           </Card>
@@ -356,12 +357,6 @@ function AllocRow({ icon: Icon, label, count, total, avg, dominant }) {
         <span>{pct}% of total</span>
         <span className="h-3 w-px bg-line" />
         <span>{Math.round(Number(avg ?? 0))}m avg duration</span>
-      </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
-        <div
-          className={`h-full rounded-full transition-all ${dominant ? "bg-available" : "bg-muted/40"}`}
-          style={{ width: `${pct}%` }}
-        />
       </div>
     </div>
   );

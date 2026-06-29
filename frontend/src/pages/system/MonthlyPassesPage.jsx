@@ -202,7 +202,7 @@ function IssueForm({ vehicleTypes, onIssued, onError }) {
     <Card className="mt-4 p-5">
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Field label="Driver email">
-          <Input type="email" required placeholder="driver@parkmaster.dev" value={form.email} onChange={set("email")} />
+          <Input type="email" required placeholder="you@example.com" value={form.email} onChange={set("email")} />
         </Field>
         <Field label="Vehicle type">
           <Select required value={form.vehicleTypeId} onChange={set("vehicleTypeId")}>

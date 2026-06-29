@@ -80,7 +80,7 @@ export default function SignUpPage() {
               value={form.fullName}
               onChange={set("fullName")}
               maxLength={120}
-              placeholder="Duc Driver"
+              placeholder="Your full name"
               required
               className={`${INPUT_CLASS} pl-10 pr-4`}
             />
@@ -94,7 +94,7 @@ export default function SignUpPage() {
               value={form.email}
               onChange={set("email")}
               autoComplete="email"
-              placeholder="driver@parkmaster.dev"
+              placeholder="you@example.com"
               required
               className={`${INPUT_CLASS} pl-10 pr-4`}
             />

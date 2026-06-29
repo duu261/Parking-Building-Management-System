@@ -75,7 +75,7 @@ export default function ExceptionsPage() {
             </Select>
           </Field>
           <Field label="Session ID (optional)">
-            <Input value={form.sessionId} onChange={set("sessionId")} placeholder="e.g. 42" inputMode="numeric" />
+            <Input value={form.sessionId} onChange={set("sessionId")} placeholder="Session ID" inputMode="numeric" />
           </Field>
           <div className="sm:col-span-2">
             <Field label="Description">
