@@ -17,6 +17,7 @@ import {
   Zap,
   MapPin,
   ChevronRight,
+  Trophy,
 } from "lucide-react";
 
 import HeroFadeIn from "../../components/hero/HeroFadeIn";
@@ -30,24 +31,32 @@ const CRITERIA = [
     label: "Vehicle-type match",
     max: 40,
     reason: "it best matches the vehicle type on this floor",
+    description: "Matches the slot floor with the selected vehicle type. Mixed floors receive a partial score.",
+    short: "Vehicle Type Match",
   },
   {
     key: "loadBalance",
     label: "Load balance",
     max: 30,
     reason: "it has the best load balance across floors",
+    description: "Prefers floors with more available spaces to distribute demand evenly across the building.",
+    short: "Load Balance",
   },
   {
     key: "distanceToEntry",
     label: "Distance to entry",
     max: 20,
     reason: "it is closest to the building entry",
+    description: "Lower floors score higher because they are closer to the entry flow.",
+    short: "Distance to Entry",
   },
   {
     key: "peakHour",
     label: "Peak-hour boost",
     max: 10,
     reason: "it has the highest peak-hour availability",
+    description: "During 7\u20139AM and 5\u20137PM, ParkMaster spreads vehicles across floors with more capacity.",
+    short: "Peak Hour Balance",
   },
 ];
 
@@ -521,6 +530,18 @@ function AIAllocationShowcaseSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [availability, setAvailability] = useState([]);
+  const [hasVideo, setHasVideo] = useState(false);
+  const [hoveredStep, setHoveredStep] = useState(null);
+
+  /* Detect video asset */
+  useEffect(() => {
+    const v = document.createElement('video');
+    v.oncanplaythrough = () => setHasVideo(true);
+    v.onerror = () => setHasVideo(false);
+    v.src = '/videos/allocation.mp4';
+    v.load();
+    return () => { v.oncanplaythrough = null; v.onerror = null; };
+  }, []);
 
   /* ── Fetch buildings + pricing on mount ── */
   useEffect(() => {
@@ -588,335 +609,674 @@ function AIAllocationShowcaseSection() {
   return (
     <section
       id="ai-allocation"
-      className="rounded-b-[32px] px-5 py-20 sm:rounded-b-[40px] sm:px-8 sm:py-24 md:rounded-b-[48px] md:px-10 md:py-28 scroll-mt-24"
+      className="relative overflow-x-clip px-5 py-20 sm:px-8 sm:py-24 md:px-10 md:py-28 scroll-mt-24"
     >
-      <HeroFadeIn className="mx-auto mb-10 max-w-4xl text-center">
-        <span
-          className="text-[0.6875rem] font-medium tracking-[0.12em] uppercase mb-2"
-          style={{ color: "hsl(var(--muted-foreground))" }}
-        >
-          <Sparkles size={13} className="mr-1 inline-block align-text-top" />
-          LIVE AI SLOT ALLOCATION
-        </span>
-        <h2
-          className="text-2xl md:text-4xl leading-[1.15] tracking-tight"
-          style={{
-            fontFamily: "var(--font-display)",
-            color: "hsl(var(--foreground))",
-          }}
-        >
-          Where should this car park? The AI answers in milliseconds.
-        </h2>
-        <p
-          className="text-sm leading-[1.65] mx-auto mt-2 max-w-3xl"
-          style={{ color: "hsl(var(--muted-foreground))" }}
-        >
-          Switch the vehicle type and watch every open slot get re-scored on
-          four weighted criteria, best first. This is the live engine, no login
-          required.
-        </p>
-      </HeroFadeIn>
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        {/* ── 1. Header ── */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute left-1/2 top-1/3 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/4 blur-[120px]" />
+          <div className="absolute right-1/3 top-1/2 h-[300px] w-[300px] rounded-full bg-teal-500/4 blur-[100px]" />
+        </div>
 
-      {/* Selectors */}
-      <div className="mx-auto mb-10 max-w-6xl">
-        <HeroFadeIn delay={0.05}>
-          <div className="flex flex-wrap items-start gap-8 sm:gap-12">
-            <div>
-              <div
-                className="mb-2 text-xs font-medium uppercase tracking-wider"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                Building
+        <HeroFadeIn className="relative mx-auto mb-16 max-w-4xl text-center">
+          <span className="mb-3 inline-flex items-center gap-1.5 text-[0.6875rem] font-medium tracking-[0.12em] uppercase" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <Sparkles size={13} className="inline-block" />
+            AI ALLOCATION ENGINE
+          </span>
+          <h2
+            className="text-3xl leading-[1.08] tracking-tight sm:text-4xl md:text-5xl lg:text-[3.25rem]"
+            style={{
+              fontFamily: "var(--font-display)",
+              color: "hsl(var(--foreground))",
+            }}
+          >
+            ParkMaster scores, ranks, and assigns the best slot in milliseconds
+          </h2>
+          <p
+            className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed sm:text-base"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            A weighted scoring engine scans available slots, evaluates each candidate, sorts the results, and recommends the highest-scoring parking space.
+          </p>
+        </HeroFadeIn>
+
+        <div className="relative mx-auto mb-20 w-full max-w-[1500px] px-4 sm:px-6">
+
+
+          {/* ── Mobile layout (< lg) — stacked ── */}
+          <div className="flex flex-col gap-6 lg:hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="relative"
+            >
+              <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-r from-cyan-500/10 via-teal-500/10 to-cyan-500/10 blur-3xl" />
+              <div className="relative overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-white/[0.02] shadow-[0_0_50px_rgba(34,211,238,0.04)]">
+                <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/60 via-black/10 to-black/20" />
+                <div className="absolute left-3 top-3 z-20 h-6 w-6 rounded-tl border-l-[1.5px] border-t-[1.5px] border-cyan-400/30" />
+                <div className="absolute right-3 top-3 z-20 h-6 w-6 rounded-tr border-r-[1.5px] border-t-[1.5px] border-cyan-400/30" />
+                <div className="absolute bottom-3 left-3 z-20 h-6 w-6 rounded-bl border-b-[1.5px] border-l-[1.5px] border-cyan-400/30" />
+                <div className="absolute bottom-3 right-3 z-20 h-6 w-6 rounded-br border-b-[1.5px] border-r-[1.5px] border-cyan-400/30" />
+                <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
+                  </span>
+                  <span className="text-[0.6rem] font-bold tracking-[0.12em] uppercase text-white/80">Live scan feed</span>
+                </div>
+                <video className="h-full w-full object-cover" src="/videos/scan-parking.mp4" autoPlay muted defaultMuted loop playsInline preload="metadata" style={{ aspectRatio: "16 / 9" }} />
               </div>
-              <div className="flex flex-wrap gap-2">
-                {buildings.map((b) => (
-                  <button
-                    key={b.id}
-                    onClick={() => setBuildingId(b.id)}
-                    className={
-                      buildingId === b.id
-                        ? "rounded-full border border-white/10 text-white/60 px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white/30 hover:text-white hover:bg-white/[0.04] hover:-translate-y-px cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98] rounded-full border border-white/80 bg-white/[0.08] text-white px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white hover:bg-white/[0.12] hover:-translate-y-px hover:shadow-[0_0_20px_rgba(255,255,255,0.04)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
-                        : "rounded-full border border-white/10 text-white/60 px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white/30 hover:text-white hover:bg-white/[0.04] hover:-translate-y-px cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
-                    }
-                  >
-                    {b.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div
-                className="mb-2 text-xs font-medium uppercase tracking-wider"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                Vehicle type
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {vehicleTypes.map((t) => (
-                  <button
-                    key={t.vehicleTypeId}
-                    onClick={() => setVehicleTypeId(t.vehicleTypeId)}
-                    className={
-                      vehicleTypeId === t.vehicleTypeId
-                        ? "rounded-full border border-white/10 text-white/60 px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white/30 hover:text-white hover:bg-white/[0.04] hover:-translate-y-px cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98] rounded-full border border-white/80 bg-white/[0.08] text-white px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white hover:bg-white/[0.12] hover:-translate-y-px hover:shadow-[0_0_20px_rgba(255,255,255,0.04)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
-                        : "rounded-full border border-white/10 text-white/60 px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white/30 hover:text-white hover:bg-white/[0.04] hover:-translate-y-px cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
-                    }
-                  >
-                    {t.vehicleTypeName}
-                  </button>
-                ))}
-              </div>
+            </motion.div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {[{ step: "01", icon: ScanLine, title: "Scan available slots", desc: "ParkMaster reads every available slot in the selected building before scoring candidates.", highlight: false }, { step: "02", icon: BarChart3, title: "Score each candidate", desc: "Each slot is scored using four weighted criteria per slot.", highlight: false }, { step: "03", icon: Layers, title: "Rank best-first", desc: "Top candidates sorted by total score descending.", highlight: false }, { step: "04", icon: Trophy, title: "Assign the top slot", desc: "Highest score wins the recommendation as the best available spot.", highlight: true }].map((card, i) => (
+                <motion.div key={card.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }} onMouseEnter={() => setHoveredStep(card.step)} onMouseLeave={() => setHoveredStep(null)}
+                  className={card.highlight ? "group relative rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-400/8 to-white/[0.02] p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/50 hover:shadow-[0_8px_40px_rgba(34,211,238,0.1)] sm:p-6" : "group relative rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.06] hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] sm:p-6"}
+                >
+                  <span className={card.highlight ? "pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-cyan-400/10 sm:text-[4.5rem]" : "pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04] sm:text-[4.5rem]"}>{card.step}</span>
+                  <div className="relative">
+                    <span className={card.highlight ? "flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-400 transition-all duration-300 group-hover:bg-cyan-400/15 sm:h-12 sm:w-12" : "flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition-all duration-300 group-hover:border-white/20 group-hover:bg-white/[0.06] sm:h-12 sm:w-12"}>
+                      <card.icon size={card.highlight ? 22 : 20} />
+                    </span>
+                    <h4 className={card.highlight ? "mt-3 text-sm font-semibold text-cyan-300 sm:text-base" : "mt-3 text-sm font-semibold text-white sm:text-base"}>{card.title}</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-white/50 sm:text-sm">{card.desc}</p>
+                    {card.highlight && <div className="mt-3 h-[2px] w-12 rounded-full bg-gradient-to-r from-cyan-400 to-transparent" />}
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
-        </HeroFadeIn>
-      </div>
 
-      {/* Loading / Error / Main content */}
-      {loading && (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-        </div>
-      )}
+          {/* ── Desktop layout (>= lg) — 3-column grid: left cards / center video / right cards ── */}
+          <div className="relative hidden lg:block">
+            <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)_220px] lg:gap-x-8">
 
-      {error && (
-        <p
-          className="py-20 text-center text-sm"
-          style={{ color: "hsl(var(--muted-foreground))" }}
-        >
-          {error}
-        </p>
-      )}
+              {/* Left column — Card 01 + Card 03 */}
+              <div className="flex flex-col justify-between gap-6 h-full">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  onMouseEnter={() => setHoveredStep("01")}
+                  onMouseLeave={() => setHoveredStep(null)}
+                  className="w-full max-w-[280px] rounded-3xl border border-white/10 bg-black/55 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-white/[0.07]"
+                >
+                  <span className="pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04]">01</span>
+                  <div className="relative">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70"><ScanLine size={20} /></span>
+                    <h4 className="mt-3 text-sm font-semibold text-white">Scan available slots</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-white/50">ParkMaster reads every available slot in the selected building before scoring candidates.</p>
+                  </div>
+                </motion.div>
 
-      {!loading && !error && winner && (
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-          {/* AI pick card */}
-          <HeroFadeIn delay={0.15} className="h-fit">
-            <div
-              className="rounded-2xl border p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/20 sm:rounded-3xl sm:p-8"
-              style={{
-                borderColor: "var(--card-border)",
-                backgroundColor: "var(--card-bg)",
-              }}
-            >
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wider"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                  color: "hsl(var(--foreground))",
-                }}
-              >
-                <Sparkles size={12} /> AI PICK FOR{" "}
-                {activeVehicleName.toUpperCase()}
-              </span>
-
-              <div className="mt-6 flex items-end justify-between gap-4">
-                <div>
-                  <div
-                    className="text-4xl font-semibold tracking-tight sm:text-5xl"
-                    style={{ color: "hsl(var(--foreground))" }}
-                  >
-                    {winner.slotCode}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                  onMouseEnter={() => setHoveredStep("03")}
+                  onMouseLeave={() => setHoveredStep(null)}
+                  className="w-full max-w-[280px] rounded-3xl border border-white/10 bg-black/55 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-white/[0.07]"
+                >
+                  <span className="pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04]">03</span>
+                  <div className="relative">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70"><Layers size={20} /></span>
+                    <h4 className="mt-3 text-sm font-semibold text-white">Rank best-first</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-white/50">Top candidates sorted by total score descending.</p>
                   </div>
-                  <div
-                    className="mt-1 text-sm"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                  >
-                    {winner.floorName} &middot; Level {winner.level}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className="text-4xl font-semibold tracking-tight sm:text-5xl"
-                    style={{
-                      color: "hsl(var(--foreground))",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {winner.total}
-                  </div>
-                  <div
-                    className="text-xs uppercase tracking-wide"
-                    style={{ color: "hsl(var(--muted-foreground))" }}
-                  >
-                    SCORE / 100
-                  </div>
-                </div>
+                </motion.div>
               </div>
 
-              <p
-                className="mt-4 border-t pt-4 text-sm leading-relaxed sm:mt-5 sm:pt-5"
-                style={{
-                  borderColor: "var(--card-border)",
-                  color: "hsl(var(--foreground))",
-                }}
-              >
-                Won because {topReason(winner)}.
-              </p>
-
-              {/* Criteria bars */}
-              <div className="mt-5 space-y-3">
-                {CRITERIA.map((c) => {
-                  const val = winner[c.key] ?? 0;
-                  const pct = Math.min(100, (val / c.max) * 100);
-                  return (
-                    <div key={c.key}>
-                      <div className="flex items-center justify-between text-xs">
-                        <span style={{ color: "hsl(var(--muted-foreground))" }}>
-                          {c.label}
-                        </span>
-                        <span
-                          className="nums"
-                          style={{ color: "hsl(var(--foreground))" }}
-                        >
-                          {val}/{c.max}
-                        </span>
-                      </div>
-                      <div className="h-[5px] rounded-[2.5px] bg-white/[0.05] overflow-hidden mt-1.5">
-                        <div
-                          className="h-full rounded-[2.5px] bg-gradient-to-r from-[hsl(186,70%,45%)] to-[rgba(56,189,248,0.25)] transition-all duration-[0.6s] ease"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
+              {/* Center column — video */}
+              <div className="min-w-0">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/15 bg-white/[0.03] shadow-[0_0_90px_rgba(34,211,238,0.2)] aspect-[16/10]">
+                    <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/60 via-black/10 to-black/20" />
+                    <div className="absolute left-4 top-4 z-20 h-10 w-10 rounded-tl border-l-[1.5px] border-t-[1.5px] border-cyan-400/30" />
+                    <div className="absolute right-4 top-4 z-20 h-10 w-10 rounded-tr border-r-[1.5px] border-t-[1.5px] border-cyan-400/30" />
+                    <div className="absolute bottom-4 left-4 z-20 h-10 w-10 rounded-bl border-b-[1.5px] border-l-[1.5px] border-cyan-400/30" />
+                    <div className="absolute bottom-4 right-4 z-20 h-10 w-10 rounded-br border-b-[1.5px] border-r-[1.5px] border-cyan-400/30" />
+                    <div className="absolute left-5 top-5 z-20 flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
+                      </span>
+                      <span className="text-[0.625rem] font-bold tracking-[0.12em] uppercase text-white/80">Live scan feed</span>
                     </div>
-                  );
-                })}
+                    <video className="h-full w-full object-cover" src="/videos/scan-parking.mp4" autoPlay muted defaultMuted loop playsInline preload="metadata" />
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Right column — Card 02 + Card 04 */}
+              <div className="flex flex-col justify-between gap-6 h-full">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  onMouseEnter={() => setHoveredStep("02")}
+                  onMouseLeave={() => setHoveredStep(null)}
+                  className="w-full max-w-[280px] rounded-3xl border border-white/10 bg-black/55 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-white/[0.07]"
+                >
+                  <span className="pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-white/[0.04]">02</span>
+                  <div className="relative">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70"><BarChart3 size={20} /></span>
+                    <h4 className="mt-3 text-sm font-semibold text-white">Score each candidate</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-white/50">Each slot is scored using four weighted criteria per slot.</p>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                  onMouseEnter={() => setHoveredStep("04")}
+                  onMouseLeave={() => setHoveredStep(null)}
+                  className="w-full max-w-[280px] rounded-3xl border border-cyan-400/25 bg-black/55 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/50 hover:shadow-[0_8px_40px_rgba(34,211,238,0.1)]"
+                >
+                  <span className="pointer-events-none absolute right-3 top-2 select-none text-[3.5rem] font-bold leading-none tracking-[-0.04em] text-cyan-400/10">04</span>
+                  <div className="relative">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-400"><Trophy size={22} /></span>
+                    <h4 className="mt-3 text-sm font-semibold text-cyan-300">Assign the top slot</h4>
+                    <p className="mt-1 text-xs leading-relaxed text-white/50">Highest score wins the recommendation as the best available spot.</p>
+                    <div className="mt-3 h-[2px] w-12 rounded-full bg-gradient-to-r from-cyan-400 to-transparent" />
+                  </div>
+                </motion.div>
+              </div>
+
+            </div>
+
+            {/* ── Connector Lines SVG (desktop overlay) — from card edges toward video ── */}
+            <svg
+              className="pointer-events-none absolute inset-0 z-20 hidden h-full w-full lg:block"
+              viewBox="0 0 1600 820"
+              preserveAspectRatio="xMidYMid meet"
+              style={{ opacity: 0.35 }}
+            >
+              <g style={{ opacity: hoveredStep === null || hoveredStep === "01" ? 1 : 0.2, transition: "opacity 0.3s" }}>
+                <path d="M 320 120 Q 350 130 380 160" fill="none" stroke="rgba(34,211,238,0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
+                <circle cx="320" cy="120" r="2.5" fill="rgba(34,211,238,0.35)" />
+                <circle cx="380" cy="160" r="2.5" fill="rgba(34,211,238,0.35)" />
+              </g>
+              <g style={{ opacity: hoveredStep === null || hoveredStep === "02" ? 1 : 0.2, transition: "opacity 0.3s" }}>
+                <path d="M 1280 120 Q 1250 130 1220 160" fill="none" stroke="rgba(34,211,238,0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
+                <circle cx="1280" cy="120" r="2.5" fill="rgba(34,211,238,0.35)" />
+                <circle cx="1220" cy="160" r="2.5" fill="rgba(34,211,238,0.35)" />
+              </g>
+              <g style={{ opacity: hoveredStep === null || hoveredStep === "03" ? 1 : 0.2, transition: "opacity 0.3s" }}>
+                <path d="M 320 700 Q 350 690 380 660" fill="none" stroke="rgba(34,211,238,0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
+                <circle cx="320" cy="700" r="2.5" fill="rgba(34,211,238,0.35)" />
+                <circle cx="380" cy="660" r="2.5" fill="rgba(34,211,238,0.35)" />
+              </g>
+              <g style={{ opacity: hoveredStep === null || hoveredStep === "04" ? 1 : 0.2, transition: "opacity 0.3s" }}>
+                <path d="M 1280 700 Q 1250 690 1220 660" fill="none" stroke="rgba(34,211,238,0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
+                <circle cx="1280" cy="700" r="2.5" fill="rgba(34,211,238,0.35)" />
+                <circle cx="1220" cy="660" r="2.5" fill="rgba(34,211,238,0.35)" />
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        {/* ── 4. Scoring Criteria ── */}
+        <div className="relative mx-auto mb-20 max-w-6xl">
+
+
+          <HeroFadeIn delay={0.1}>
+            <div className="relative mb-8 text-center">
+              <span
+                className="text-[0.6875rem] font-medium tracking-[0.12em] uppercase"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
+                How scoring works
+              </span>
+              <p
+                className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed"
+                style={{ color: "hsl(var(--muted-foreground))" }}
+              >
+                ParkMaster does not guess. It ranks every available slot with four weighted criteria and selects the highest scoring candidate.
+              </p>
+            </div>
+          </HeroFadeIn>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {CRITERIA.map((card, i) => (
+              <HeroFadeIn key={card.key} delay={0.1 + i * 0.06} y={16}>
+                <div
+                  className="group flex flex-col min-h-[185px] sm:min-h-[170px] rounded-xl border border-white/10 bg-black/55 p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-white/[0.07] sm:p-5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-1.5 w-1.5 rounded-full bg-cyan-300/50 shrink-0" />
+                      <h3
+                        className="text-xs font-semibold tracking-tight sm:text-sm"
+                        style={{ color: "hsl(var(--foreground))" }}
+                      >
+                        {card.short}
+                      </h3>
+                    </div>
+                    <span
+                      className="nums shrink-0 rounded-md px-2 py-0.5 text-[0.625rem] font-bold sm:text-xs"
+                      style={{
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        color: "hsl(186,70%,45%)",
+                      }}
+                    >
+                      {card.max} pts
+                    </span>
+                  </div>
+                  <p
+                    className="mt-1.5 text-[0.625rem] leading-relaxed sm:text-xs"
+                    style={{ color: "hsl(var(--muted-foreground))" }}
+                  >
+                    {card.description}
+                  </p>
+                  <div className="mt-auto pt-3">
+                    <motion.div
+                      className="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: 0.1 + i * 0.1 }}
+                    >
+                      <motion.div
+                        className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        whileInView={{ width: `${(card.max / 40) * 100}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8, delay: 0.25 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        style={{
+                          background: "linear-gradient(90deg, hsl(186,70%,45%) 0%, rgba(56,189,248,0.3) 100%)",
+                        }}
+                      />
+                    </motion.div>
+                  </div>
+                </div>
+              </HeroFadeIn>
+            ))}
+          </div>
+        </div>
+
+        {/* ── 5. Live preview ── */}
+        <HeroFadeIn className="mx-auto mb-10 max-w-6xl text-center">
+          <span
+            className="text-[0.6875rem] font-medium tracking-[0.12em] uppercase"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
+            LIVE PREVIEW
+          </span>
+          <h3
+            className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl"
+            style={{
+              fontFamily: "var(--font-display)",
+              color: "hsl(var(--foreground))",
+            }}
+          >
+            Try the allocation engine
+          </h3>
+          <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+            Switch building or vehicle type and watch the ranked candidates update from the current API data.
+          </p>
+        </HeroFadeIn>
+
+        {/* ── Selectors ── */}
+        <div className="mx-auto mb-10 max-w-6xl">
+          <HeroFadeIn delay={0.05}>
+            <div className="flex flex-wrap items-start gap-8 sm:gap-12">
+              <div>
+                <div
+                  className="mb-2 text-xs font-medium uppercase tracking-wider"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Building
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {buildings.map((b) => (
+                    <button
+                      key={b.id}
+                      onClick={() => setBuildingId(b.id)}
+                      className={
+                        buildingId === b.id
+                          ? "rounded-full border border-white/80 bg-white/[0.08] text-white px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white hover:bg-white/[0.12] hover:-translate-y-px hover:shadow-[0_0_20px_rgba(255,255,255,0.04)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
+                          : "rounded-full border border-white/10 text-white/60 px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white/30 hover:text-white hover:bg-white/[0.04] hover:-translate-y-px cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
+                      }
+                    >
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div
+                  className="mb-2 text-xs font-medium uppercase tracking-wider"
+                  style={{ color: "hsl(var(--muted-foreground))" }}
+                >
+                  Vehicle type
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {vehicleTypes.map((t) => (
+                    <button
+                      key={t.vehicleTypeId}
+                      onClick={() => setVehicleTypeId(t.vehicleTypeId)}
+                      className={
+                        vehicleTypeId === t.vehicleTypeId
+                          ? "rounded-full border border-white/80 bg-white/[0.08] text-white px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white hover:bg-white/[0.12] hover:-translate-y-px hover:shadow-[0_0_20px_rgba(255,255,255,0.04)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
+                          : "rounded-full border border-white/10 text-white/60 px-5 py-2 text-sm font-medium transition-all duration-200 hover:border-white/30 hover:text-white hover:bg-white/[0.04] hover:-translate-y-px cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
+                      }
+                    >
+                      {t.vehicleTypeName}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </HeroFadeIn>
-
-          {/* Runners-up + CTA */}
-          <div>
-            <HeroFadeIn delay={0.2}>
-              <div
-                className="text-xs font-medium uppercase tracking-wider"
-                style={{ color: "hsl(var(--muted-foreground))" }}
-              >
-                Runners-up
-              </div>
-              <div
-                className="mt-3 divide-y"
-                style={{ borderColor: "var(--card-border)" }}
-              >
-                {runners.map((r, i) => (
-                  <div
-                    key={r.slotCode}
-                    className="flex items-center gap-3 py-2.5 text-sm transition-all duration-200 hover:pl-1"
-                  >
-                    <span
-                      className="nums w-5 text-xs"
-                      style={{ color: "hsl(var(--muted-foreground))" }}
-                    >
-                      {i + 2}
-                    </span>
-                    <span
-                      className="nums font-medium"
-                      style={{ color: "hsl(var(--foreground))" }}
-                    >
-                      {r.slotCode}
-                    </span>
-                    <span
-                      className="text-xs"
-                      style={{ color: "hsl(var(--muted-foreground))" }}
-                    >
-                      {r.floorName}
-                    </span>
-                    <span
-                      className="nums ml-auto text-xs"
-                      style={{ color: "hsl(var(--muted-foreground))" }}
-                    >
-                      {r.total}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </HeroFadeIn>
-
-            <HeroFadeIn delay={0.3}>
-              <Link
-                to="/app/reservations"
-                className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-medium text-white no-underline transition-all duration-300 hover:-translate-y-[2px] hover:border-white/30 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98] mt-6"
-              >
-                Let it park you{" "}
-                <ArrowRight
-                  size={15}
-                  className="inline-block transition-all duration-300 opacity-70 group-hover:translate-x-[3px] group-hover:opacity-100"
-                />
-              </Link>
-            </HeroFadeIn>
-          </div>
         </div>
-      )}
 
-      {/* Live availability */}
-      <div id="availability" />
-      <HeroFadeIn delay={0.2} className="mx-auto mt-16 max-w-6xl">
-        <div className="mb-4 text-center">
-          <div
-            className="text-[0.6875rem] font-medium tracking-[0.12em] uppercase mb-2"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
-            Live availability
+        {/* ── Loading ── */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
           </div>
-          <p
-            className="mt-1 text-sm"
-            style={{ color: "hsl(var(--muted-foreground))" }}
-          >
-            Real-time open slots across all buildings.
+        )}
+
+        {/* ── Error ── */}
+        {error && (
+          <p className="py-20 text-center text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+            {error}
           </p>
-        </div>
-        <div className="mx-auto grid max-w-lg gap-4 sm:grid-cols-2">
-          {availability.map((a) => {
-            const pct =
-              a.totalSlots > 0
-                ? Math.round((a.availableSlots / a.totalSlots) * 100)
-                : 0;
-            return (
+        )}
+
+        {/* ── Main demo ── */}
+        {!loading && !error && winner && (
+          <div className="mx-auto mb-16 grid max-w-6xl gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+            {/* ─── Best slot card ─── */}
+            <HeroFadeIn delay={0.15} className="h-fit">
               <div
-                key={a.buildingId}
-                className="rounded-xl border p-5 backdrop-blur-sm"
+                className="rounded-2xl border p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/20 sm:rounded-3xl sm:p-8"
                 style={{
                   borderColor: "var(--card-border)",
-                  backgroundColor: "rgba(0,0,0,0.35)",
+                  backgroundColor: "var(--card-bg)",
                 }}
               >
-                <div className="flex items-center justify-between">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wider"
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    color: "hsl(var(--foreground))",
+                  }}
+                >
+                  <Trophy size={12} /> AI PICK FOR{" "}
+                  {activeVehicleName.toUpperCase()}
+                </span>
+
+                <div className="mt-6 flex items-end justify-between gap-4">
                   <div>
-                    <div
-                      className="text-sm font-medium"
+                    <motion.div
+                      key={winner.slotCode}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      className="text-4xl font-semibold tracking-tight sm:text-5xl"
                       style={{ color: "hsl(var(--foreground))" }}
                     >
-                      {a.name}
-                    </div>
+                      {winner.slotCode}
+                    </motion.div>
                     <div
-                      className="text-xs"
+                      className="mt-1 text-sm"
                       style={{ color: "hsl(var(--muted-foreground))" }}
                     >
-                      Open slots
+                      {winner.floorName} &middot; Level {winner.level}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <motion.div
+                    key={winner.total}
+                    className="text-right"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     <div
-                      className="text-lg font-semibold"
+                      className="text-4xl font-semibold tracking-tight sm:text-5xl"
                       style={{
-                        color: "hsl(var(--foreground))",
+                        color: "hsl(186,70%,45%)",
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
-                      {a.availableSlots}/{a.totalSlots}
+                      {winner.total}
                     </div>
-                  </div>
+                    <div
+                      className="text-xs uppercase tracking-wide"
+                      style={{ color: "hsl(var(--muted-foreground))" }}
+                    >
+                      SCORE / 100
+                    </div>
+                  </motion.div>
                 </div>
-                <div className="h-[5px] rounded-[2.5px] bg-white/[0.05] overflow-hidden mt-3">
-                  <div
-                    className="h-full rounded-[2.5px] bg-gradient-to-r from-[hsl(186,70%,45%)] to-[rgba(56,189,248,0.25)] transition-all duration-[0.6s] ease"
-                    style={{ width: `${pct}%` }}
-                  />
+
+                <p
+                  className="mt-4 border-t pt-4 text-sm leading-relaxed sm:mt-5 sm:pt-5"
+                  style={{
+                    borderColor: "var(--card-border)",
+                    color: "hsl(var(--foreground))",
+                  }}
+                >
+                  <span style={{ opacity: 0.6 }}>Won because </span>
+                  {topReason(winner)}.
+                </p>
+
+                {/* Animated breakdown bars */}
+                <div className="mt-5 space-y-3">
+                  {CRITERIA.map((c) => {
+                    const val = winner[c.key] ?? 0;
+                    const pct = Math.min(100, (val / c.max) * 100);
+                    return (
+                      <motion.div
+                        key={`${winner.slotId}-${c.key}`}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, delay: 0.1 }}
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span style={{ color: "hsl(var(--muted-foreground))" }}>
+                            {c.label}
+                          </span>
+                          <span className="nums" style={{ color: "hsl(var(--foreground))" }}>
+                            {val}/{c.max}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-[5px] rounded-[2.5px] bg-white/[0.05] overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-[2.5px]"
+                            style={{
+                              background:
+                                "linear-gradient(90deg, hsl(186,70%,45%) 0%, rgba(56,189,248,0.45) 100%)",
+                            }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                          />
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </HeroFadeIn>
+            </HeroFadeIn>
+
+            {/* ─── Runners-up + CTA + Video ─── */}
+            <div className="flex flex-col gap-6">
+              <HeroFadeIn delay={0.2}>
+                <div
+                  className="rounded-2xl border p-6 backdrop-blur-sm sm:rounded-3xl sm:p-8"
+                  style={{
+                    borderColor: "var(--card-border)",
+                    backgroundColor: "var(--card-bg)",
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-xs font-medium uppercase tracking-wider"
+                      style={{ color: "hsl(var(--muted-foreground))" }}
+                    >
+                      Runners-up
+                    </span>
+                    <span
+                      className="text-[10px]"
+                      style={{ color: "rgba(255,255,255,0.25)" }}
+                    >
+                      {runners.length} candidates
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-1">
+                    {runners.map((r, i) => {
+                      const isFirst = i === 0;
+                      return (
+                        <div
+                          key={r.slotCode}
+                          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${
+                            isFirst
+                              ? "bg-white/[0.03] border border-white/[0.06]"
+                              : "hover:bg-white/[0.02]"
+                          }`}
+                        >
+                          <span
+                            className="nums flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-bold"
+                            style={{
+                              backgroundColor: isFirst
+                                ? "rgba(255,255,255,0.08)"
+                                : "transparent",
+                              color: isFirst
+                                ? "hsl(var(--foreground))"
+                                : "hsl(var(--muted-foreground))",
+                            }}
+                          >
+                            {i + 2}
+                          </span>
+                          <span
+                            className="nums font-medium"
+                            style={{ color: "hsl(var(--foreground))" }}
+                          >
+                            {r.slotCode}
+                          </span>
+                          <span
+                            className="text-xs"
+                            style={{ color: "hsl(var(--muted-foreground))" }}
+                          >
+                            {r.floorName}
+                          </span>
+                          <span
+                            className="nums ml-auto text-xs"
+                            style={{
+                              color: isFirst
+                                ? "hsl(186,70%,45%)"
+                                : "hsl(var(--muted-foreground))",
+                              fontWeight: isFirst ? 600 : 400,
+                            }}
+                          >
+                            {r.total}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </HeroFadeIn>
+
+              {/* CTA */}
+              <HeroFadeIn delay={0.3}>
+                <Link
+                  to="/app/reservations"
+                  className="group inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-medium text-white no-underline transition-all duration-300 hover:-translate-y-[2px] hover:border-white/30 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.98]"
+                >
+                  Assign Best Slot{" "}
+                  <ArrowRight
+                    size={15}
+                    className="inline-block transition-all duration-300 opacity-70 group-hover:translate-x-[3px] group-hover:opacity-100"
+                  />
+                </Link>
+              </HeroFadeIn>
+
+
+            </div>
+          </div>
+        )}
+
+        {/* ── Live Availability ── */}
+        <div id="availability" />
+        <HeroFadeIn delay={0.2} className="mx-auto max-w-6xl">
+          <div className="mb-4 text-center">
+            <div
+              className="text-[0.6875rem] font-medium tracking-[0.12em] uppercase mb-2"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
+              Live availability
+            </div>
+            <p className="mt-1 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+              Real-time open slots across all buildings.
+            </p>
+          </div>
+          <div className="mx-auto grid max-w-lg gap-4 sm:grid-cols-2">
+            {availability.map((a) => {
+              const pct =
+                a.totalSlots > 0
+                  ? Math.round((a.availableSlots / a.totalSlots) * 100)
+                  : 0;
+              return (
+                <div
+                  key={a.buildingId}
+                  className="rounded-xl border p-5 backdrop-blur-sm"
+                  style={{
+                    borderColor: "var(--card-border)",
+                    backgroundColor: "rgba(0,0,0,0.35)",
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div
+                        className="text-sm font-medium"
+                        style={{ color: "hsl(var(--foreground))" }}
+                      >
+                        {a.name}
+                      </div>
+                      <div
+                        className="text-xs"
+                        style={{ color: "hsl(var(--muted-foreground))" }}
+                      >
+                        Open slots
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div
+                        className="text-lg font-semibold"
+                        style={{
+                          color: "hsl(var(--foreground))",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {a.availableSlots}/{a.totalSlots}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-[5px] rounded-[2.5px] bg-white/[0.05] overflow-hidden mt-3">
+                    <div
+                      className="h-full rounded-[2.5px] bg-gradient-to-r from-[hsl(186,70%,45%)] to-[rgba(56,189,248,0.25)] transition-all duration-[0.6s] ease"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </HeroFadeIn>
+      </div>
     </section>
   );
 }
