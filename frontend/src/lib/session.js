@@ -2,6 +2,7 @@
 // { accessToken, id, email, fullName, role }.
 const TOKEN_KEY = "accessToken";
 const USER_KEY = "user";
+const STAY_KEY = "stayLoggedIn";
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -30,6 +31,15 @@ export function setSession(authResponse) {
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(STAY_KEY);
+}
+
+export function setStayLoggedIn(value) {
+  localStorage.setItem(STAY_KEY, value ? "1" : "0");
+}
+
+export function getStayLoggedIn() {
+  return localStorage.getItem(STAY_KEY) === "1";
 }
 
 export function homePathForRole() {

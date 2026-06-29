@@ -4,7 +4,7 @@ import { Mail, Lock } from "lucide-react";
 import AuthShell from "./AuthShell";
 import { Field, Input, Button, Alert } from "../../components/ui";
 import { authApi } from "../../lib/endpoints";
-import { setSession, isAuthed, getUser, homePathForRole } from "../../lib/session";
+import { setSession, setStayLoggedIn, isAuthed, getUser, homePathForRole } from "../../lib/session";
 
 const INPUT_CLASS = "bg-white/[0.06] border-white/10 text-white placeholder:text-white/35 h-11 py-2.5 rounded-xl hover:border-white/20 focus:border-white/35 focus:ring-2 focus:ring-white/15";
 const BTN_CLASS = "w-full bg-white text-black h-12 rounded-xl font-semibold duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(255,255,255,0.14)] hover:bg-white/90 active:translate-y-0 disabled:opacity-60";
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +27,7 @@ export default function LoginPage() {
     try {
       const auth = await authApi.login({ email, password });
       setSession(auth);
+      setStayLoggedIn(keepLoggedIn);
       navigate(homePathForRole(auth.role), { replace: true });
     } catch (err) {
       setError(err.message);
@@ -94,7 +96,16 @@ export default function LoginPage() {
             </button>
           </div>
         </Field>
-        <div className="flex justify-end -mt-1">
+        <div className="flex items-center justify-between -mt-1">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={keepLoggedIn}
+              onChange={(e) => setKeepLoggedIn(e.target.checked)}
+              className="w-4 h-4 accent-white cursor-pointer"
+            />
+            <span className="text-xs text-white/55">Stay logged in</span>
+          </label>
           <Link to="/forgot-password" className="text-xs text-white/55 hover:text-white transition-colors duration-200 no-underline">
             Forgot password?
           </Link>
