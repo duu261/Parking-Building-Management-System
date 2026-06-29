@@ -78,6 +78,9 @@ export default function MySessionsPage() {
   });
 
   const visibleList = filtered.slice(0, visibleCount);
+  const groupCounts = Object.fromEntries(
+    STATUS_GROUPS.map((g) => [g.key, filtered.filter((s) => s.status === g.key).length])
+  );
   const groups = !statusFilter
     ? STATUS_GROUPS.map((g) => ({
         ...g,
@@ -158,7 +161,7 @@ export default function MySessionsPage() {
             <section key={group.key}>
               <div className="mb-3 flex items-center gap-2">
                 <h2 className="text-sm font-semibold tracking-tight">{group.label}</h2>
-                <span className="text-xs text-muted">({group.sessions.length})</span>
+                <span className="text-xs text-muted">({groupCounts[group.key] ?? group.sessions.length})</span>
                 {group.key === "ACTIVE" && <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: "var(--available)" }} />}
                 {group.key === "AWAITING_PAYMENT" && <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: "var(--locked)" }} />}
               </div>

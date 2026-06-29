@@ -344,6 +344,7 @@ function DateTimeInput({ value, onChange, min, max }) {
         type="datetime-local"
         value={value}
         onChange={onChange}
+        onClick={(e) => e.stopPropagation()}
         min={min}
         max={max}
         required
@@ -383,7 +384,7 @@ function ReservationCard({ reservation: r, onCancel, cancelling }) {
               )}
               {r.allocationScore ? (
                 <ScoreBreakdownCard score={r.allocationScore} compact />
-              ) : r.slotCode ? (
+              ) : r.reservationType === "FREE" && r.slotCode ? (
                 <span className="inline-flex items-center gap-1 text-xs text-muted">
                   <Sparkles size={10} /> AI-assigned
                 </span>
