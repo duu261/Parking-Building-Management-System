@@ -70,20 +70,43 @@ export function AreaLine({ data, format = identity, height = 180 }) {
   }
   const w = 600;
   const h = height;
-  const pad = 24; // more padding to make room for labels
+  const padL = 65;
+  const padR = 8;
+  const padT = 10;
+  const padB = 8;
+  const chartW = w - padL - padR;
+  const chartH = h - padT - padB;
   const max = Math.max(...data.map((d) => d.value), 1);
   const count = data.length;
-  const x = (i) => pad + (i * (w - 2 * pad)) / Math.max(count - 1, 1);
-  const y = (v) => h - pad - (v / max) * (h - 2 * pad);
+  const x = (i) => padL + (i * chartW) / Math.max(count - 1, 1);
+  const y = (v) => padT + (1 - v / max) * chartH;
   const line = data.map((d, i) => `${x(i)},${y(d.value)}`).join(" ");
-  const area = `${pad},${h - pad} ${line} ${w - pad},${h - pad}`;
-
-  // Determine label visibility: show all if <= 14 points, every 2nd if <= 30, every 3rd for 90
-  const step = count <= 14 ? 1 : count <= 30 ? 2 : 3;
+  const area = `${padL},${h - padB} ${line} ${w - padR},${h - padB}`;
+  const yTicks = [0, 0.33, 0.67, 1];
 
   return (
     <div>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height }} preserveAspectRatio="none">
+        {yTicks.map((pct) => {
+          const yPos = y(max * pct);
+          return (
+            <g key={pct}>
+              <line
+                x1={padL} y1={yPos} x2={w - padR} y2={yPos}
+                stroke="var(--line)" strokeWidth="1" strokeDasharray="3 4"
+                vectorEffect="non-scaling-stroke"
+              />
+              <text
+                x={padL - 5} y={yPos}
+                textAnchor="end" dominantBaseline="middle"
+                fill="var(--muted)" fontSize="9"
+                vectorEffect="non-scaling-stroke"
+              >
+                {format(max * pct)}
+              </text>
+            </g>
+          );
+        })}
         <polygon points={area} fill="var(--text)" opacity="0.06" />
         <polyline points={line} fill="none" stroke="var(--text)" strokeWidth="2"
           strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
@@ -93,16 +116,6 @@ export function AreaLine({ data, format = identity, height = 180 }) {
               stroke="var(--text)" strokeWidth="1.5" vectorEffect="non-scaling-stroke">
               <title>{`${d.label}: ${format(d.value)}`}</title>
             </circle>
-            {i % step === 0 && (
-              <text x={x(i)} y={y(d.value) - 8} textAnchor="middle"
-                className="nums"
-                fill="var(--muted)"
-                fontSize="9"
-                vectorEffect="non-scaling-stroke"
-              >
-                {format(d.value)}
-              </text>
-            )}
           </g>
         ))}
       </svg>
