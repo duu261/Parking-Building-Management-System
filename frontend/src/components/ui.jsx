@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { STATUS_COLOR } from "../lib/status";
 
 function cx(...parts) {
@@ -33,7 +33,12 @@ export function Field({ label, error, children }) {
     <label className="block">
       <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
       {children}
-      {error && <span className="mt-1 block text-xs text-occupied">{error}</span>}
+      {error && (
+        <span className="mt-1.5 flex items-center gap-1 text-xs text-rose-400">
+          <AlertCircle size={12} className="shrink-0" />
+          <span>{error}</span>
+        </span>
+      )}
     </label>
   );
 }
@@ -44,8 +49,17 @@ const controlClass = cx(
   "placeholder:text-muted/70 focus:border-text/40 focus:ring-2 focus:ring-text/15 disabled:opacity-50",
 );
 
-export function Input({ className, ...rest }) {
-  return <input className={cx(controlClass, className)} {...rest} />;
+export function Input({ className, hasError, ...rest }) {
+  return (
+    <input
+      className={cx(
+        controlClass,
+        className,
+        hasError && "border-rose-400/60 focus:border-rose-400 focus:ring-rose-400/30",
+      )}
+      {...rest}
+    />
+  );
 }
 
 export function Textarea({ className, ...rest }) {
@@ -126,4 +140,8 @@ export function Alert({ children }) {
       {children}
     </div>
   );
+}
+
+export function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

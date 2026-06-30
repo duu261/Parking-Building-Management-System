@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
 import AuthShell from "./AuthShell";
-import { Field, Input, Button, Alert } from "../../components/ui";
+import { Field, Input, Button, Alert, validateEmail } from "../../components/ui";
 import { authApi } from "../../lib/endpoints";
-import { setSession, setStayLoggedIn, isAuthed, getUser, homePathForRole } from "../../lib/session";
+import { setSession, isAuthed, getUser, homePathForRole } from "../../lib/session";
 
 const INPUT_CLASS = "bg-white/[0.06] border-white/10 text-white placeholder:text-white/35 h-11 py-2.5 rounded-xl hover:border-white/20 focus:border-white/35 focus:ring-2 focus:ring-white/15";
 const BTN_CLASS = "w-full bg-white text-black h-12 rounded-xl font-semibold duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(255,255,255,0.14)] hover:bg-white/90 active:translate-y-0 disabled:opacity-60";
@@ -14,20 +14,33 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   if (isAuthed()) return <Navigate to={homePathForRole(getUser()?.role)} replace />;
 
+  const validate = () => {
+    const errs = {};
+    if (!email.trim()) errs.email = "Email is required";
+    else if (!validateEmail(email)) errs.email = "Invalid email format";
+    if (!password) errs.password = "Password is required";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const clearError = (field) => {
+    if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  };
+
   const submit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setError("");
     setLoading(true);
     try {
       const auth = await authApi.login({ email, password });
       setSession(auth);
-      setStayLoggedIn(keepLoggedIn);
       navigate(homePathForRole(auth.role), { replace: true });
     } catch (err) {
       setError(err.message);
@@ -49,8 +62,8 @@ export default function LoginPage() {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-5">
-        <Field label="Email">
+      <form onSubmit={submit} noValidate className="space-y-5">
+        <Field label="Email" error={fieldErrors.email}>
           <div className="relative">
             <Mail
               size={16}
@@ -59,15 +72,15 @@ export default function LoginPage() {
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
               autoComplete="email"
-              placeholder="you@example.com"
-              required
+              placeholder="driver@parkmaster.dev"
+              hasError={!!fieldErrors.email}
               className={`${INPUT_CLASS} pl-10 pr-4`}
             />
           </div>
         </Field>
-        <Field label="Password">
+        <Field label="Password" error={fieldErrors.password}>
           <div className="relative">
             <Lock
               size={16}
@@ -76,10 +89,10 @@ export default function LoginPage() {
             <Input
               type={showPw ? "text" : "password"}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
               autoComplete="current-password"
               placeholder="Enter your password"
-              required
+              hasError={!!fieldErrors.password}
               className={`${INPUT_CLASS} pl-10 pr-10`}
             />
             <button
@@ -96,21 +109,7 @@ export default function LoginPage() {
             </button>
           </div>
         </Field>
-        <div className="flex items-center justify-between -mt-1">
-          <button
-            type="button"
-            onClick={() => setKeepLoggedIn((v) => !v)}
-            className="flex items-center gap-2 select-none py-2 text-left"
-          >
-            <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${keepLoggedIn ? "bg-white border-white" : "border-white/30"}`}>
-              {keepLoggedIn && (
-                <svg viewBox="0 0 10 8" className="w-2.5 h-2.5" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="1,4 3.5,6.5 9,1" />
-                </svg>
-              )}
-            </div>
-            <span className="text-xs text-white/55">Stay logged in</span>
-          </button>
+        <div className="flex justify-end -mt-1">
           <Link to="/forgot-password" className="text-xs text-white/55 hover:text-white transition-colors duration-200 no-underline">
             Forgot password?
           </Link>
