@@ -4,7 +4,7 @@
 
 Full-stack parking management system with AI-powered slot allocation, two-tier reservations (free/paid), VNPay payment integration, and real-time analytics.
 
-**Live demo:** [parkmaster.vercel.app](https://parkmaster.vercel.app)
+**Live demo:** [parkmaster.vercel.app](https://parkmaster.vercel.app) · **Release:** [v1.0](https://github.com/duu261/Parking-Building-Management-System/releases/tag/PM_SU26SWP08-v1.0) · **License:** MIT
 
 Demo accounts — see [docs/demo-accounts.md](docs/demo-accounts.md) (all use password `password123`):
 - `admin@parkmaster.dev` · `manager@parkmaster.dev` · `staff@parkmaster.dev` · `driver@parkmaster.dev`
@@ -109,19 +109,6 @@ Vercel + Render auto-redeploy on push to `deploy`. UptimeRobot pings `/api/publi
 
 Environment variables: [docs/env.md](docs/env.md)
 
-### Reset Demo Data (Production)
-
-Use before a presentation so active session timestamps show "just checked in".
-
-1. [Neon console](https://console.neon.tech) → SQL Editor → run:
-   ```sql
-   DROP SCHEMA public CASCADE;
-   CREATE SCHEMA public;
-   ```
-2. Render dashboard → Manual Deploy (or push any commit to `deploy`)
-3. Wait ~40s — Flyway re-migrates, seeder runs automatically
-4. Check Render logs for `Dev seed complete`
-
 ## Documentation
 
 | Document | Description |
@@ -135,6 +122,9 @@ Use before a presentation so active session timestamps show "just checked in".
 | [Contributing](docs/contributing.md) | Setup, conventions, dev workflow |
 | [Environment](docs/env.md) | All environment variables |
 | [Integrations](docs/integrations.md) | VNPay, Gemini AI, UptimeRobot |
+| [SRS](docs/report/SRS.md) | Software Requirement Specification |
+| [SDS](docs/report/SDS.md) | Software Design Specification |
+| [Final Release](docs/report/Final-Release.md) | Deliverable package, install guide, user manual |
 
 ### Feature Notes
 
