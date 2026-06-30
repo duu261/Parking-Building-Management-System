@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
 import AuthShell from "./AuthShell";
-import { Field, Input, Button, Alert } from "../../components/ui";
+import { Field, Input, Button, Alert, validateEmail } from "../../components/ui";
 import { authApi } from "../../lib/endpoints";
 
 const INPUT_CLASS = "bg-white/[0.06] border-white/10 text-white placeholder:text-white/35 h-11 py-2.5 rounded-xl hover:border-white/20 focus:border-white/35 focus:ring-2 focus:ring-white/15";
@@ -14,9 +14,18 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [resetUrl, setResetUrl] = useState("");
   const [error, setError] = useState("");
+  const [fieldError, setFieldError] = useState("");
+
+  const validate = () => {
+    if (!email.trim()) { setFieldError("Email is required"); return false; }
+    if (!validateEmail(email)) { setFieldError("Invalid email format"); return false; }
+    setFieldError("");
+    return true;
+  };
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setError("");
     setLoading(true);
     try {
@@ -80,8 +89,8 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
       ) : (
-        <form onSubmit={submit} className="space-y-5">
-          <Field label="Email">
+        <form onSubmit={submit} noValidate className="space-y-5">
+          <Field label="Email" error={fieldError}>
             <div className="relative">
               <Mail
                 size={16}
@@ -90,10 +99,10 @@ export default function ForgotPasswordPage() {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (fieldError) setFieldError(""); }}
                 autoComplete="email"
-                placeholder="you@example.com"
-                required
+                placeholder="driver@parkmaster.dev"
+                hasError={!!fieldError}
                 className={`${INPUT_CLASS} pl-10 pr-4`}
               />
             </div>

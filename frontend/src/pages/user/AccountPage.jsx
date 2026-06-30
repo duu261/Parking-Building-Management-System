@@ -73,14 +73,14 @@ function ProfileSection({ profile, onUpdate }) {
           <p className="text-xs text-muted">Your personal information</p>
         </div>
       </div>
-      <form onSubmit={save} className="space-y-5">
+      <form onSubmit={save} noValidate className="space-y-5">
         <div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">Email</label>
           <Input value={profile.email} disabled />
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted">Full name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required />
+          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
         </div>
         {err && <p className="text-sm text-occupied">{err}</p>}
         {msg && (
@@ -107,8 +107,6 @@ function PasswordField({ label, value, onChange, visible, onToggle, autoComplete
           value={value}
           onChange={onChange}
           autoComplete={autoComplete}
-          required
-          minLength={autoComplete === "new-password" ? 8 : undefined}
           maxLength={100}
         />
         <button
@@ -181,7 +179,7 @@ function ChangePasswordSection() {
           <p className="text-xs text-muted">Update your password regularly</p>
         </div>
       </div>
-      <form onSubmit={save} className="space-y-5">
+      <form onSubmit={save} noValidate className="space-y-5">
         <PasswordField label="Current password" value={form.current} onChange={set("current")} visible={show.current} onToggle={() => setShow((s) => ({ ...s, current: !s.current }))} autoComplete="current-password" />
         <div className="grid gap-5 sm:grid-cols-2">
           <PasswordField label="New password" value={form.next} onChange={set("next")} visible={show.next} onToggle={() => setShow((s) => ({ ...s, next: !s.next }))} autoComplete="new-password" error={nextTooShort ? `At least 8 characters (${8 - form.next.length} more needed)` : undefined} />

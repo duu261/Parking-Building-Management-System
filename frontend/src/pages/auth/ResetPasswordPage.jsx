@@ -13,13 +13,25 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const validate = () => {
+    const errs = {};
+    if (!password) errs.password = "Password is required";
+    else if (password.length < 8) errs.password = "Password must be at least 8 characters";
+    if (!confirm) errs.confirm = "Please confirm your password";
+    else if (password !== confirm) errs.confirm = "Passwords do not match";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const clearError = (field) => {
+    if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (password !== confirm) {
-      setError("Passwords do not match");
-      return;
-    }
+    if (!validate()) return;
     setError("");
     setLoading(true);
     try {
@@ -80,30 +92,28 @@ export default function ResetPasswordPage() {
           </Link>
         </div>
       ) : (
-        <form onSubmit={submit} className="space-y-4">
-          <Field label="New password">
+        <form onSubmit={submit} noValidate className="space-y-4">
+          <Field label="New password" error={fieldErrors.password}>
             <div className="relative">
               <Input
                 type={showPw ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
                 autoComplete="new-password"
-                minLength={8}
-                required
+                hasError={!!fieldErrors.password}
                 className="pr-10"
               />
               {EyeToggle}
             </div>
           </Field>
-          <Field label="Confirm password">
+          <Field label="Confirm password" error={fieldErrors.confirm}>
             <div className="relative">
               <Input
                 type={showPw ? "text" : "password"}
                 value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
+                onChange={(e) => { setConfirm(e.target.value); clearError("confirm"); }}
                 autoComplete="new-password"
-                minLength={8}
-                required
+                hasError={!!fieldErrors.confirm}
                 className="pr-10"
               />
               {EyeToggle}
