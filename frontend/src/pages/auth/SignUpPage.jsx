@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { User, Mail, Lock } from "lucide-react";
 import AuthShell from "./AuthShell";
-import { Field, Input, Button, Alert } from "../../components/ui";
+import { Field, Input, Button, Alert, validateEmail } from "../../components/ui";
 import { authApi } from "../../lib/endpoints";
 import { setSession, isAuthed, getUser, homePathForRole } from "../../lib/session";
 
@@ -16,18 +16,33 @@ export default function SignUpPage() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   if (isAuthed()) return <Navigate to={homePathForRole(getUser()?.role)} replace />;
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const validate = () => {
+    const errs = {};
+    if (!form.fullName.trim()) errs.fullName = "Full name is required";
+    if (!form.email.trim()) errs.email = "Email is required";
+    else if (!validateEmail(form.email)) errs.email = "Invalid email format";
+    if (!form.password) errs.password = "Password is required";
+    else if (form.password.length < 8) errs.password = "Password must be at least 8 characters";
+    if (!confirmPw) errs.confirmPw = "Please confirm your password";
+    else if (form.password !== confirmPw) errs.confirmPw = "Passwords do not match";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const clearError = (field) => {
+    if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  };
+
   const submit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setError("");
-    if (form.password !== confirmPw) {
-      setError("Passwords do not match");
-      return;
-    }
     setLoading(true);
     try {
       const auth = await authApi.register(form);
@@ -72,61 +87,59 @@ export default function SignUpPage() {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-5">
-        <Field label="Full name">
+      <form onSubmit={submit} noValidate className="space-y-5">
+        <Field label="Full name" error={fieldErrors.fullName}>
           <div className="relative">
             <Icon component={User} />
             <Input
               value={form.fullName}
-              onChange={set("fullName")}
+              onChange={(e) => { set("fullName")(e); clearError("fullName"); }}
               maxLength={120}
-              placeholder="Your full name"
-              required
+              placeholder="Duc Driver"
+              hasError={!!fieldErrors.fullName}
               className={`${INPUT_CLASS} pl-10 pr-4`}
             />
           </div>
         </Field>
-        <Field label="Email">
+        <Field label="Email" error={fieldErrors.email}>
           <div className="relative">
             <Icon component={Mail} />
             <Input
               type="email"
               value={form.email}
-              onChange={set("email")}
+              onChange={(e) => { set("email")(e); clearError("email"); }}
               autoComplete="email"
-              placeholder="you@example.com"
-              required
+              placeholder="driver@parkmaster.dev"
+              hasError={!!fieldErrors.email}
               className={`${INPUT_CLASS} pl-10 pr-4`}
             />
           </div>
         </Field>
-        <Field label="Password">
+        <Field label="Password" error={fieldErrors.password}>
           <div className="relative">
             <Icon component={Lock} />
             <Input
               type={showPw ? "text" : "password"}
               value={form.password}
-              onChange={set("password")}
+              onChange={(e) => { set("password")(e); clearError("password"); }}
               autoComplete="new-password"
-              minLength={8}
               placeholder="Create a password"
-              required
+              hasError={!!fieldErrors.password}
               className={`${INPUT_CLASS} pl-10 pr-10`}
             />
             {EyeToggle}
           </div>
         </Field>
-        <Field label="Confirm password">
+        <Field label="Confirm password" error={fieldErrors.confirmPw}>
           <div className="relative">
             <Icon component={Lock} />
             <Input
               type={showPw ? "text" : "password"}
               value={confirmPw}
-              onChange={(e) => setConfirmPw(e.target.value)}
+              onChange={(e) => { setConfirmPw(e.target.value); clearError("confirmPw"); }}
               autoComplete="new-password"
-              minLength={8}
               placeholder="Confirm your password"
-              required
+              hasError={!!fieldErrors.confirmPw}
               className={`${INPUT_CLASS} pl-10 pr-10`}
             />
             {EyeToggle}

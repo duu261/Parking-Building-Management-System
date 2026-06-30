@@ -1,6 +1,6 @@
 # Entity-Relationship Diagram (ERD) — ParkMaster
 
-**Last updated:** 2026-06-24
+**Last updated:** 2026-06-30
 
 This document defines all JPA entities, their fields, relationships, and enumerations in the ParkMaster parking building management system.
 
@@ -37,7 +37,7 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `email` | `VARCHAR(255)` | NOT NULL, UNIQUE | Login credential |
 | `password_hash` | `VARCHAR(255)` | NOT NULL | Bcrypt hash, never plaintext |
 | `full_name` | `VARCHAR(255)` | NOT NULL | Display name |
-| `role` | `VARCHAR(50)` enum | NOT NULL | `ADMIN`, `MANAGER`, `STAFF`, `USER` |
+| `role` | `VARCHAR(255)` enum | NOT NULL | `ADMIN`, `MANAGER`, `STAFF`, `USER` |
 | `active` | `BOOLEAN` | NOT NULL, default=true | Soft-delete flag |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Account creation timestamp |
 
@@ -119,7 +119,7 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `id` | `BIGINT` | PRIMARY KEY, auto-increment | — |
 | `floor_id` | `BIGINT` | NOT NULL, FK → floor | Parent floor |
 | `code` | `VARCHAR(255)` | NOT NULL | Slot identifier (e.g., "A-01", "B-15") |
-| `status` | `VARCHAR(50)` enum | NOT NULL, default=AVAILABLE | `AVAILABLE`, `OCCUPIED`, `RESERVED`, `MAINTENANCE`, `LOCKED` |
+| `status` | `VARCHAR(255)` enum | NOT NULL, default=AVAILABLE | `AVAILABLE`, `OCCUPIED`, `RESERVED`, `MAINTENANCE`, `LOCKED` |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Creation timestamp |
 
 **Relationships:**
@@ -159,11 +159,11 @@ This document defines all JPA entities, their fields, relationships, and enumera
 |-------|------|-------------|-------|
 | `id` | `BIGINT` | PRIMARY KEY, auto-increment | — |
 | `vehicle_type_id` | `BIGINT` | NOT NULL, FK → vehicle_type, UNIQUE | One active policy per vehicle type |
-| `rate_per_hour` | `DECIMAL(10,2)` | NOT NULL | Base hourly rate |
-| `daily_cap` | `DECIMAL(10,2)` | — | Max charge per day (nullable = uncapped) |
+| `rate_per_hour` | `NUMERIC(38,2)` | NOT NULL | Base hourly rate |
+| `daily_cap` | `NUMERIC(38,2)` | — | Max charge per day (nullable = uncapped) |
 | `grace_minutes` | `INTEGER` | NOT NULL, default=0 | Free parking before billing starts |
-| `peak_multiplier` | `DECIMAL(5,2)` | NOT NULL, default=1.00 | Surcharge factor during peak hours |
-| `monthly_pass_price` | `DECIMAL(10,2)` | — | Cost of unlimited monthly pass (nullable) |
+| `peak_multiplier` | `NUMERIC(38,2)` | NOT NULL, default=1.00 | Surcharge factor during peak hours |
+| `monthly_pass_price` | `NUMERIC(38,2)` | — | Cost of unlimited monthly pass (nullable) |
 | `is_active` | `BOOLEAN` | NOT NULL, default=true | Soft-disable for retired tariffs |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Creation timestamp |
 
@@ -187,12 +187,12 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `ticket_code` | `VARCHAR(255)` | NOT NULL, UNIQUE | UUID encoded into QR code for checkout scan |
 | `check_in_at` | `TIMESTAMP` | NOT NULL, immutable | Check-in timestamp |
 | `check_out_at` | `TIMESTAMP` | — | Nullable; set on checkout |
-| `amount_charged` | `DECIMAL(10,2)` | — | Nullable; set after tariff calculated |
-| `status` | `VARCHAR(50)` enum | NOT NULL, default=ACTIVE | `ACTIVE`, `AWAITING_PAYMENT`, `COMPLETED` |
+| `amount_charged` | `NUMERIC(38,2)` | — | Nullable; set after tariff calculated |
+| `status` | `VARCHAR(255)` enum | NOT NULL, default=ACTIVE | `ACTIVE`, `AWAITING_PAYMENT`, `COMPLETED` |
 | `auto_allocated` | `BOOLEAN` | NOT NULL, default=false | True if slot chosen by allocation service |
 | `allocation_score` | `JSONB` | — | AI allocation scoring metadata (nullable) |
 | `from_reservation` | `BOOLEAN` | NOT NULL, default=false | True if session originated from a reservation |
-| `deposit_credit` | `DECIMAL(10,2)` | — | Deposit credited at checkout (PAID reservations only) |
+| `deposit_credit` | `NUMERIC(38,2)` | — | Deposit credited at checkout (PAID reservations only) |
 
 **Relationships:**
 - N:1 → User (user_id, optional)
@@ -217,11 +217,11 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `building_id` | `BIGINT` | FK → parking_building | Target building |
 | `vehicle_type_id` | `BIGINT` | NOT NULL, FK → vehicle_type | Vehicle type reserved for |
 | `license_plate` | `VARCHAR(255)` | NOT NULL | Expected plate (unique per PENDING status) |
-| `reservation_type` | `VARCHAR(10)` | NOT NULL, default=FREE | `FREE` or `PAID` |
+| `reservation_type` | `VARCHAR(255)` | NOT NULL, default=FREE | `FREE` or `PAID` |
 | `reserved_start` | `TIMESTAMP` | — | Driver's chosen arrival time |
 | `hold_until` | `TIMESTAMP` | NOT NULL | 15min for unpaid PAID; reservedStart+30min after payment/FREE |
-| `status` | `VARCHAR(50)` enum | NOT NULL, default=PENDING | `PENDING`, `FULFILLED`, `CANCELLED`, `EXPIRED` |
-| `deposit_amount` | `DECIMAL(10,2)` | — | 1hr rate deposit (PAID only) |
+| `status` | `VARCHAR(255)` enum | NOT NULL, default=PENDING | `PENDING`, `FULFILLED`, `CANCELLED`, `EXPIRED` |
+| `deposit_amount` | `NUMERIC(38,2)` | — | 1hr rate deposit (PAID only) |
 | `deposit_payment_id` | `BIGINT` | FK → payment | Linked deposit payment (PAID only) |
 | `allocation_score` | `JSONB` | — | Allocation scoring metadata (nullable) |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Creation timestamp |
@@ -244,19 +244,19 @@ This document defines all JPA entities, their fields, relationships, and enumera
 |-------|------|-------------|-------|
 | `id` | `BIGINT` | PRIMARY KEY, auto-increment | — |
 | `session_id` | `BIGINT` | — | FK → parking_session, UNIQUE (nullable for deposits/passes) |
-| `amount` | `DECIMAL(10,2)` | NOT NULL | Total charged (base + penalty) |
-| `penalty_amount` | `DECIMAL(10,2)` | NOT NULL, default=0.00 | Surcharge component |
+| `amount` | `NUMERIC(38,2)` | NOT NULL | Total charged (base + penalty) |
+| `penalty_amount` | `NUMERIC(38,2)` | NOT NULL, default=0.00 | Surcharge component |
 | `description` | `VARCHAR(255)` | — | Identifies sessionless payments (e.g., "Reservation deposit · plate · slot") |
 | `processed_by_staff_id` | `BIGINT` | — | FK → users; nullable (null for online pay) |
-| `method` | `VARCHAR(50)` enum | — | `CASH`, `ONLINE`, `VNPAY` (nullable) |
-| `status` | `VARCHAR(50)` enum | NOT NULL, default=PENDING | `PENDING`, `PAID`, `VOIDED` |
+| `method` | `VARCHAR(255)` enum | — | `CASH`, `ONLINE`, `VNPAY` (nullable) |
+| `status` | `VARCHAR(255)` enum | NOT NULL, default=PENDING | `PENDING`, `PAID`, `VOIDED` |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Payment record creation |
 | `paid_at` | `TIMESTAMP` | — | When payment settled (nullable) |
 | `voided_at` | `TIMESTAMP` | — | When voided (nullable) |
 | `void_reason` | `VARCHAR(255)` | — | Reason for void (nullable) |
 | `gateway_ref` | `VARCHAR(255)` | — | VNPay txn ref (vnp_TxnRef), UNIQUE (nullable) |
 | `gateway_txn_no` | `VARCHAR(255)` | — | VNPay's txn number, nullable |
-| `gateway_response_code` | `VARCHAR(10)` | — | VNPay response code ("00" = success), nullable |
+| `gateway_response_code` | `VARCHAR(255)` | — | VNPay response code ("00" = success), nullable |
 
 **Relationships:**
 - 1:1 → ParkingSession (session_id, unique, optional)
@@ -276,9 +276,9 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `id` | `BIGINT` | PRIMARY KEY, auto-increment | — |
 | `session_id` | `BIGINT` | — | FK → parking_session (nullable; lost ticket may have no findable session) |
 | `reported_by` | `BIGINT` | NOT NULL, FK → users | Staff member who reported |
-| `type` | `VARCHAR(50)` enum | NOT NULL | `LOST_TICKET`, `WRONG_PLATE`, `OVERTIME`, `WRONG_ZONE` |
+| `type` | `VARCHAR(255)` enum | NOT NULL | `LOST_TICKET`, `WRONG_PLATE`, `OVERTIME`, `WRONG_ZONE` |
 | `description` | `TEXT` | NOT NULL | Detailed description |
-| `status` | `VARCHAR(50)` enum | NOT NULL, default=OPEN | `OPEN`, `RESOLVED` |
+| `status` | `VARCHAR(255)` enum | NOT NULL, default=OPEN | `OPEN`, `RESOLVED` |
 | `resolution_note` | `TEXT` | — | Resolution notes (nullable) |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Report timestamp |
 | `resolved_at` | `TIMESTAMP` | — | Resolution timestamp (nullable) |
@@ -303,7 +303,7 @@ This document defines all JPA entities, their fields, relationships, and enumera
 | `payment_id` | `BIGINT` | — | FK → payment (nullable; links to payment record) |
 | `valid_from` | `DATE` | NOT NULL | Start date (inclusive) |
 | `valid_until` | `DATE` | NOT NULL | End date (inclusive) |
-| `status` | `VARCHAR(50)` enum | NOT NULL, default=PENDING | `PENDING`, `ACTIVE`, `EXPIRED` |
+| `status` | `VARCHAR(255)` enum | NOT NULL, default=PENDING | `PENDING`, `ACTIVE`, `EXPIRED` |
 | `created_at` | `TIMESTAMP` | NOT NULL, immutable | Creation timestamp |
 
 **Relationships:**
@@ -485,6 +485,8 @@ Database schema is managed by Flyway. Listed below in order of application:
 | **V19__pass_pricing.sql** | Add monthly_pass_price to PricingPolicy; add payment_id FK to MonthlyPass |
 | **V20__allocation_score.sql** | Add allocation_score (JSONB) to ParkingSession |
 | **V21__reservation_allocation_score.sql** | Add allocation_score (JSONB) to Reservation |
+| **V22__reservation_tiers.sql** | Add reservation_type, reserved_start, building_id, deposit_amount, deposit_payment_id to Reservation; add from_reservation, deposit_credit to ParkingSession |
+| **V23__payment_description.sql** | Add description column to Payment for sessionless payment identification |
 
 ---
 
