@@ -175,9 +175,13 @@ public class ParkingSessionService {
     }
 
     @Transactional(readOnly = true)
-    public BigDecimal estimateCharge(Long sessionId) {
+    public BigDecimal estimateChargeForUser(String email, Long sessionId) {
         ParkingSession session = sessions.findById(sessionId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Session not found"));
+        // Non-owner gets 404, not 403 — do not leak that the session exists.
+        if (session.getUser() == null || !session.getUser().getEmail().equals(email)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Session not found");
+        }
         if (session.getStatus() != SessionStatus.ACTIVE) {
             return session.getAmountCharged() != null ? session.getAmountCharged() : BigDecimal.ZERO;
         }

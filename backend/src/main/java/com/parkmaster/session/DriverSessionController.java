@@ -33,8 +33,8 @@ class DriverSessionController {
     }
 
     @GetMapping("/{id}/estimate")
-    Map<String, BigDecimal> estimate(@PathVariable Long id) {
-        return Map.of("estimate", service.estimateCharge(id));
+    Map<String, BigDecimal> estimate(@PathVariable Long id, Authentication auth) {
+        return Map.of("estimate", service.estimateChargeForUser(auth.getName(), id));
     }
 
     @GetMapping(value = "/{id}/ticket.png", produces = MediaType.IMAGE_PNG_VALUE)
