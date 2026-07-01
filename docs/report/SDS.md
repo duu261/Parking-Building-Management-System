@@ -14,6 +14,13 @@ Software Design Specification
 
 # I. Overview
 
+> **Scope.** These code designs cover the **backend service layer** (Spring Boot:
+> controllers, services, entities, repositories, and their SQL) — the tier with an
+> object-oriented class model to design. The React SPA is a functional-component
+> client with no class hierarchy to diagram; its **screen and navigation design is
+> specified in SRS §2.1 (Screens Flow)**. Here it consumes the REST APIs and appears
+> as an external actor ("Driver", "Staff", etc.) in the sequence diagrams.
+
 ## 1. Code Packages
 
 Backend package layout under `com.parkmaster.*` (Spring Boot, layered by
@@ -948,3 +955,469 @@ SELECT EXISTS (
 JPA derived queries: `MonthlyPassRepository.findByLicensePlateIgnoreCaseAndVehicleType_IdAndStatusIn(String, Long, List<PassStatus>)`,
 `MonthlyPassRepository.existsByLicensePlateIgnoreCaseAndVehicleType_IdAndStatusAndValidFromLessThanEqualAndValidUntilGreaterThanEqual(...)`,
 `MonthlyPassRepository.findByPayment_Id(Long)`.
+
+## 7. Manage Buildings / Floors / Slots (UC-5, UC-6, UC-7)
+
+### a. Class Diagram
+
+```mermaid
+classDiagram
+    class ManagerParkingController {
+        +createBuilding(BuildingRequest) BuildingResponse
+        +updateBuilding(Long, BuildingRequest) BuildingResponse
+        +deleteBuilding(Long) void
+        +createFloor(Long, FloorRequest) FloorResponse
+        +setFloorVehicleType(Long, Long) FloorResponse
+        +deleteFloor(Long) void
+        +createSlot(Long, SlotRequest) SlotResponse
+        +updateSlotStatus(Long, SlotStatus) SlotResponse
+        +deleteSlot(Long) void
+        +getFloorAnalytics(Long) AllocationAnalytics
+    }
+    class ParkingService {
+        +createBuilding(BuildingRequest) BuildingResponse
+        +createFloor(Long, FloorRequest) FloorResponse
+        +setFloorVehicleType(Long, Long) FloorResponse
+        +createSlot(Long, SlotRequest) SlotResponse
+        +updateSlotStatus(Long, SlotStatus) SlotResponse
+        +getFloorAnalytics(Long) AllocationAnalytics
+    }
+    class ParkingBuilding {
+        -Long id
+        -String name
+        -String address
+    }
+    class Floor {
+        -Long id
+        -int level
+        -String name
+        -VehicleType vehicleType
+    }
+    class ParkingSlot {
+        -Long id
+        -String code
+        -SlotStatus status
+    }
+    class SlotStatus {
+        <<enum>>
+        AVAILABLE
+        OCCUPIED
+        RESERVED
+        MAINTENANCE
+        LOCKED
+    }
+    ManagerParkingController --> ParkingService
+    ParkingService --> ParkingBuildingRepository
+    ParkingService --> FloorRepository
+    ParkingService --> ParkingSlotRepository
+    ParkingBuilding "1" o-- "*" Floor
+    Floor "1" o-- "*" ParkingSlot
+    Floor --> VehicleType
+    ParkingSlot --> SlotStatus
+```
+
+### b. Class Specifications
+
+| Class | Responsibility | Key members |
+|---|---|---|
+| `ManagerParkingController` | REST endpoints under `/api/manager` for building/floor/slot CRUD + per-building fill-rate analytics. | delegates all logic to `ParkingService`. |
+| `ParkingService` | Transactional CRUD; enforces uniqueness (floor level per building, slot code per floor) and 404 guards. | `createBuilding/Floor/Slot`, `updateSlotStatus`, `setFloorVehicleType`, `getFloorAnalytics`. |
+| `ParkingBuilding` / `Floor` / `ParkingSlot` | JPA entities (tables `parking_building`, `floor`, `parking_slot`). | `Floor.vehicleType` optional FK; `ParkingSlot.status` = `SlotStatus`. |
+| `SlotStatus` | Slot lifecycle enum. | `AVAILABLE, OCCUPIED, RESERVED, MAINTENANCE, LOCKED`. |
+
+### c. Sequence Diagram(s)
+
+```mermaid
+sequenceDiagram
+    actor Manager
+    participant C as ManagerParkingController
+    participant S as ParkingService
+    participant FR as FloorRepository
+    participant SR as ParkingSlotRepository
+    Manager->>C: POST /api/manager/floors (buildingId, level, name)
+    C->>S: createFloor(buildingId, req)
+    S->>FR: existsByBuildingIdAndLevel(buildingId, level)
+    alt level already used
+        S-->>C: ApiException 409 CONFLICT
+    else ok
+        S->>FR: save(new Floor(building, level, name))
+        S-->>C: FloorResponse
+    end
+    Manager->>C: PATCH /api/manager/slots/{id}/status
+    C->>S: updateSlotStatus(id, status)
+    S->>SR: findById(id) / setStatus(status)
+    S-->>C: SlotResponse
+```
+
+### d. Database Queries
+
+```sql
+-- ParkingService.createFloor guard (JPA: existsByBuildingIdAndLevel)
+SELECT EXISTS(SELECT 1 FROM floor WHERE building_id = ? AND level = ?);
+
+-- ParkingService.createSlot guard (JPA: existsByFloorIdAndCode)
+SELECT EXISTS(SELECT 1 FROM parking_slot WHERE floor_id = ? AND code = ?);
+
+-- ParkingService.getFloorAnalytics fill-rate (JPA: countByFloorIdAndStatus)
+SELECT COUNT(*) FROM parking_slot WHERE floor_id = ? AND status = 'OCCUPIED';
+```
+
+JPA derived queries: `FloorRepository.findByBuildingIdOrderByLevel(Long)`,
+`ParkingSlotRepository.findByFloorIdOrderByCode(Long)`,
+`ParkingSlotRepository.countByFloorId(Long)`,
+`ParkingSlotRepository.countByFloor_Building_Id(Long)`,
+`ParkingSlotRepository.findByFloor_Building_IdAndStatus(Long, SlotStatus)`.
+
+## 8. Manage Vehicle Types & Pricing Policy (UC-10, UC-11)
+
+### a. Class Diagram
+
+```mermaid
+classDiagram
+    class ManagerPricingController {
+        +createVehicleType(VehicleTypeRequest) VehicleTypeResponse
+        +updateVehicleType(Long, VehicleTypeRequest) VehicleTypeResponse
+        +deleteVehicleType(Long) void
+        +setPolicy(Long, PricingPolicyRequest) PricingPolicyResponse
+        +getPolicy(Long) PricingPolicyResponse
+        +listPolicies() List~PricingPolicyResponse~
+    }
+    class PricingService {
+        +createVehicleType(VehicleTypeRequest) VehicleTypeResponse
+        +setPolicy(Long, PricingPolicyRequest) PricingPolicyResponse
+        +listPolicies() List~PricingPolicyResponse~
+    }
+    class VehicleType {
+        -Long id
+        -String name
+        -String description
+    }
+    class PricingPolicy {
+        -Long id
+        -BigDecimal ratePerHour
+        -BigDecimal dailyCap
+        -int graceMinutes
+        -BigDecimal peakMultiplier
+        -BigDecimal monthlyPassPrice
+        -boolean active
+    }
+    ManagerPricingController --> PricingService
+    PricingService --> VehicleTypeRepository
+    PricingService --> PricingPolicyRepository
+    PricingPolicy "1" --> "1" VehicleType : unique FK
+```
+
+### b. Class Specifications
+
+| Class | Responsibility | Key members |
+|---|---|---|
+| `ManagerPricingController` | `/api/manager/vehicle-types` + `/pricing` endpoints. | delegates to `PricingService`. |
+| `PricingService` | Vehicle-type CRUD (unique name, case-insensitive) and **upsert** of the single pricing policy per type. | `createVehicleType`, `setPolicy` (find-or-create), `getPolicy`, `deletePolicy`. |
+| `VehicleType` | Entity `vehicle_type`; unique `name`. | `name`, `description`. |
+| `PricingPolicy` | Entity `pricing_policy`; one active policy per vehicle type (unique FK). | `ratePerHour`, `dailyCap`, `graceMinutes`, `peakMultiplier`, `monthlyPassPrice`. |
+
+### c. Sequence Diagram(s)
+
+```mermaid
+sequenceDiagram
+    actor Manager
+    participant C as ManagerPricingController
+    participant S as PricingService
+    participant PR as PricingPolicyRepository
+    Manager->>C: PUT /api/manager/vehicle-types/{id}/pricing
+    C->>S: setPolicy(vehicleTypeId, req)
+    S->>PR: findByVehicleTypeId(vehicleTypeId)
+    alt policy exists
+        S->>S: update fields on existing policy
+    else none
+        S->>S: new PricingPolicy(vehicleType, rate, cap, grace)
+    end
+    S->>PR: save(policy)
+    S-->>C: PricingPolicyResponse
+```
+
+### d. Database Queries
+
+```sql
+-- PricingService.createVehicleType guard (JPA: existsByNameIgnoreCase)
+SELECT EXISTS(SELECT 1 FROM vehicle_type WHERE LOWER(name) = LOWER(?));
+
+-- PricingService.setPolicy upsert lookup (JPA: findByVehicleTypeId)
+SELECT * FROM pricing_policy WHERE vehicle_type_id = ?;
+
+-- Insert when absent
+INSERT INTO pricing_policy
+    (vehicle_type_id, rate_per_hour, daily_cap, grace_minutes, peak_multiplier, monthly_pass_price, is_active)
+VALUES (?, ?, ?, ?, ?, ?, TRUE);
+```
+
+JPA derived queries: `VehicleTypeRepository.findAllByOrderByName()`,
+`PricingPolicyRepository.findByVehicleTypeId(Long)`,
+`PricingPolicyRepository.findAllByOrderByVehicleTypeName()`.
+
+## 9. Manage Users & Roles (UC-35, UC-36)
+
+### a. Class Diagram
+
+```mermaid
+classDiagram
+    class AdminUserController {
+        +list() List~UserSummary~
+        +create(CreateUserRequest) UserSummary
+        +changeRole(Long, UpdateRoleRequest) UserSummary
+        +setActive(Long, UpdateActiveRequest) UserSummary
+    }
+    class AdminUserService {
+        +list() List~UserSummary~
+        +create(CreateUserRequest) UserSummary
+        +changeRole(Long, Role) UserSummary
+        +setActive(Long, boolean) UserSummary
+    }
+    class User {
+        -Long id
+        -String email
+        -String passwordHash
+        -String fullName
+        -Role role
+        -boolean active
+    }
+    class Role {
+        <<enum>>
+        ADMIN
+        MANAGER
+        STAFF
+        USER
+    }
+    AdminUserController --> AdminUserService
+    AdminUserService --> UserRepository
+    AdminUserService --> PasswordEncoder
+    User --> Role
+```
+
+### b. Class Specifications
+
+| Class | Responsibility | Key members |
+|---|---|---|
+| `AdminUserController` | `/api/admin/users` (ADMIN only). | list/create/changeRole/setActive. |
+| `AdminUserService` | User admin; bcrypt-hashes new passwords, unique email guard. | `create` (encode password), `changeRole`, `setActive`. **No self-lockout guard** (an admin can demote/deactivate themselves — documented shortcut). |
+| `User` | Entity `users`. | `email` (unique), `passwordHash`, `role`, `active`. |
+| `Role` | Authority enum used in JWT + `SecurityConfig` prefixes. | `ADMIN, MANAGER, STAFF, USER`. |
+
+### c. Sequence Diagram(s)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant C as AdminUserController
+    participant S as AdminUserService
+    participant UR as UserRepository
+    participant PE as PasswordEncoder
+    Admin->>C: POST /api/admin/users (email, password, role)
+    C->>S: create(req)
+    S->>UR: existsByEmail(email)
+    alt email taken
+        S-->>C: ApiException 409 CONFLICT
+    else ok
+        S->>PE: encode(password)
+        S->>UR: save(new User(...))
+        S-->>C: UserSummary
+    end
+    Admin->>C: PATCH /api/admin/users/{id}/role
+    C->>S: changeRole(id, role)
+    S->>UR: findById(id) / setRole(role)
+    S-->>C: UserSummary
+```
+
+### d. Database Queries
+
+```sql
+-- AdminUserService.create guard (JPA: existsByEmail)
+SELECT EXISTS(SELECT 1 FROM users WHERE email = ?);
+
+-- create
+INSERT INTO users (email, password_hash, full_name, role, is_active)
+VALUES (?, ?, ?, ?, TRUE);
+
+-- changeRole / setActive
+UPDATE users SET role = ? WHERE id = ?;
+UPDATE users SET is_active = ? WHERE id = ?;
+```
+
+JPA derived queries: `UserRepository.findAll()`, `UserRepository.existsByEmail(String)`,
+`UserRepository.findByEmail(String)`.
+
+## 10. Exception Reports — Report / Resolve (UC-26, UC-27, UC-28)
+
+### a. Class Diagram
+
+```mermaid
+classDiagram
+    class StaffExceptionController {
+        +create(CreateExceptionRequest, Authentication) ExceptionResponse
+        +open() List~ExceptionResponse~
+        +get(Long) ExceptionResponse
+    }
+    class ManagerExceptionController {
+        +all() List~ExceptionResponse~
+        +open() List~ExceptionResponse~
+        +resolve(Long, ResolveExceptionRequest) ExceptionResponse
+    }
+    class ExceptionReportService {
+        +create(String, ExceptionType, String, Long) ExceptionResponse
+        +listAll() List~ExceptionResponse~
+        +listOpen() List~ExceptionResponse~
+        +resolve(Long, String) ExceptionResponse
+    }
+    class ExceptionReport {
+        -Long id
+        -ExceptionType type
+        -String description
+        -ExceptionStatus status
+        -String resolutionNote
+        -Instant resolvedAt
+    }
+    class ExceptionType {
+        <<enum>>
+        LOST_TICKET
+        WRONG_PLATE
+        OVERTIME
+        WRONG_ZONE
+    }
+    class ExceptionStatus {
+        <<enum>>
+        OPEN
+        RESOLVED
+    }
+    StaffExceptionController --> ExceptionReportService
+    ManagerExceptionController --> ExceptionReportService
+    ExceptionReportService --> ExceptionReportRepository
+    ExceptionReport --> ExceptionType
+    ExceptionReport --> ExceptionStatus
+    ExceptionReport --> ParkingSession : nullable
+    ExceptionReport --> User : reportedBy
+```
+
+### b. Class Specifications
+
+| Class | Responsibility | Key members |
+|---|---|---|
+| `StaffExceptionController` | `/api/staff/exceptions` — staff/driver raise + view open queue. | `create` (uses `Authentication.getName()`), `open`, `get`. |
+| `ManagerExceptionController` | `/api/manager/exceptions` — full list + resolve. | `all`, `open`, `resolve`. |
+| `ExceptionReportService` | Create (resolve reporter + optional session), list, resolve (blocks double-resolve). | `create`, `listOpen`, `resolve`. |
+| `ExceptionReport` | Entity `exception_report`; `session` nullable (lost ticket may have none). | `type`, `status`, `resolutionNote`, `resolvedAt`. |
+
+### c. Sequence Diagram(s)
+
+```mermaid
+sequenceDiagram
+    actor Staff
+    actor Manager
+    participant SC as StaffExceptionController
+    participant MC as ManagerExceptionController
+    participant S as ExceptionReportService
+    participant RR as ExceptionReportRepository
+    Staff->>SC: POST /api/staff/exceptions (type, description, sessionId?)
+    SC->>S: create(auth.name, type, description, sessionId)
+    S->>RR: save(new ExceptionReport(reporter, type, desc, session))
+    S-->>SC: ExceptionResponse (status OPEN)
+    Manager->>MC: POST /api/manager/exceptions/{id}/resolve (note)
+    MC->>S: resolve(id, note)
+    alt already RESOLVED
+        S-->>MC: ApiException 409 CONFLICT
+    else
+        S->>RR: setStatus(RESOLVED), setResolvedAt(now)
+        S-->>MC: ExceptionResponse (status RESOLVED)
+    end
+```
+
+### d. Database Queries
+
+```sql
+-- create
+INSERT INTO exception_report (session_id, reported_by, type, description, status, created_at)
+VALUES (?, ?, ?, ?, 'OPEN', ?);
+
+-- listOpen (JPA: findByStatusOrderByCreatedAt)
+SELECT * FROM exception_report WHERE status = 'OPEN' ORDER BY created_at;
+
+-- resolve
+UPDATE exception_report
+   SET status = 'RESOLVED', resolution_note = ?, resolved_at = ?
+ WHERE id = ?;
+```
+
+JPA derived queries: `ExceptionReportRepository.findAllByOrderByCreatedAtDesc()`,
+`ExceptionReportRepository.findByStatusOrderByCreatedAt(ExceptionStatus)`.
+
+## 11. Manager Analytics & Reports (UC-25, UC-37, UC-38, UC-39, UC-40)
+
+### a. Class Diagram
+
+```mermaid
+classDiagram
+    class ManagerReportController {
+        +revenueDaily(Instant, Instant) DailyRevenueReport
+        +revenueByVehicleType(Instant, Instant) RevenueByTypeReport
+        +checkInsByHour(Instant, Instant) HourlyCheckInReport
+        +durationByVehicleType(Instant, Instant) DurationByTypeReport
+        +allocationComparison(Instant, Instant) AllocationComparison
+    }
+    class ReportService {
+        +revenueDaily(Instant, Instant) DailyRevenueReport
+        +checkInsByHour(Instant, Instant) HourlyCheckInReport
+        +durationByVehicleType(Instant, Instant) DurationByTypeReport
+        +allocationComparison(Instant, Instant) AllocationComparison
+    }
+    class PaymentService {
+        +revenue(Instant, Instant) RevenueResponse
+    }
+    ManagerReportController --> ReportService
+    ReportService --> PaymentRepository
+    ReportService --> ParkingSessionRepository
+    PaymentService --> PaymentRepository
+```
+
+### b. Class Specifications
+
+| Class | Responsibility | Key members |
+|---|---|---|
+| `ManagerReportController` | `/api/manager/reports` — chart-ready analytics; every window is `[from, to)` UTC. | 5 GET endpoints. |
+| `ReportService` | Aggregates payments + sessions in-memory into time-bucketed points. | `revenueDaily`, `checkInsByHour`, `durationByVehicleType`, `allocationComparison`. |
+| `PaymentService.revenue` | Revenue summary (UC-25): total + count of PAID payments in window. | `revenue(from, to)`. |
+| `AllocationComparison` (DTO) | Auto- vs manual-allocation avg session duration — **answers RQ2–RQ4**. | `autoCount`, `autoAvgMinutes`, `manualCount`, `manualAvgMinutes`. |
+
+### c. Sequence Diagram(s)
+
+```mermaid
+sequenceDiagram
+    actor Manager
+    participant C as ManagerReportController
+    participant S as ReportService
+    participant SR as ParkingSessionRepository
+    Manager->>C: GET /api/manager/reports/allocation-comparison?from&to
+    C->>S: allocationComparison(from, to)
+    S->>SR: startedIn(from, to)
+    loop each checked-out session
+        S->>S: bucket by isAutoAllocated(), sum minutes
+    end
+    S-->>C: AllocationComparison(auto vs manual avg)
+```
+
+### d. Database Queries
+
+```sql
+-- PaymentService.revenue (UC-25)
+SELECT COALESCE(SUM(amount), 0) FROM payment WHERE status = 'PAID' AND paid_at >= ? AND paid_at < ?;
+SELECT COUNT(*)                 FROM payment WHERE status = 'PAID' AND paid_at >= ? AND paid_at < ?;
+
+-- ReportService.revenueDaily source rows (bucketed by day in service)
+SELECT * FROM payment WHERE status = 'PAID' AND paid_at >= ? AND paid_at < ?;
+
+-- ReportService.allocationComparison / duration / check-ins source rows
+SELECT * FROM parking_session WHERE check_in_at >= ? AND check_in_at < ?;
+```
+
+JPA queries: `PaymentRepository.sumPaidBetween(Instant, Instant)`,
+`PaymentRepository.countPaidBetween(Instant, Instant)`,
+`PaymentRepository.paidBetween(Instant, Instant)`,
+`ParkingSessionRepository.startedIn(Instant, Instant)`.
