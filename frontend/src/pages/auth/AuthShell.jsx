@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function AuthShell({ title, subtitle, children, footer }) {
   return (
     <div
-      className="min-h-dvh relative flex items-center justify-center p-4 sm:p-6"
+      className="min-h-dvh relative flex items-center justify-center p-4 sm:p-6 overflow-x-hidden"
       style={{
         "--muted-foreground": "0 0% 58%",
         "--foreground": "0 0% 96%",
@@ -13,12 +13,28 @@ export default function AuthShell({ title, subtitle, children, footer }) {
         fontFamily: '"Inter", sans-serif',
       }}
     >
+      <style>{`
+        body {
+          background-color: hsl(0 0% 4%) !important;
+        }
+        #root {
+          background-color: hsl(0 0% 4%);
+        }
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #ffffff;
+          -webkit-box-shadow: 0 0 0px 1000px rgba(20,20,25,0.95) inset;
+          transition: background-color 5000s ease-in-out 0s;
+          caret-color: #ffffff;
+        }
+      `}</style>
       {/* Grid overlay */}
       <div className="absolute inset-0 grid-paper opacity-[0.05] pointer-events-none" />
 
       {/* Ambient glow */}
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full pointer-events-none"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[800px] h-[400px] sm:h-[800px] rounded-full pointer-events-none"
         style={{
           background: "radial-gradient(circle, rgba(56,189,248,0.04) 0%, transparent 60%)",
         }}
@@ -45,7 +61,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
 
       {/* ───── Auth card ───── */}
       <div
-        className="w-[min(1120px,calc(100vw-32px))] sm:w-[min(1120px,calc(100vw-48px))] min-h-[min(620px,calc(100dvh-48px))] rounded-[28px] sm:rounded-[32px] overflow-hidden border flex relative z-10 shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
+        className="w-[min(1120px,calc(100vw-32px))] sm:w-[min(1120px,calc(100vw-48px))] lg:min-h-[min(620px,calc(100dvh-48px))] rounded-[28px] sm:rounded-[32px] overflow-hidden border flex relative z-10 shadow-[0_16px_48px_rgba(0,0,0,0.5)]"
         style={{
           backgroundColor: "rgba(255,255,255,0.04)",
           borderColor: "rgba(255,255,255,0.08)",

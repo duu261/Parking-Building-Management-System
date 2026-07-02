@@ -210,6 +210,7 @@ export default function PricingPage() {
   const [policyError, setPolicyError] = useState("");
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     publicApi
       .pricing()
       .then((p) => { setPolicies(p.filter((x) => x.active)); setPolicyLoading(false); })
