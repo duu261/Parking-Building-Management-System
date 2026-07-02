@@ -56,7 +56,7 @@ export default function FeedbackPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-4">
           <SummaryCard icon={Star} label="Avg rating" value={avg} />
           <SummaryCard icon={MessageSquareText} label="Total reviews" value={rows.length} />
-          <SummaryCard icon={ThumbsUp} label="4\u20135 star" value={highCount} accent={highCount > 0} />
+          <SummaryCard icon={ThumbsUp} label="4–5 stars" value={highCount} accent={highCount > 0} />
           <SummaryCard icon={AlertCircle} label="Needs attention" value={lowCount} accent={lowCount > 0} alert />
         </div>
       )}
