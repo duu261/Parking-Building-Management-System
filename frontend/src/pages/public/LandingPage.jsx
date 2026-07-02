@@ -908,6 +908,9 @@ function AIAllocationShowcaseSection() {
           </div>
         </div>
 
+        {/* ── Live Availability anchor ── */}
+        <div id="availability" />
+
         {/* ── 5. Live preview ── */}
         <HeroFadeIn className="mx-auto mb-10 max-w-6xl text-center">
           <span
@@ -1214,7 +1217,6 @@ function AIAllocationShowcaseSection() {
         )}
 
         {/* ── Live Availability ── */}
-        <div id="availability" />
         <HeroFadeIn delay={0.2} className="mx-auto max-w-6xl">
           <div className="mb-4 text-center">
             <div
@@ -1526,6 +1528,8 @@ function scrollTo(id) {
 export default function LandingPage() {
   const [activeNav, setActiveNav] = useState("hero-home");
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.add("hero-scroll");
@@ -1533,11 +1537,24 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
+    const SECTION_IDS = ["hero-home", "parking-flow", "about-parkmaster", "core-features", "ai-allocation", "availability", "for-teams"];
+
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const docHeight =
         document.documentElement.scrollHeight - window.innerHeight;
       setScrollProgress(docHeight > 0 ? Math.min(scrollTop / docHeight, 1) : 0);
+      setScrolled(scrollTop > 20);
+
+      let current = SECTION_IDS[0];
+      for (const id of SECTION_IDS) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= 150) {
+          current = id;
+        }
+      }
+      setActiveNav(current);
     };
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -1580,9 +1597,133 @@ export default function LandingPage() {
       </div>
 
       {/* ───── Hero fullscreen ───── */}
+      {/* Fixed floating glass navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-4 pointer-events-none">
+        <div
+          className="pointer-events-auto mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:px-6 py-3 rounded-2xl sm:rounded-[32px] transition-all duration-500"
+          style={{
+            background: scrolled || menuOpen
+              ? "rgba(0,0,0,0.72)"
+              : "transparent",
+            backdropFilter: scrolled || menuOpen ? "blur(20px) saturate(1.8)" : "none",
+            WebkitBackdropFilter: scrolled || menuOpen ? "blur(20px) saturate(1.8)" : "none",
+            border: scrolled || menuOpen
+              ? "1px solid rgba(255,255,255,0.08)"
+              : "none",
+            boxShadow: scrolled || menuOpen
+              ? "0 8px 32px rgba(0,0,0,0.45), 0 0 60px rgba(34,211,238,0.03)"
+              : "none",
+          }}
+        >
+          <span
+            className="text-2xl sm:text-3xl tracking-tight"
+            style={{
+              fontFamily: "var(--font-display)",
+              color: "#ffffff",
+            }}
+          >
+            ParkMaster
+          </span>
+          <div className="hidden items-center gap-0.5 md:flex">
+            {NAV_ITEMS.map(({ label, target, isRoute }) =>
+              isRoute ? (
+                <Link
+                  key={target}
+                  to={target}
+                  onClick={() => window.scrollTo(0, 0)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 hover:bg-white/[0.08] no-underline"
+                  style={{
+                    color: "rgba(255,255,255,0.65)",
+                  }}
+                >
+                  {label}
+                </Link>
+              ) : (
+                <button
+                  key={target}
+                  onClick={() => handleNavClick(target)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 hover:bg-white/[0.08] cursor-pointer bg-none border-none focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-2"
+                  style={{
+                    color:
+                      activeNav === target ? "#ffffff" : "rgba(255,255,255,0.65)",
+                    backgroundColor:
+                      activeNav === target
+                        ? "rgba(255,255,255,0.1)"
+                        : "transparent",
+                  }}
+                >
+                  {label}
+                </button>
+              ),
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/login"
+              className="rounded-full px-5 py-1.5 text-sm font-medium transition-all duration-200 hover:bg-white/[0.12] no-underline"
+              style={{
+                color: "#ffffff",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
+            >
+              Sign in
+            </Link>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="md:hidden flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200 hover:bg-white/[0.08] cursor-pointer bg-none border-none text-white/70"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+            >
+              {menuOpen ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div
+            className="pointer-events-auto mx-auto mt-2 w-full max-w-7xl rounded-2xl border border-white/[0.08] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+            style={{
+              background: "rgba(0,0,0,0.85)",
+              backdropFilter: "blur(20px) saturate(1.8)",
+            }}
+          >
+            {NAV_ITEMS.map(({ label, target, isRoute }) =>
+              isRoute ? (
+                <Link
+                  key={target}
+                  to={target}
+                  onClick={() => { window.scrollTo(0, 0); setMenuOpen(false); }}
+                  className="block w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-white/[0.08] no-underline"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
+                >
+                  {label}
+                </Link>
+              ) : (
+                <button
+                  key={target}
+                  onClick={() => { handleNavClick(target); setMenuOpen(false); }}
+                  className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-white/[0.08] cursor-pointer bg-none border-none"
+                  style={{
+                    color: activeNav === target ? "#ffffff" : "rgba(255,255,255,0.65)",
+                    backgroundColor: activeNav === target ? "rgba(255,255,255,0.1)" : "transparent",
+                  }}
+                >
+                  {label}
+                </button>
+              ),
+            )}
+          </div>
+        )}
+      </nav>
+
       <section
         id="hero-home"
-        className="relative min-h-screen overflow-hidden scroll-mt-24"
+        className="relative min-h-screen overflow-hidden scroll-mt-24 pt-24"
       >
         {/* Cinematic gradient overlay — darker at edges, brighter center for readability */}
         <div
@@ -1603,65 +1744,6 @@ export default function LandingPage() {
         >
           <source src="/videos/parking-hero.mp4" type="video/mp4" />
         </video>
-
-        <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-8 py-6">
-          <span
-            className="text-3xl tracking-tight"
-            style={{
-              fontFamily: "var(--font-display)",
-              color: "#ffffff",
-              textShadow: "0 1px 8px rgba(0,0,0,0.5)",
-            }}
-          >
-            ParkMaster
-          </span>
-          <div className="hidden items-center gap-4 md:flex">
-            {NAV_ITEMS.map(({ label, target, isRoute }) =>
-              isRoute ? (
-                <Link
-                  key={target}
-                  to={target}
-                  className="text-sm font-medium transition-colors duration-200 hover:text-white no-underline"
-                  style={{
-                    color: "rgba(255,255,255,0.6)",
-                    textShadow: "0 1px 6px rgba(0,0,0,0.4)",
-                  }}
-                >
-                  {label}
-                </Link>
-              ) : (
-                <button
-                  key={target}
-                  onClick={() => handleNavClick(target)}
-                  className="text-sm font-medium transition-colors duration-200 hover:text-white cursor-pointer bg-none border-none p-0 focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-4 focus-visible:rounded-sm"
-                  style={{
-                    color:
-                      activeNav === target ? "#ffffff" : "rgba(255,255,255,0.6)",
-                    textShadow: "0 1px 6px rgba(0,0,0,0.4)",
-                  }}
-                >
-                  {label}
-                </button>
-              ),
-            )}
-          </div>
-          <Link
-            to="/login"
-            className="cursor-pointer rounded-full px-6 py-2.5 text-sm font-medium transition-transform hover:scale-[1.03]"
-            style={{
-              color: "#ffffff",
-              background: "rgba(255,255,255,0.08)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              boxShadow:
-                "0 1px 12px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.15)",
-              textShadow: "0 1px 4px rgba(0,0,0,0.4)",
-            }}
-          >
-            Sign in
-          </Link>
-        </nav>
 
         <div className="relative z-10 flex flex-col items-center px-6 pb-40 pt-32 text-center">
           <motion.h1

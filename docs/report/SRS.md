@@ -301,7 +301,20 @@ flowchart TD
 
 ### 2.3 Screen Authorization
 
-Enforced server-side by `SecurityConfig.java` role rules per `/api/{admin,manager,staff,driver,public}/**` prefix (`ADMIN` is a superset of `MANAGER`+`STAFF`+`USER`).
+Authorization is enforced **server-side** by `SecurityConfig.java`, which grants
+access per API prefix — `/api/admin/**` → `ADMIN`; `/api/manager/**` →
+`ADMIN, MANAGER`; `/api/staff/**` → `ADMIN, MANAGER, STAFF`; `/api/driver/**` →
+`ADMIN, USER`; `/api/public/**` and `/api/auth/**` → no auth. The matrix below
+marks the roles each screen's backing API accepts.
+
+Two clarifications so the table is not misread:
+
+- **The frontend does not gate screens per role.** All four authenticated roles
+  share one `ProtectedRoute` over `/app/*` (`frontend/src/App.jsx`); any signed-in
+  user can open any route. Unauthorized data calls simply return `403` from the
+  backend, which is the real authorization boundary.
+- **`ADMIN` shows `X` on every row** because it is a URL-prefix superset of the
+  other roles, not because an admin navigates to driver/staff screens in practice.
 
 | **Screen** | **ADMIN** | **MANAGER** | **STAFF** | **USER** | **Guest** |
 | --- | --- | --- | --- | --- | --- |
