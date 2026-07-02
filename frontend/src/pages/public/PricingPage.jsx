@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Check,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import HeroFadeIn from "../../components/hero/HeroFadeIn";
 import { publicApi } from "../../lib/endpoints";
+import { isAuthed } from "../../lib/session";
 
 const vnd = new Intl.NumberFormat("vi-VN");
 const money = (n) => `${vnd.format(Number(n))}₫`;
@@ -208,6 +209,14 @@ export default function PricingPage() {
   const [policies, setPolicies] = useState(null);
   const [policyLoading, setPolicyLoading] = useState(true);
   const [policyError, setPolicyError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState("pricing-plans");
+  const navigate = useNavigate();
+
+  const goDashboard = () => {
+    if (isAuthed()) navigate("/app/dashboard");
+    else navigate("/login");
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -215,6 +224,24 @@ export default function PricingPage() {
       .pricing()
       .then((p) => { setPolicies(p.filter((x) => x.active)); setPolicyLoading(false); })
       .catch((e) => { setPolicyError(e.message); setPolicyLoading(false); });
+  }, []);
+
+  useEffect(() => {
+    const SECTION_IDS = ["pricing-plans", "current-rates", "driver-benefits", "pricing-faq"];
+    const handleScroll = () => {
+      let current = "pricing-plans";
+      for (const id of SECTION_IDS) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= 200) {
+          current = id;
+        }
+      }
+      setActiveNav(current);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
@@ -233,47 +260,119 @@ export default function PricingPage() {
       }}
     >
       {/* ───── Navbar ───── */}
-      <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-5 sm:px-8">
-        <Link
-          to="/"
-          className="text-2xl tracking-tight no-underline"
-          style={{ fontFamily: "var(--font-display)", color: "#ffffff" }}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center px-4 sm:px-6 pt-3 sm:pt-4 pointer-events-none">
+        <div
+          className="pointer-events-auto mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:px-6 py-3 rounded-2xl sm:rounded-[32px] transition-all duration-500"
+          style={{
+            background: "rgba(0,0,0,0.72)",
+            backdropFilter: "blur(20px) saturate(1.8)",
+            WebkitBackdropFilter: "blur(20px) saturate(1.8)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.45), 0 0 60px rgba(34,211,238,0.03)",
+          }}
         >
-          ParkMaster
-        </Link>
-        <div className="flex items-center gap-3">
-          {NAV_ITEMS.map(({ label, target, isRoute }) =>
-            isRoute ? (
-              <Link
-                key={target}
-                to={target}
-                className="text-sm font-medium transition-colors duration-200 hover:text-white no-underline"
-                style={{ color: "rgba(255,255,255,0.6)" }}
-              >
-                {label}
-              </Link>
-            ) : (
-              <button
-                key={target}
-                onClick={() => scrollTo(target)}
-                className="text-sm font-medium transition-colors duration-200 hover:text-white cursor-pointer bg-none border-none p-0 focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-4 focus-visible:rounded-sm"
-                style={{ color: "rgba(255,255,255,0.6)" }}
-              >
-                {label}
-              </button>
-            ),
-          )}
           <Link
-            to="/login"
-            className="rounded-full border border-white/20 px-5 py-1.5 text-sm font-medium text-white/70 no-underline transition-all duration-300 hover:-translate-y-[1px] hover:border-white/40 hover:text-white hover:shadow-[0_4px_16px_rgba(0,0,0,0.3)] cursor-pointer"
+            to="/"
+            className="text-2xl tracking-tight no-underline"
+            style={{ fontFamily: "var(--font-display)", color: "#ffffff" }}
           >
-            Sign in
+            ParkMaster
           </Link>
+          <div className="hidden items-center gap-0.5 md:flex">
+            {NAV_ITEMS.map(({ label, target, isRoute }) => {
+              const isActive = !isRoute && activeNav === target;
+              return isRoute ? (
+                <Link
+                  key={target}
+                  to={target}
+                  onClick={() => window.scrollTo(0, 0)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 hover:bg-white/[0.08] no-underline"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
+                >
+                  {label}
+                </Link>
+              ) : (
+                <button
+                  key={target}
+                  onClick={() => scrollTo(target)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 hover:bg-white/[0.08] cursor-pointer bg-none border-none focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-2"
+                  style={{
+                    color: isActive ? "#ffffff" : "rgba(255,255,255,0.65)",
+                    backgroundColor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/login"
+              className="rounded-full px-5 py-1.5 text-sm font-medium transition-all duration-200 hover:bg-white/[0.12] no-underline"
+              style={{
+                color: "#ffffff",
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
+            >
+              Sign in
+            </Link>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="md:hidden flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200 hover:bg-white/[0.08] cursor-pointer bg-none border-none text-white/70"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+            >
+              {menuOpen ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* ── Mobile dropdown ── */}
+        {menuOpen && (
+          <div
+            className="pointer-events-auto mx-auto mt-2 w-full max-w-7xl rounded-2xl border border-white/[0.08] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)]"
+            style={{
+              background: "rgba(0,0,0,0.85)",
+              backdropFilter: "blur(20px) saturate(1.8)",
+            }}
+          >
+            {NAV_ITEMS.map(({ label, target, isRoute }) => {
+              const isActive = !isRoute && activeNav === target;
+              return isRoute ? (
+                <Link
+                  key={target}
+                  to={target}
+                  onClick={() => { setMenuOpen(false); window.scrollTo(0, 0); }}
+                  className="flex w-full items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-white/[0.08] no-underline"
+                  style={{ color: "rgba(255,255,255,0.7)" }}
+                >
+                  {label}
+                </Link>
+              ) : (
+                <button
+                  key={target}
+                  onClick={() => { scrollTo(target); setMenuOpen(false); }}
+                  className="flex w-full items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-white/[0.08] cursor-pointer bg-none border-none text-left"
+                  style={{
+                    color: isActive ? "#ffffff" : "rgba(255,255,255,0.7)",
+                    backgroundColor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       {/* ───── Hero ───── */}
-      <section className="px-6 pt-16 pb-10 sm:pt-24 sm:pb-14 md:pt-28 md:pb-16">
+      <section className="px-6 pt-24 pb-10 sm:pt-28 sm:pb-14 md:pt-32 md:pb-16">
         <HeroFadeIn className="mx-auto max-w-3xl text-center">
           <span
             className="text-[0.6875rem] font-medium tracking-[0.12em] uppercase"
@@ -659,23 +758,17 @@ export default function PricingPage() {
                 >
                   Home
                 </Link>
-                <Link
-                  to="/app/dashboard"
-                  className="text-[0.8125rem] text-white/55 no-underline transition-all duration-200 hover:text-white hover:translate-x-[3px]"
+                <button
+                  onClick={goDashboard}
+                  className="text-[0.8125rem] text-white/55 text-left transition-all duration-200 hover:text-white hover:translate-x-[3px] cursor-pointer bg-transparent border-none p-0 font-[inherit] focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-4 focus-visible:rounded-sm"
                 >
                   Dashboard
-                </Link>
+                </button>
                 <Link
                   to="/app/reservations"
                   className="text-[0.8125rem] text-white/55 no-underline transition-all duration-200 hover:text-white hover:translate-x-[3px]"
                 >
                   Reservations
-                </Link>
-                <Link
-                  to="/app/passes"
-                  className="text-[0.8125rem] text-white/55 no-underline transition-all duration-200 hover:text-white hover:translate-x-[3px]"
-                >
-                  Passes
                 </Link>
               </div>
             </div>
