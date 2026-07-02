@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ScanLine,
   Smartphone,
@@ -24,6 +24,7 @@ import HeroFadeIn from "../../components/hero/HeroFadeIn";
 
 import SpotlightText from "../../components/hero/SpotlightText";
 import { publicApi } from "../../lib/endpoints";
+import { isAuthed } from "../../lib/session";
 
 const CRITERIA = [
   {
@@ -1403,7 +1404,13 @@ function FinalCTASection() {
 }
 
 function Footer() {
+  const navigate = useNavigate();
   const year = new Date().getFullYear();
+
+  const goDashboard = () => {
+    if (isAuthed()) navigate("/app/dashboard");
+    else navigate("/login");
+  };
   return (
     <footer
       id="contact"
@@ -1439,24 +1446,24 @@ function Footer() {
               Navigate
             </div>
             <div className="flex flex-col gap-3">
-              <Link
-                to="/app/dashboard"
+              <button
+                onClick={goDashboard}
                 className="text-[0.8125rem] text-white/55 inline-flex items-center gap-1 transition-all duration-200 hover:text-white hover:translate-x-[3px] cursor-pointer bg-transparent border-none p-0 font-[inherit] focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-4 focus-visible:rounded-sm"
               >
                 Dashboard
-              </Link>
+              </button>
               <Link
                 to="/app/reservations"
                 className="text-[0.8125rem] text-white/55 inline-flex items-center gap-1 transition-all duration-200 hover:text-white hover:translate-x-[3px] cursor-pointer bg-transparent border-none p-0 font-[inherit] focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-4 focus-visible:rounded-sm"
               >
                 Reservations
               </Link>
-              <button
-                onClick={() => scrollTo("pricing")}
-                className="text-[0.8125rem] text-white/55 inline-flex items-center gap-1 transition-all duration-200 hover:text-white hover:translate-x-[3px] cursor-pointer bg-transparent border-none p-0 font-[inherit] focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-4 focus-visible:rounded-sm"
+              <Link
+                to="/pricing"
+                className="text-[0.8125rem] text-white/55 inline-flex items-center gap-1 transition-all duration-200 hover:text-white hover:translate-x-[3px] no-underline"
               >
                 Pricing
-              </button>
+              </Link>
               <button
                 onClick={() => scrollTo("contact")}
                 className="text-[0.8125rem] text-white/55 inline-flex items-center gap-1 transition-all duration-200 hover:text-white hover:translate-x-[3px] cursor-pointer bg-transparent border-none p-0 font-[inherit] focus-visible:outline-2 focus-visible:outline-white/60 focus-visible:outline-offset-4 focus-visible:rounded-sm"
