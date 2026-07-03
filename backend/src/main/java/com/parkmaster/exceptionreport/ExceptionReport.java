@@ -20,7 +20,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 // ponytail: session is nullable — a lost ticket may have no findable session yet.
-// No assignment/severity fields until staff workflow needs them.
+// Make non-null when lost-ticket lookup workflow lands. No assignment/severity
+// fields until staff workflow needs them.
 @Entity
 @Table(name = "exception_report")
 @Getter

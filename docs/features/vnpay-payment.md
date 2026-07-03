@@ -104,3 +104,22 @@ Check-in is blocked for PAID reservations until the deposit is confirmed PAID.
 | `pay-url` | `VNPAY_PAY_URL` | `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html` |
 | `return-url` | `VNPAY_RETURN_URL` | `http://localhost:5000/api/public/payments/vnpay-return` |
 | `result-url` | `VNPAY_RESULT_URL` | `http://localhost:5173/app` |
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `payment/VnPayService.java` | `buildPaymentUrl()`, HMAC-SHA512 signing, `isValidSignature()` callback verification |
+| Controller | `payment/PublicPaymentController.java` | `GET /vnpay-return` — callback handler, signature verification, smart redirect |
+| Controller | `payment/VnPayIpnController.java` | `GET /api/public/payments/vnpay-ipn` — server-to-server IPN endpoint |
+| Service | `payment/PaymentService.java` | `handleVnPayReturn()` — idempotent settlement, `activateLinkedPass()` |
+| Config | `application.yml` | `parkmaster.vnpay.*` configuration block |
+| Frontend | `pages/user/MyParkingPage.jsx` | "Pay via VNPay" button on unpaid charges |
+| Frontend | `pages/user/PassesPage.jsx` | Auto-redirect to VNPay after pass registration |
+| Test | `payment/VnPayServiceTest.java` | Signature generation and verification tests |
+
+## Slide Notes
+
+- **One-liner**: "Real VNPay sandbox integration — HMAC-SHA512 signing, server callback verification, idempotent settlement with cascading actions."
+- **Demo flow**: Driver clicks "Pay via VNPay" → redirected to VNPay sandbox → pays → redirected back → payment PAID → pass/session activated.
+

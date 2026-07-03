@@ -48,3 +48,22 @@ Duplicate type names (case-insensitive) → 409. Missing type/policy → 404.
 Floor/zone segmentation by vehicle type (RQ1) relies on the vehicle type model:
 floors are optionally assigned a vehicle type, and the AI allocator's
 `vehicleTypeMatch` criterion (40 pts) scores slots on type-matched floors higher.
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `pricing/PricingService.java` | CRUD for vehicle types + pricing policies, upsert |
+| Controller | `pricing/ManagerPricingController.java` | `POST/GET/PUT/DELETE /api/manager/vehicle-types`, `PUT /{id}/pricing` |
+| Controller | `pricing/PublicPricingController.java` | `GET /api/public/pricing` — public rates + availability |
+| Entity | `pricing/VehicleType.java` | `name` (unique), `description` |
+| Entity | `pricing/PricingPolicy.java` | `ratePerHour`, `dailyCap`, `graceMinutes`, `peakMultiplier`, `monthlyPassPrice`, `isActive` |
+| Frontend | `pages/system/PricingPage.jsx` | Manager: vehicle type + pricing CRUD |
+| Frontend | `pages/public/PricingPage.jsx` | Public: pricing cards with rates |
+| Test | `pricing/PricingServiceTest.java` | Policy upsert, duplicate detection |
+
+## Slide Notes
+
+- **One-liner**: "One-to-one vehicle type → pricing policy. Controls hourly rate, grace period, daily cap, peak surcharge, monthly pass price, soft-disable."
+- **RQ1 link**: Floor/zone segmentation by vehicle type — the `vehicleTypeMatch` criterion (40 pts) scores type-matched floors higher.
+

@@ -114,3 +114,23 @@ payment
 Peak-hour pricing shares the same time-window definition as the AI allocation
 `peakHour` factor — a single config drives both surcharge and scoring, making
 the system coherent when analyzing peak-hour utilization.
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `payment/PaymentService.java` | `settle()`, `void_()`, `payOwn()`, `handleVnPayReturn()`, cascading actions |
+| Controller | `payment/StaffPaymentController.java` | `POST /{id}/settle`, `POST /{id}/void`, `GET /pending` |
+| Controller | `payment/DriverPaymentController.java` | `POST /{id}/vnpay` (start checkout) |
+| Controller | `payment/ManagerPaymentController.java` | `GET /revenue?from=&to=` |
+| Controller | `payment/PublicPaymentController.java` | `GET /vnpay-return` (VNPay callback) |
+| Entity | `payment/Payment.java` | `PaymentMethod` (CASH/ONLINE/VNPAY), `PaymentStatus` (PENDING/PAID/VOIDED) |
+| DTO | `payment/PaymentDtos.java` | Settle/Void requests, payment responses |
+| Frontend | `pages/staff/PaymentsPage.jsx` | Pending payments list with settle/void buttons |
+| Frontend | `components/AppLayout.jsx` | Driver dashboard: unpaid charges with "Pay via VNPay" button |
+
+## Slide Notes
+
+- **One-liner**: "Two-phase payment: check-out creates PENDING charge → staff settle or driver pays via VNPay. Void cascades to linked reservation/pass."
+- **Demo flow**: Staff checks out → payment PENDING → staff settles cash → slot freed. Or driver pays via VNPay from dashboard.
+

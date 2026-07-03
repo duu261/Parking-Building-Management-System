@@ -93,3 +93,25 @@ RQ2 (time-to-park comparison) and RQ4 (peak-hour utilization). The
 `autoAllocated` flag and `allocationScore` JSONB make every session auditable.
 `fromReservation` + `depositCredit` enable comparing reservation vs walk-in
 session costs and fulfillment rates.
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `session/ParkingSessionService.java` | `checkIn()`, `checkOut()`, `computeCharge()`, QR ticket generation |
+| Controller | `session/StaffSessionController.java` | `POST /check-in`, `POST /{id}/check-out`, `GET /active`, `GET /by-ticket/` |
+| Controller | `session/DriverSessionController.java` | `GET /`, `GET /{id}`, `GET /{id}/estimate`, `GET /{id}/ticket.png` |
+| Calculator | `session/ChargeCalculator.java` | Rate × hours, grace period, daily cap, peak multiplier, reservation discounts |
+| Entity | `session/ParkingSession.java` | `SessionStatus`, `allocationScore` JSONB, `fromReservation`, `depositCredit` |
+| QR | `common/QrCodeGenerator.java` | Generates PNG QR codes for ticket codes |
+| Frontend | `pages/staff/CheckInPage.jsx` | Check-in form with barcode scanner, auto-allocation |
+| Frontend | `pages/staff/ActiveSessionsPage.jsx` | Live active sessions list |
+| Frontend | `pages/user/MySessionsPage.jsx` | Driver session history with QR codes |
+| Frontend | `pages/user/MyParkingPage.jsx` | Active session dashboard with live cost estimate |
+| Test | `session/ChargeCalculatorTest.java` | Unit tests for charge math |
+
+## Slide Notes
+
+- **One-liner**: "AI-allocated check-in → QR ticket → live cost estimate → charge calculation with grace/discount → payment settlement."
+- **Demo flow**: Staff checks in → QR ticket generated → driver sees live estimate on dashboard → staff checks out → charge computed → payment.
+
