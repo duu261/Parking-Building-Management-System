@@ -72,3 +72,25 @@ duration, allocation method split (auto vs manual), and per-floor breakdown.
 - **No training data needed**: the system works from day one with zero historical sessions.
 - For a capstone project, this is the right trade-off between sophistication and
   demonstrability. ML is the natural next step when real usage data exists.
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `session/SlotAllocationService.java` | `allocate()`, `score()`, `vehicleTypeScore()`, `loadBalanceScore()`, `distanceScore()`, `peakScore()`, inner `ScoreBreakdown` record |
+| Controller | `parking/PublicParkingController.java` | `GET /api/public/buildings/{id}/slots/available` (public availability) |
+| Controller | `parking/StaffParkingController.java` | Check-in endpoint that calls allocator |
+| Controller | `reservation/DriverReservationController.java` | `POST /api/driver/reservations/suggest` (AI slot suggestions for paid tier) |
+| Entity | `parking/ParkingSlot.java` | `SlotStatus` enum, `allocationScore` JSONB field |
+| Analytics | `report/ReportService.java` | `GET /api/manager/buildings/{id}/analytics/allocation` |
+| Frontend | `components/AllocationShowcase.jsx` | Visual demo of scoring on landing page |
+| Frontend | `components/ScoreBreakdownCard.jsx` | Per-criterion score bars (40/30/20/10) |
+| Frontend | `pages/staff/CheckInPage.jsx` | Staff check-in triggers auto-allocation |
+| Test | `session/SlotAllocationServiceTest.java` | Unit tests for scoring model |
+
+## Slide Notes
+
+- **One-liner**: "AI scores every available slot on four criteria and picks the best one — explainable, deterministic, tunable."
+- **Demo flow**: Staff check-in → omit slot → backend auto-assigns → show score breakdown card on frontend.
+- **Grading hook**: Directly answers RQ2, RQ3, RQ4. Weights are tunable constants for experiments.
+- **Visual**: AllocationShowcase component on landing page has live score bars — screenshots work well in slides.

@@ -72,3 +72,20 @@ sessions and drivers.
   billing path).
 - Status is simple (OPEN → RESOLVED) because the physical resolution happens
   at the gate, not in software.
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `exceptionreport/ExceptionReportService.java` | `file()`, `resolve()`, list by status |
+| Controller | `exceptionreport/StaffExceptionController.java` | `POST/GET /api/staff/exception-reports` |
+| Controller | `exceptionreport/ManagerExceptionController.java` | `GET /api/manager/exception-reports`, `PUT /{id}/resolve` |
+| Entity | `exceptionreport/ExceptionReport.java` | `ExceptionType` (LOST_TICKET/WRONG_PLATE/OVERTIME/WRONG_ZONE), `ExceptionStatus` (OPEN/RESOLVED) |
+| DTO | `exceptionreport/ExceptionDtos.java` | File/Resolve request/response |
+| Frontend | `pages/staff/ExceptionsPage.jsx` | Staff: file reports, view own |
+| Frontend | `pages/system/ExceptionsPage.jsx` | Manager: filter, resolve |
+
+## Slide Notes
+
+- **One-liner**: "Staff file exception reports (lost ticket, wrong plate, overtime, wrong zone) → manager reviews/resolves → penalty added to payment."
+

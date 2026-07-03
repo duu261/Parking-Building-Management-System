@@ -73,6 +73,26 @@ PENDING  ──(payment settles)──>  ACTIVE  ──(manager revoke / expiry)
 Issuing rejects a new pass whose date range overlaps an existing ACTIVE **or
 PENDING** pass for the same plate+type. Prevents duplicate purchases.
 
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `pass/MonthlyPassService.java` | `register()`, `activateLinkedPass()`, `hasActivePass()`, `revoke()`, overlap guard |
+| Controller | `pass/DriverPassController.java` | `POST/GET /api/driver/passes` |
+| Controller | `pass/ManagerPassController.java` | `POST/GET/DELETE /api/manager/passes`, direct issue + revoke |
+| Entity | `pass/MonthlyPass.java` | `PassStatus` (PENDING/ACTIVE/EXPIRED), FK to Payment |
+| DTO | `pass/PassDtos.java` | `PassResponse` (includes paymentId, price) |
+| Payment | `payment/PaymentService.java` | `settle()`, `payOwn()`, `handleVnPayReturn()` all call `activateLinkedPass()` |
+| Frontend | `pages/system/MonthlyPassesPage.jsx` | Manager: list, activate, revoke, filter by status |
+| Frontend | `pages/user/PassesPage.jsx` | Driver: register, pay, view own passes |
+| Migration | `V19__monthly_pass_payment.sql` | Added `monthly_pass_price` to pricing, `payment_id` to pass |
+
+## Slide Notes
+
+- **One-liner**: "Drivers buy monthly passes via VNPay — auto-activates on payment, free exit while active."
+- **Demo flow**: Driver registers pass → auto-redirect to VNPay → payment confirms → pass ACTIVE → next check-out charge = 0.
+
+
 ## Pricing configuration
 Manager sets `monthlyPassPrice` alongside hourly rate on the Pricing page.
 If not configured (null or zero), pass registration returns 400.

@@ -66,3 +66,15 @@ handy to point out during the demo.
 
 Optional. Set `GEMINI_API_KEY` to enable Gemini answers; with no key the assistant runs
 in local FAQ mode. Setup and deployment steps live in the project README, not here.
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Controller | `assistant/AssistantController.java` | `POST /api/public/assistant/chat`, no auth, per-IP rate limit |
+| Service | `assistant/AssistantService.java` | Builds live context (availability + pricing), local FAQ fallback, calls Gemini |
+| Client | `assistant/GeminiClient.java` | JDK `HttpClient` wrapper over Gemini API, graceful degradation |
+| DTO | `assistant/AssistantDtos.java` | `ChatRequest`, `Turn`, `ChatResponse {reply, source}` |
+| Frontend | `components/AiAssistant.jsx` | Floating chat widget, toggle, suggestions, typing indicator |
+
+

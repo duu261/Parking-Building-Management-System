@@ -139,3 +139,23 @@ auto-cancels the linked reservation and releases the slot.
   suggestions measures which criteria matter most.
 - **RQ4**: Reservation data (fulfillment rates, no-show rates, peak-hour bookings)
   measures whether the allocation algorithm improves peak-hour utilization.
+
+## Implementation Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Service | `reservation/ReservationService.java` | `createFree()`, `createPaid()`, `cancel()`, `suggest()`, `fulfill()` |
+| Controller | `reservation/DriverReservationController.java` | `POST/GET/DELETE /api/driver/reservations`, `GET /suggest` |
+| Controller | `reservation/ManagerReservationController.java` | `GET /api/manager/reservations` |
+| Job | `reservation/ReservationExpiryJob.java` | `@Scheduled` sweep: releases unpaid holds after 15min, expires past-due reservations |
+| Entity | `reservation/Reservation.java` | `ReservationType` (FREE/PAID), `ReservationStatus` (PENDING/FULFILLED/CANCELLED/EXPIRED) |
+| Frontend | `pages/user/ReservationsPage.jsx` | Driver reservation list + create form |
+| Frontend | `pages/staff/CheckInPage.jsx` | Staff check-in consumes reservations |
+| Test | `reservation/ReservationServiceTest.java` | Unit tests for both tiers |
+
+## Slide Notes
+
+- **One-liner**: "Two-tier pre-booking: free with AI assignment + 10% discount, or paid with guaranteed slot via VNPay deposit."
+- **Demo flow**: Driver creates paid reservation → AI suggests best slot → picks slot → pays deposit → staff checks in via reservation QR.
+- **Grading hook**: Tests RQ2 (AI vs driver choice), RQ3 (which criteria drive driver decisions), RQ4 (reservation fulfillment rates at peak hours).
+
