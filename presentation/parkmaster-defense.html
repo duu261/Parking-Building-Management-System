@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParkMaster - SWP391 Defense</title>
+
+<!-- Fonts: Overpass (Highway Gothic heir) + Overpass Mono for chrome/labels -->
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800;900&family=Overpass+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================
+   THEME - "Asphalt & Paint" (disciplined)
+   Road-marking design language. Decorations
+   (lane dashes, slot outlines) live only on
+   the title + section-divider slides; content
+   slides stay austere.
+   =========================================== */
+:root {
+    --asphalt: #17181a;        /* slide background */
+    --panel: #1e2023;          /* card surface */
+    --line: #2c2f33;           /* hairline borders */
+    --paint: #e9e6dd;          /* lane-paint white = primary text */
+    --muted: #8f8d85;          /* secondary text */
+    --yellow: #ffb400;         /* road-sign yellow = only accent */
+    --sign-blue: #1467c6;      /* parking-sign blue, P badge only */
+    --stage-bg: #0e0f11;
+    --slide-bg: var(--asphalt);
+
+    --font-display: 'Overpass', sans-serif;
+    --font-mono: 'Overpass Mono', monospace;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   (viewport-base.css, included in full)
+   =========================================== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px;
+        height: 1080px;
+        break-after: page;
+        page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   REVEAL ANIMATIONS - triggered by .visible
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity .6s var(--ease-out-expo), transform .6s var(--ease-out-expo);
+}
+.slide.visible .reveal { opacity: 1; transform: none; }
+.reveal:nth-child(1) { transition-delay: .05s; }
+.reveal:nth-child(2) { transition-delay: .15s; }
+.reveal:nth-child(3) { transition-delay: .25s; }
+.reveal:nth-child(4) { transition-delay: .35s; }
+.reveal:nth-child(5) { transition-delay: .45s; }
+.reveal:nth-child(6) { transition-delay: .55s; }
+
+/* ===========================================
+   SHARED SLIDE ANATOMY (content slides)
+   kicker → yellow rule → title → body grid.
+   Speaker chip bottom-left, page no bottom-right.
+   =========================================== */
+.slide { font-family: var(--font-display); color: var(--paint); }
+
+.kicker {
+    position: absolute; top: 84px; left: 110px;
+    font-family: var(--font-mono); font-size: 23px;
+    letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
+}
+.kicker b { color: var(--yellow); font-weight: 600; }
+.k-rule {
+    position: absolute; top: 132px; left: 110px; width: 120px; height: 5px;
+    background: var(--yellow); transform-origin: left;
+}
+.slide.visible .k-rule { animation: growX .7s var(--ease-out-expo) both; }
+h2.s-title {
+    position: absolute; top: 168px; left: 110px; width: 1700px;
+    font-weight: 900; font-size: 84px; line-height: 1.02;
+    text-transform: uppercase; letter-spacing: -.01em;
+}
+h2.s-title .y { color: var(--yellow); }
+.body { position: absolute; top: 330px; left: 110px; right: 110px; bottom: 150px; }
+
+.speaker-chip {
+    position: absolute; left: 110px; bottom: 58px;
+    font-family: var(--font-mono); font-size: 19px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--muted);
+    border: 1px solid var(--line); padding: 8px 18px 6px; border-radius: 999px;
+}
+.speaker-chip b { color: var(--yellow); font-weight: 600; }
+.pageno {
+    position: absolute; right: 110px; bottom: 58px;
+    font-family: var(--font-mono); font-size: 20px; color: var(--muted);
+}
+
+/* Cards & grids used across content slides */
+.cardgrid { display: grid; gap: 28px; height: 100%; }
+.card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 36px 40px; position: relative;
+}
+.card .tag {
+    font-family: var(--font-mono); font-size: 20px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--yellow); margin-bottom: 16px;
+}
+.card h3 { font-size: 36px; font-weight: 800; margin-bottom: 14px; line-height: 1.15; }
+.card p, .card li { font-size: 26px; line-height: 1.5; color: var(--paint); font-weight: 400; }
+.card .dim { color: var(--muted); }
+.card ul { list-style: none; }
+.card li { padding-left: 30px; position: relative; margin-bottom: 10px; }
+.card li::before { content: "-"; position: absolute; left: 0; color: var(--yellow); }
+
+.mono { font-family: var(--font-mono); }
+.ycol { color: var(--yellow); }
+
+/* Big stat tiles */
+.stat { text-align: left; }
+.stat .n { font-weight: 900; font-size: 96px; color: var(--yellow); line-height: 1; }
+.stat .l { font-family: var(--font-mono); font-size: 22px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
+
+/* Formula strip (charge / score slides) */
+.formula {
+    background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--yellow);
+    border-radius: 10px; padding: 26px 34px; font-family: var(--font-mono);
+    font-size: 27px; line-height: 1.6; color: var(--paint);
+}
+.formula .y { color: var(--yellow); }
+
+/* ===========================================
+   TITLE + DIVIDER DECOR (only these slides)
+   =========================================== */
+.asphalt-tex {
+    position: absolute; inset: 0;
+    background:
+        radial-gradient(1200px 600px at 75% -10%, #23252a 0%, transparent 60%),
+        radial-gradient(900px 500px at 10% 110%, #1d1f23 0%, transparent 55%);
+}
+.lane {
+    position: absolute; left: 0; right: 0; height: 10px; opacity: .9;
+    background: repeating-linear-gradient(90deg, var(--paint) 0 90px, transparent 90px 150px);
+}
+.slide.visible .lane { animation: laneIn 1.1s var(--ease-out-expo) both; }
+.psign {
+    width: 96px; height: 96px; background: var(--sign-blue); border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 64px; color: #fff;
+}
+.slots { display: flex; }
+.slot {
+    width: 150px; height: 330px; border: 6px solid var(--paint);
+    border-bottom: none; margin-left: -6px; position: relative;
+}
+.slot.full { background: #ffb40022; }
+.slot .code {
+    position: absolute; top: 18px; left: 0; right: 0; text-align: center;
+    font-family: var(--font-mono); font-size: 26px; color: var(--muted);
+}
+.slot .car {
+    position: absolute; left: 20px; right: 20px; bottom: 26px; height: 150px;
+    border-radius: 26px; background: var(--yellow);
+}
+.slide.visible .slot .car { animation: parkIn .9s .9s cubic-bezier(.25,1.2,.4,1) both; }
+
+@keyframes growX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes laneIn { from { transform: translateX(-240px); opacity: 0; } to { transform: none; opacity: .9; } }
+@keyframes parkIn { from { transform: translateY(220px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Section divider slides */
+.divider .bignum {
+    position: absolute; top: 120px; left: 110px;
+    font-family: var(--font-mono); font-size: 44px; color: var(--yellow); letter-spacing: .2em;
+}
+.divider h2 {
+    position: absolute; top: 400px; left: 110px; width: 1500px;
+    font-weight: 900; font-size: 150px; line-height: .98; text-transform: uppercase;
+}
+.divider .sub {
+    position: absolute; top: 760px; left: 110px; width: 1100px;
+    font-size: 34px; color: var(--muted); line-height: 1.5;
+}
+
+/* ===========================================
+   IN-SLIDE SPEAKER NOTES - press N to toggle.
+   Small mono strip pinned above the footer.
+   =========================================== */
+.note {
+    position: absolute; left: 110px; right: 110px; bottom: 112px;
+    font-family: var(--font-mono); font-size: 19px; line-height: 1.5;
+    color: #6f6d66; border-top: 1px dashed var(--line); padding-top: 10px;
+    display: none;
+    /* solid backdrop: notes may sit over card bottoms in rehearsal mode */
+    background: var(--asphalt); z-index: 5;
+}
+body.show-notes .note { display: block; }
+
+/* ===========================================
+   DECK CHROME: progress bar + edit controls
+   =========================================== */
+.progress {
+    position: fixed; left: 0; bottom: 0; height: 5px; background: var(--yellow);
+    width: 0; z-index: 1001; transition: width .3s var(--ease-out-expo);
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 18px; left: 18px; z-index: 10001;
+    opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    background: var(--panel); color: var(--paint); border: 1px solid var(--line);
+    border-radius: 10px; font-size: 18px; padding: 8px 12px; cursor: pointer;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { border-color: var(--yellow); color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============ 01 · TITLE (speaker 4) ============ -->
+<section class="slide active">
+    <div class="asphalt-tex"></div>
+    <div class="lane" style="top:238px"></div>
+    <div class="psign" style="position:absolute;left:110px;top:96px">P</div>
+    <div class="kicker" style="left:240px;top:118px">SWP391 Capstone Defense · <b>SU26SWP08</b> · FPT University · Jul 2026</div>
+    <div class="slots" style="position:absolute;right:110px;top:330px">
+        <div class="slot"><span class="code">A-01</span></div>
+        <div class="slot full"><span class="code">A-02</span><div class="car"></div></div>
+        <div class="slot"><span class="code">A-03</span></div>
+    </div>
+    <h1 class="reveal" style="position:absolute;left:110px;top:320px;width:1050px;font-weight:900;font-size:150px;line-height:.98;text-transform:uppercase">Park<span class="ycol">Master</span></h1>
+    <p class="reveal" style="position:absolute;left:110px;top:672px;width:940px;font-size:32px;line-height:1.5;color:var(--muted)">Parking Building Management System - AI slot allocation, reservations, VNPay payments, four roles end to end.</p>
+    <div class="reveal" style="position:absolute;left:110px;right:110px;bottom:104px;display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:22px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-top:6px solid var(--yellow);padding-top:24px">
+        <span>Spring Boot 3 · React 19 · PostgreSQL</span><span class="ycol">parkmaster.vercel.app</span><span>4 members</span>
+    </div>
+    <p class="note">S4 opens: greet panel, group code, project name, one-line pitch, hand over the agenda. ~40s.</p>
+</section>
+
+<!-- ============ 02 · THE PROBLEM (speaker 4) ============ -->
+<section class="slide">
+    <div class="kicker">01 · Context</div><div class="k-rule"></div>
+    <h2 class="s-title">Why does a parking building<br>need <span class="y">software?</span></h2>
+    <div class="body" style="top:400px">
+        <div class="cardgrid" style="grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)">
+            <div class="card reveal"><div class="tag">Drivers</div><p>Circle floor after floor hunting for a free slot - no way to reserve, no idea what parking will cost.</p></div>
+            <div class="card reveal"><div class="tag">Gate staff</div><p>Paper tickets and manual cash - slow at peak hours, easy to lose, easy to dispute.</p></div>
+            <div class="card reveal"><div class="tag">Managers</div><p>No utilization data: which floors fill first, when peak hits, whether pricing works - all invisible.</p></div>
+            <div class="card reveal"><div class="tag">The building</div><p>Multi-floor, mixed vehicle types, hundreds of slots - too much state for a whiteboard.</p></div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Quốc</b></div><div class="pageno">02 / 18</div>
+    <p class="note">One pain per actor. End with: "So we built one system that gives each of these people their own tool." ~1 min.</p>
+</section>
+
+<!-- ============ 03 · WHAT WE BUILT (speaker 4) ============ -->
+<section class="slide">
+    <div class="kicker">01 · Context</div><div class="k-rule"></div>
+    <h2 class="s-title">What we <span class="y">built</span></h2>
+    <div class="body" style="top:320px">
+        <p class="reveal" style="font-size:33px;line-height:1.55;width:1450px;margin-bottom:56px">A full-stack web system for multi-building parking: drivers reserve and pay, staff run the gate, managers configure buildings and pricing, admins manage accounts - plus a public guest view. Live at <span class="mono ycol">parkmaster.vercel.app</span>.</p>
+        <div class="cardgrid reveal" style="grid-template-columns:repeat(5,1fr);height:auto">
+            <div class="stat"><div class="n">4+1</div><div class="l">Roles + guest</div></div>
+            <div class="stat"><div class="n">42</div><div class="l">Use cases</div></div>
+            <div class="stat"><div class="n">13</div><div class="l">DB tables</div></div>
+            <div class="stat"><div class="n">16</div><div class="l">Backend packages</div></div>
+            <div class="stat"><div class="n">103</div><div class="l">Backend tests</div></div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Quốc</b></div><div class="pageno">03 / 18</div>
+    <p class="note">Read the numbers, don't explain them yet - they get defended later slide by slide. ~45s.</p>
+</section>
+
+<!-- ============ 04 · TEAM & PROCESS (speaker 4) ============ -->
+<section class="slide">
+    <div class="kicker">01 · Context</div><div class="k-rule"></div>
+    <h2 class="s-title">Team <span class="y">&amp;</span> process</h2>
+    <div class="body" style="top:340px">
+        <div class="cardgrid" style="grid-template-columns:1.15fr .85fr">
+            <div class="card reveal">
+                <div class="tag">SU26SWP08 - 4 members</div>
+                <ul>
+                    <li><b>Huỳnh Thiên Quốc</b> <span class="mono dim">SE181733</span> - team lead: coordination, testing, deliverables</li>
+                    <li><b>Nguyễn Như Vũ</b> <span class="mono dim">SE160436</span> - backend: security, AI allocation, payments, data</li>
+                    <li><b>Trần Thanh Trọng</b> <span class="mono dim">SE204312</span> - frontend: driver &amp; staff screens</li>
+                    <li><b>Phạm Hoàng Vĩ Đại</b> <span class="mono dim">SE201557</span> - frontend: manager, admin, public pages</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Workflow</div>
+                <ul>
+                    <li>GitHub - feature branches, PR review</li>
+                    <li>Conventional Commits</li>
+                    <li><span class="mono">main</span> = dev, <span class="mono">deploy</span> = production</li>
+                    <li>Issues + project tracking sheets</li>
+                    <li>Release tag <span class="mono">PM_SU26SWP08-v1.0</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Quốc</b></div><div class="pageno">04 / 18</div>
+    <p class="note">Each member says one sentence about their own part here - teamwork points. Quoc reads his line from the script, keep it short. ~1.5 min.</p>
+</section>
+
+<!-- ============ 05 · ARCHITECTURE (speaker 1 / lead) ============ -->
+<section class="slide">
+    <div class="kicker">02 · System design</div><div class="k-rule"></div>
+    <h2 class="s-title">Architecture</h2>
+    <div class="body" style="top:320px">
+        <!-- three-tier boxes -->
+        <div class="cardgrid" style="grid-template-columns:repeat(3,1fr);height:430px">
+            <div class="card reveal">
+                <div class="tag">Client</div>
+                <h3>React 19 SPA</h3>
+                <ul>
+                    <li>Vite build, Tailwind UI</li>
+                    <li>Routes by role in <span class="mono">App.jsx</span></li>
+                    <li>JWT in <span class="mono">localStorage</span>, Bearer header</li>
+                    <li>Talks only REST <span class="mono">/api/*</span></li>
+                </ul>
+            </div>
+            <div class="card reveal" style="border-color:var(--yellow)">
+                <div class="tag">API</div>
+                <h3>Spring Boot 3.3</h3>
+                <ul>
+                    <li>Controller → Service → Repository</li>
+                    <li>16 domain packages</li>
+                    <li>Stateless JWT, no server session</li>
+                    <li>RFC7807 error responses</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Data</div>
+                <h3>PostgreSQL 16</h3>
+                <ul>
+                    <li>Schema owned by Flyway</li>
+                    <li><span class="mono">ddl-auto: validate</span></li>
+                    <li>Migrations <span class="mono">V*.sql</span> per domain</li>
+                    <li>JPA repositories</li>
+                </ul>
+            </div>
+        </div>
+        <div class="formula reveal" style="margin-top:32px">
+            Deploy: <span class="y">Vercel</span> (frontend) → <span class="y">Render</span> (backend, Docker) → <span class="y">Neon</span> (Postgres) · UptimeRobot pings <span class="y">/api/public/health</span>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Vũ</b></div><div class="pageno">05 / 18</div>
+    <p class="note">Key defense line: schema is Flyway-owned so Hibernate only VALIDATES - migrations are reviewable SQL, not magic. ~2 min.</p>
+</section>
+
+<!-- ============ 06 · SECURITY (speaker 1) ============ -->
+<section class="slide">
+    <div class="kicker">02 · System design</div><div class="k-rule"></div>
+    <h2 class="s-title">Security <span class="y">model</span></h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr">
+            <div class="card reveal">
+                <div class="tag">Authentication</div>
+                <ul>
+                    <li>Passwords stored as <b>BCrypt</b> hashes - plaintext never persisted or logged</li>
+                    <li>Login issues a <b>stateless JWT</b> carrying the role claim</li>
+                    <li><span class="mono">JwtAuthFilter</span> validates every request</li>
+                    <li>Forgot password: single-use reset token</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Authorization - two layers</div>
+                <ul>
+                    <li><b>Coarse:</b> RBAC by URL prefix in <span class="mono">SecurityConfig</span> - <span class="mono">/api/admin/**</span>, <span class="mono">/manager/**</span>, <span class="mono">/staff/**</span>, <span class="mono">/driver/**</span></li>
+                    <li><b>Fine:</b> object ownership in the service layer - e.g. <span class="mono">getForUser(email, id)</span> so a driver only reads their own session</li>
+                    <li>Public endpoints isolated under <span class="mono">/api/public/**</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Vũ</b></div><div class="pageno">06 / 18</div>
+    <p class="note">Expected question: "why no @PreAuthorize?" - answer: URL-prefix RBAC covers roles centrally; per-object checks belong to services where the data is loaded anyway. ~2 min.</p>
+</section>
+
+<!-- ============ 07 · DATA MODEL (speaker 1) ============ -->
+<section class="slide">
+    <div class="kicker">02 · System design</div><div class="k-rule"></div>
+    <h2 class="s-title">Data model - <span class="y">13 tables</span></h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:repeat(3,1fr);height:400px">
+            <div class="card reveal">
+                <div class="tag">Space</div>
+                <p class="mono" style="font-size:25px;line-height:1.9">parking_building<br>&nbsp;└ floor <span class="dim">(opt. vehicle_type)</span><br>&nbsp;&nbsp;&nbsp;└ parking_slot <span class="dim">(status enum)</span></p>
+            </div>
+            <div class="card reveal" style="border-color:var(--yellow)">
+                <div class="tag">Flow</div>
+                <p class="mono" style="font-size:25px;line-height:1.9">users → parking_session → payment<br>reservation <span class="dim">(free / paid deposit)</span><br>monthly_pass <span class="dim">(zeroes charge)</span></p>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Rules &amp; support</div>
+                <p class="mono" style="font-size:25px;line-height:1.9">vehicle_type ⇄ pricing_policy <span class="dim">(1:1)</span><br>exception_report · feedback<br>password_reset_token</p>
+            </div>
+        </div>
+        <div class="formula reveal" style="margin-top:32px">
+            <span class="y">parking_session</span> stores <span class="y">allocation_score JSONB</span> - every AI decision is persisted, queryable for the research questions
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Vũ</b></div><div class="pageno">07 / 18</div>
+    <p class="note">If pressed on any table: slot status enum = AVAILABLE/OCCUPIED/RESERVED/MAINTENANCE/LOCKED; payment method = CASH/ONLINE/VNPAY. ~1.5 min.</p>
+</section>
+
+<!-- ============ 08 · DIVIDER: WORKFLOWS ============ -->
+<section class="slide divider">
+    <div class="asphalt-tex"></div>
+    <div class="lane" style="top:300px"></div>
+    <div class="bignum">SECTION 03</div>
+    <h2 class="reveal">Core<br>workflows</h2>
+    <div class="sub reveal">Driver · Staff · Payments - the daily life of the building.</div>
+    <div class="speaker-chip">Speaker <b>Trọng</b></div><div class="pageno">08 / 18</div>
+    <p class="note">Handover: Trong takes over. One breath, then next slide. ~10s.</p>
+</section>
+
+<!-- ============ 09 · DRIVER FLOW (speaker 2) ============ -->
+<section class="slide">
+    <div class="kicker">03 · Workflows</div><div class="k-rule"></div>
+    <h2 class="s-title">Driver: reserve → park → <span class="y">pay</span></h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="card reveal">
+                <div class="tag">Free tier</div>
+                <ul>
+                    <li>AI assigns the slot automatically</li>
+                    <li>10% checkout discount for free-reservation sessions</li>
+                    <li>Hold expires 30 min after reserved start (<span class="mono">hold_until</span>)</li>
+                    <li>QR code shown to staff at the gate</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Paid tier</div>
+                <ul>
+                    <li>Driver picks the exact slot</li>
+                    <li>VNPay deposit = 1-hour rate</li>
+                    <li>Slot locked <span class="mono">RESERVED</span> on payment</li>
+                    <li>Guaranteed on arrival</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">While parked</div>
+                <ul>
+                    <li>Live status on My Parking</li>
+                    <li>Session history + feedback</li>
+                    <li>Monthly pass → checkout charge = 0</li>
+                    <li>Pay at exit via VNPay or cash</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Trọng</b></div><div class="pageno">09 / 18</div>
+    <p class="note">Guard worth citing: one PENDING reservation per plate; reservation window validated ≤3h ahead. ~2 min.</p>
+</section>
+
+<!-- ============ 10 · STAFF FLOW (speaker 2) ============ -->
+<section class="slide">
+    <div class="kicker">03 · Workflows</div><div class="k-rule"></div>
+    <h2 class="s-title">Staff: check-in <span class="y">/</span> check-out</h2>
+    <div class="body" style="top:320px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr;height:400px">
+            <div class="card reveal">
+                <div class="tag">Check-in</div>
+                <ul>
+                    <li>Scan QR - <span class="mono">RES:&lt;id&gt;</span> or <span class="mono">PASS:&lt;plate&gt;</span> - or search plate/ticket</li>
+                    <li>Walk-in: <b>AI Auto</b> (score breakdown shown) or <b>Manual</b> slot pick</li>
+                    <li>Slot flips <span class="mono">AVAILABLE → OCCUPIED</span>, session created with ticket code</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Check-out</div>
+                <ul>
+                    <li>Find session on Active Sessions (live slot map)</li>
+                    <li>Charge computed, panel shows amount due</li>
+                    <li>Settle cash on-site, or driver pays VNPay on their phone</li>
+                    <li>Active monthly pass → charge 0, session completes instantly</li>
+                </ul>
+            </div>
+        </div>
+        <div class="formula reveal" style="margin-top:30px">
+            charge = ceil_hours(minutes − <span class="y">grace</span>) × rate_per_hour, capped at <span class="y">daily_cap</span> per started day, × <span class="y">peak_multiplier</span>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Trọng</b></div><div class="pageno">10 / 18</div>
+    <p class="note">ChargeCalculator is a pure function - that's why it has direct unit tests. Grace/cap/peak all come from pricing_policy per vehicle type. ~2 min.</p>
+</section>
+
+<!-- ============ 11 · PAYMENTS (speaker 2) ============ -->
+<section class="slide">
+    <div class="kicker">03 · Workflows</div><div class="k-rule"></div>
+    <h2 class="s-title">Payments - <span class="y">VNPay</span> integration</h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr;height:400px">
+            <div class="card reveal">
+                <div class="tag">Outbound - build checkout URL</div>
+                <ul>
+                    <li>Sort params, URL-encode <span class="mono">name=value</span> pairs</li>
+                    <li>Sign with <b>HMAC-SHA512</b> + merchant secret</li>
+                    <li>Unique <span class="mono">gatewayRef</span> (txnRef) persisted before redirect</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Return - verify &amp; complete</div>
+                <ul>
+                    <li>Recompute signature over all <span class="mono">vnp_*</span> params</li>
+                    <li>Match payment by <span class="mono">gatewayRef</span>, check code <span class="mono">00</span> + amount</li>
+                    <li>Set <span class="mono">PAID</span> <b>idempotently</b>, then complete the linked session / pass / reservation</li>
+                </ul>
+            </div>
+        </div>
+        <div class="formula reveal" style="margin-top:30px">
+            Methods: <span class="y">CASH</span> (staff settle) · <span class="y">ONLINE</span> (mock settle) · <span class="y">VNPAY</span> (sandbox gateway) - one payment row per session, status PENDING → PAID
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Trọng</b></div><div class="pageno">11 / 18</div>
+    <p class="note">Why idempotent: VNPay may redirect + retry - double PAID must not double-complete. Amount check prevents tampering with return params. ~2 min.</p>
+</section>
+
+<!-- ============ 12 · DIVIDER: AI ALLOCATION ============ -->
+<section class="slide divider">
+    <div class="asphalt-tex"></div>
+    <div class="lane" style="top:300px"></div>
+    <div class="bignum">SECTION 04</div>
+    <h2 class="reveal">AI slot<br><span class="ycol">allocation</span></h2>
+    <div class="sub reveal">The research core - scoring, weights, and what the data says.</div>
+    <div class="speaker-chip">Speaker <b>Vũ</b></div><div class="pageno">12 / 18</div>
+    <p class="note">Vu back on. This is the graded RBL feature - slow down here. ~10s.</p>
+</section>
+
+<!-- ============ 13 · SCORING FORMULA (speaker 1) ============ -->
+<section class="slide">
+    <div class="kicker">04 · AI allocation</div><div class="k-rule"></div>
+    <h2 class="s-title">Scoring - <span class="y">max 100 points</span></h2>
+    <div class="body" style="top:320px">
+        <div class="cardgrid" style="grid-template-columns:repeat(4,1fr);height:400px">
+            <div class="card reveal"><div class="tag">40 · Vehicle match</div><p>Binary: slot's floor dedicated to this vehicle type → 40; mixed floor with no dedicated type → 20; wrong type → 0.</p></div>
+            <div class="card reveal"><div class="tag">30 · Load balance</div><p>Floor's <span class="mono">availableRatio × 30</span> - spreads vehicles so no floor saturates while others sit empty.</p></div>
+            <div class="card reveal"><div class="tag">20 · Distance</div><p><span class="mono">20 / floor.level</span> - ground floor scores full 20, each level up scores less. Proxy for time-to-park.</p></div>
+            <div class="card reveal"><div class="tag">10 · Peak hour</div><p>Bonus only when <span class="mono">PeakHours.isPeakNow()</span> - 7–9 AM and 5–7 PM, Asia/Ho_Chi_Minh.</p></div>
+        </div>
+        <div class="formula reveal" style="margin-top:30px">
+            <span class="y">rank()</span> loads all AVAILABLE slots in the building, scores each, returns best-first · <span class="y">allocate()</span> = top-1 or HTTP 409 · score persisted as JSONB per session
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Vũ</b></div><div class="pageno">13 / 18</div>
+    <p class="note">Weights defense: vehicle match dominates because a wrong-type slot is useless; load balance beats distance because building throughput > individual walk. Weights are constants - tunable, and persisted scores let us re-evaluate them (RQ3). ~2.5 min.</p>
+</section>
+
+<!-- ============ 14 · RESEARCH QUESTIONS (speaker 1) ============ -->
+<section class="slide">
+    <div class="kicker">04 · AI allocation</div><div class="k-rule"></div>
+    <h2 class="s-title">Research <span class="y">questions</span></h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr">
+            <div class="card reveal"><div class="tag">RQ1 · Segmentation</div><p>Does floor/zone segmentation by vehicle type affect utilization? → <span class="dim">floor.vehicle_type + per-floor fill-rate analytics</span></p></div>
+            <div class="card reveal"><div class="tag">RQ2 · Auto vs free choice</div><p>Does auto allocation reduce time-to-park? → <span class="dim">allocation-comparison report: auto vs manual session counts + avg duration</span></p></div>
+            <div class="card reveal"><div class="tag">RQ3 · Which criteria matter</div><p>Distance, floor, type, time, fill rate - which weighs most? → <span class="dim">per-session allocation_score JSONB keeps every component queryable</span></p></div>
+            <div class="card reveal"><div class="tag">RQ4 · Peak utilization</div><p>Can the algorithm improve peak-hour utilization? → <span class="dim">peak bonus in scoring + check-ins-by-hour distribution</span></p></div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Vũ</b></div><div class="pageno">14 / 18</div>
+    <p class="note">Honest framing: system INSTRUMENTS the questions - every allocation decision is recorded so the comparison is measurable, demo dataset = 30 days seeded history. ~2 min.</p>
+</section>
+
+<!-- ============ 15 · ANALYTICS (speaker 1) ============ -->
+<section class="slide">
+    <div class="kicker">04 · AI allocation</div><div class="k-rule"></div>
+    <h2 class="s-title">Manager <span class="y">analytics</span></h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:repeat(2,1fr);grid-template-rows:1fr 1fr">
+            <div class="card reveal"><div class="tag">Revenue</div><p>Daily revenue trend + totals - sum of PAID payments per <span class="mono">[from, to)</span> UTC window.</p></div>
+            <div class="card reveal"><div class="tag">Check-ins by hour</div><p>Peak-hour distribution - validates the 7–9 / 17–19 peak definition against real sessions (RQ4).</p></div>
+            <div class="card reveal"><div class="tag">Duration by vehicle type</div><p>Average session duration per type - feeds pricing decisions (daily cap, rates).</p></div>
+            <div class="card reveal" style="border-color:var(--yellow)"><div class="tag">Allocation comparison</div><p>Auto vs manual: counts + average minutes - the direct RQ2–RQ4 evidence, chart-ready endpoint.</p></div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Vũ</b></div><div class="pageno">15 / 18</div>
+    <p class="note">All 5 report endpoints under /api/manager/reports; aggregation done in service layer over windowed rows. Hand over to Dai after this. ~1.5 min.</p>
+</section>
+
+<!-- ============ 16 · QUALITY (speaker 3) ============ -->
+<section class="slide">
+    <div class="kicker">05 · Verification</div><div class="k-rule"></div>
+    <h2 class="s-title">Quality <span class="y">&amp;</span> testing</h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr">
+            <div class="card reveal">
+                <div class="tag">Automated</div>
+                <ul>
+                    <li><b>103 backend tests</b> in 15 classes - services, security, controllers (<span class="mono">mvn test</span>)</li>
+                    <li>Pure <span class="mono">ChargeCalculator</span> unit-tested on grace / cap / peak edges</li>
+                    <li>Flyway <span class="mono">validate</span> - schema drift fails startup</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Operational</div>
+                <ul>
+                    <li>RFC7807 problem-details on every error path</li>
+                    <li>Dev seeder: 2 buildings, 6 floors, 86 slots, 30 days history</li>
+                    <li>Issues Report + Project Tracking sheets in deliverables</li>
+                    <li>Health endpoint monitored every 14 min</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Đại</b></div><div class="pageno">16 / 18</div>
+    <p class="note">If asked "what kind of tests": service-layer tests with mocked repos + security filter tests; the calculator tests are pure-input/output. ~1.5 min.</p>
+</section>
+
+<!-- ============ 17 · LIMITATIONS (speaker 3) ============ -->
+<section class="slide">
+    <div class="kicker">05 · Verification</div><div class="k-rule"></div>
+    <h2 class="s-title">Known limits <span class="y">&amp;</span> next steps</h2>
+    <div class="body" style="top:330px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr">
+            <div class="card reveal">
+                <div class="tag">Deliberate shortcuts - documented</div>
+                <ul>
+                    <li>Analytics aggregate in-memory - fine at this scale, SQL <span class="mono">GROUP BY</span> when data grows</li>
+                    <li>One pricing policy per vehicle type - no time-windowed tariffs yet</li>
+                    <li>Admin can deactivate their own account - no self-lockout guard</li>
+                    <li>One active session per plate assumed by workflow, not a DB constraint</li>
+                </ul>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Future work</div>
+                <ul>
+                    <li>License-plate camera (ANPR) at the gate</li>
+                    <li>Learned scoring weights from collected allocation data</li>
+                    <li>Time-windowed / dynamic pricing</li>
+                    <li>Native mobile app for drivers</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-chip">Speaker <b>Đại</b></div><div class="pageno">17 / 18</div>
+    <p class="note">Owning limits BEFORE being asked disarms strict panels. Every left card item is documented in SDS/report - say that. ~1.5 min.</p>
+</section>
+
+<!-- ============ 18 · DEMO + Q&A (speaker 3 → all) ============ -->
+<section class="slide">
+    <div class="asphalt-tex"></div>
+    <div class="lane" style="top:238px"></div>
+    <div class="kicker">06 · Close</div><div class="k-rule"></div>
+    <h2 class="s-title" style="top:300px;font-size:130px">Live demo <span class="y">·</span> Q&amp;A</h2>
+    <div class="body" style="top:520px">
+        <div class="cardgrid" style="grid-template-columns:1fr 1fr;height:330px">
+            <div class="card reveal">
+                <div class="tag">Try it</div>
+                <p class="mono" style="font-size:27px;line-height:2"><span class="ycol">parkmaster.vercel.app</span><br>github.com/duu261/Parking-Building-Management-System<br>Release: PM_SU26SWP08-v1.0</p>
+            </div>
+            <div class="card reveal">
+                <div class="tag">Demo accounts · password123</div>
+                <p class="mono" style="font-size:25px;line-height:1.9">admin@parkmaster.dev · manager@parkmaster.dev<br>staff@parkmaster.dev · driver@parkmaster.dev</p>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-chip">All <b>members</b></div><div class="pageno">18 / 18</div>
+    <p class="note">Demo order: driver free-reserve → staff QR check-in → walk-in AI auto (show score) → checkout with pass → manager allocation chart. Vu anchors Q&A, routes questions to section owners. ~5 min.</p>
+</section>
+
+</main>
+</div>
+
+<!-- Deck chrome: progress bar + inline-edit affordance -->
+<div class="progress" id="progress"></div>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Arrows / Space / PgUp-PgDn / wheel / swipe.
+   N toggles in-slide speaker notes.
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.current = 0;
+        this.stage = document.getElementById('deckStage');
+        this.progress = document.getElementById('progress');
+        this.setupStageScale();
+        this.setupKeyboard();
+        this.setupTouch();
+        this.setupWheel();
+        this.show(0);
+    }
+    setupStageScale() {
+        const scale = () => {
+            const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+            this.stage.style.transform =
+                `translate(${(innerWidth - 1920 * k) / 2}px, ${(innerHeight - 1080 * k) / 2}px) scale(${k})`;
+        };
+        scale();
+        addEventListener('resize', scale);
+    }
+    setupKeyboard() {
+        addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) { e.preventDefault(); this.next(); }
+            if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); this.prev(); }
+            if (e.key === 'Home') this.show(0);
+            if (e.key === 'End') this.show(this.slides.length - 1);
+            if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('show-notes');
+        });
+    }
+    setupTouch() {
+        let x0 = null;
+        addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+        addEventListener('touchend', e => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 60) dx < 0 ? this.next() : this.prev();
+            x0 = null;
+        }, { passive: true });
+    }
+    setupWheel() {
+        let lock = false;
+        addEventListener('wheel', e => {
+            if (lock) return;
+            lock = true;
+            setTimeout(() => lock = false, 450);
+            e.deltaY > 0 ? this.next() : this.prev();
+        }, { passive: true });
+    }
+    next() { this.show(this.current + 1); }
+    prev() { this.show(this.current - 1); }
+    show(i) {
+        this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, j) => {
+            s.classList.toggle('active', j === this.current);
+            s.classList.toggle('visible', j === this.current);
+        });
+        this.progress.style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+    }
+}
+const deck = new SlidePresentation();
+
+/* ===========================================
+   INLINE TEXT EDITOR
+   Hover top-left corner or press E; click any
+   text to edit; Ctrl+S saves the file.
+   =========================================== */
+const editor = {
+    isActive: false,
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        editToggle.classList.toggle('active', this.isActive);
+        document.querySelectorAll('.slide h1,.slide h2,.slide h3,.slide p,.slide li,.slide .kicker,.slide .tag,.slide .stat .n,.slide .stat .l,.slide .speaker-chip,.slide .formula')
+            .forEach(el => el.setAttribute('contenteditable', this.isActive ? 'true' : 'false'));
+        if (!this.isActive) this.persist();
+    },
+    persist() {
+        localStorage.setItem('parkmaster-deck-edits', document.getElementById('deckStage').innerHTML);
+    },
+    restore() {
+        const saved = localStorage.getItem('parkmaster-deck-edits');
+        if (saved) return; /* ponytail: restore disabled by default - uncomment to auto-load edits */
+    },
+    saveFile() {
+        this.persist();
+        const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'parkmaster-defense.html';
+        a.click();
+    }
+};
+const editToggle = document.getElementById('editToggle');
+const hotzone = document.getElementById('editHotzone');
+let hideTimeout = null;
+editToggle.addEventListener('click', () => editor.toggleEditMode());
+hotzone.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+hotzone.addEventListener('mouseleave', () => {
+    hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400);
+});
+editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', () => {
+    hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400);
+});
+hotzone.addEventListener('click', () => editor.toggleEditMode());
+addEventListener('keydown', (e) => {
+    if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true')) editor.toggleEditMode();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); editor.saveFile(); }
+});
+</script>
+</body>
+</html>
